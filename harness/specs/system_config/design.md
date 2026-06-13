@@ -35,16 +35,24 @@ tests/
 ### config.yaml — Estructura
 
 ```yaml
-scale:
-  port: /dev/ttyUSB0
+scale_rs485:
+  port: /dev/ttyRS485
   baudrate: 9600
   parity: N
   data_bits: 8
   stop_bits: 1
   timeout_ms: 1500
 
+pc_rs232:
+  port: /dev/ttyS0
+  baudrate: 115200
+  parity: N
+  data_bits: 8
+  stop_bits: 1
+  timeout_ms: 2000
+
 gsm:
-  port: /dev/ttyUSB1
+  port: /dev/ttyUSB2
   baudrate: 115200
   timeout_ms: 3000
 
@@ -59,15 +67,23 @@ reports:
 
 ```python
 class ScaleConfig(BaseModel):
-    port: str = "/dev/ttyUSB0"
+    port: str = "/dev/ttyRS485"
     baudrate: int = Field(default=9600, ge=300, le=115200)
     parity: Literal["N", "E", "O"] = "N"
     data_bits: Literal[7, 8] = 8
     stop_bits: Literal[1, 2] = 1
     timeout_ms: int = Field(default=1500, ge=500, le=3000)
 
+class PCConfig(BaseModel):
+    port: str = "/dev/ttyS0"
+    baudrate: int = Field(default=115200, ge=300, le=115200)
+    parity: Literal["N", "E", "O"] = "N"
+    data_bits: Literal[7, 8] = 8
+    stop_bits: Literal[1, 2] = 1
+    timeout_ms: int = Field(default=2000, ge=500, le=5000)
+
 class GSMConfig(BaseModel):
-    port: str = "/dev/ttyUSB1"
+    port: str = "/dev/ttyUSB2"
     baudrate: int = Field(default=115200, ge=300, le=115200)
     timeout_ms: int = Field(default=3000, ge=500, le=5000)
 
@@ -76,7 +92,8 @@ class ReportsConfig(BaseModel):
     recipients: list[str] = Field(default=[])
 
 class SystemConfig(BaseModel):
-    scale: ScaleConfig = ScaleConfig()
+    scale_rs485: ScaleConfig = ScaleConfig()
+    pc_rs232: PCConfig = PCConfig()
     gsm: GSMConfig = GSMConfig()
     reports: ReportsConfig = ReportsConfig()
 ```
@@ -103,17 +120,18 @@ Atomicidad: `save()` escribe a `config.yaml.tmp` y luego `os.replace()`.
 | GET    | `/admin/config`            | Admin| Página HTML de configuración|
 | GET    | `/api/config`              | Admin| Obtener config actual (JSON)|
 | PUT    | `/api/config`              | Admin| Guardar config completa     |
-| POST   | `/api/config/test-scale`   | Admin| Probar conexión báscula     |
+| POST   | `/api/config/test-scale`   | Admin| Probar conexión RS485 báscula|
+| POST   | `/api/config/test-rs232`   | Admin| Probar conexión RS232 PC     |
 | POST   | `/api/config/test-gsm`     | Admin| Probar conexión módem GSM   |
 
 ### Frontend (HTMX)
 
 - `config.html`: Layout Admin con navegación. Incluye tabs/secciones para Hardware
   y SMS. Cada sección carga su partial.
-- `config_form.html`: Formulario con campos de báscula + GSM. Botones "Test Báscula"
-  y "Test GSM" disparan `hx-post` a los endpoints de prueba. Botón "Guardar" dispara
-  `hx-put` a `/api/config`. Errores de validación se muestran inline vía HTMX sin
-  recargar la página.
+- `config_form.html`: Formulario con campos de RS485 (báscula), RS232 (PC) y GSM.
+  Botones "Test Báscula", "Test RS232" y "Test GSM" disparan `hx-post` a los
+  endpoints de prueba. Botón "Guardar" dispara `hx-put` a `/api/config`.
+  Errores de validación se muestran inline vía HTMX sin recargar la página.
 - `config_sms.html`: Lista de destinatarios SMS + horarios. Permite añadir/quitar
   números y horarios.
 
@@ -121,11 +139,11 @@ Feedback visual: Verde (éxito), Rojo (error), Amarillo (procesando) según RNF 
 
 ### Test de conectividad
 
-- **Báscula**: Abrir puerto serial con `pyserial` (no incluido en requirements aún,
-  se añade en esta feature). Enviar comando configurable. Timeout del config.
-  Manejar `SerialException`, `OSError`. El resultado es JSON `{success, message, data?}`.
-- **GSM**: Abrir puerto serial, enviar `AT\r\n`, esperar `OK`. Manejar timeouts.
-  Resultado similar en JSON.
+- **Báscula (RS485)**: Abrir puerto serial con `pyserial`. Enviar comando configurable.
+  Timeout del config. Manejar `SerialException`, `OSError`.
+- **PC (RS232)**: Abrir puerto serial con `pyserial`. Verificar disponibilidad y
+  permisos. No requiere respuesta del PC. Resultado JSON.
+- **GSM**: Abrir puerto serial, enviar `AT\r\n`, esperar `OK`.
 
 > **Nota sobre pyserial**: Se requiere `pyserial==3.5` como dependencia nueva.
 > Se añade a `requirements.txt` en esta feature.

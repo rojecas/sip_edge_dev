@@ -14,10 +14,10 @@ editables y sus valores actuales cargados desde `config.yaml`.
 
 ---
 
-## R2 — Configurar puerto de báscula
+## R2 — Configurar puerto RS485 (báscula)
 
 El sistema DEBE permitir al Administrador configurar los siguientes parámetros
-del puerto serial de la báscula:
+del puerto RS485 de la báscula:
 
 - Ruta del dispositivo (ej. `/dev/ttyUSB0`)
 - Baudrate (9600, 19200, 38400, 57600, 115200)
@@ -27,18 +27,32 @@ del puerto serial de la báscula:
 
 ---
 
-## R3 — Configurar puerto del módem GSM
+### R3 — Configurar puerto del módem GSM
 
 El sistema DEBE permitir al Administrador configurar los siguientes parámetros
 del puerto serial del módem GSM:
 
-- Ruta del dispositivo (ej. `/dev/ttyUSB1`)
+- Ruta del dispositivo (ej. `/dev/ttyUSB2`)
 - Baudrate (9600, 19200, 38400, 57600, 115200)
 - Timeout de respuesta (500–5000 ms, default 3000)
 
 ---
 
-## R4 — Probar conectividad de báscula
+### R3.2 — Configurar puerto RS232 (PC externo)
+
+El sistema DEBE permitir al Administrador configurar los siguientes parámetros
+del puerto RS232 para transmisión a PC externo:
+
+- Ruta del dispositivo (ej. `/dev/ttyS0`)
+- Baudrate (9600, 19200, 38400, 57600, 115200)
+- Data bits (7, 8)
+- Stop bits (1, 2)
+- Paridad (None, Even, Odd)
+- Timeout de envío (500–5000 ms, default 2000)
+
+---
+
+## R4 — Probar conectividad de báscula (RS485)
 
 CUANDO el Administrador presiona el botón "Test Báscula", el sistema DEBE:
 
@@ -60,6 +74,20 @@ CUANDO el Administrador presiona el botón "Test GSM", el sistema DEBE:
 2. Enviar comando `AT\r\n`.
 3. Esperar respuesta `OK` hasta el timeout configurado.
 4. Mostrar en pantalla "OK — Módem responde" o "ERROR — Sin respuesta del módem".
+
+---
+
+## R5.2 — Probar conectividad del puerto RS232
+
+CUANDO el Administrador presiona el botón "Test RS232", el sistema DEBE:
+
+1. Abrir el puerto serial configurado para RS232.
+2. Enviar un comando de prueba predefinido (loopback o eco si está conectado).
+3. Verificar que el puerto está disponible y configurable.
+4. Mostrar en pantalla "OK — Puerto RS232 disponible" o "ERROR — <mensaje>".
+
+SI el puerto no existe o está en uso, ENTONCES el sistema DEBE mostrar un
+mensaje de error descriptivo.
 
 ---
 
@@ -132,9 +160,9 @@ DEBE devolver HTTP 403 y mostrar un mensaje de acceso denegado.
 
 ## Traceability Matrix
 
-| RF    | Requirements         |
-|-------|----------------------|
-| RF-015 | R1, R2, R3, R9, R10 |
-| RF-016 | R4, R5              |
-| RF-017 | R6, R7, R8, R11     |
-| RF-002 | R12                 |
+| RF     | Requirements              |
+|--------|---------------------------|
+| RF-015 | R1, R2, R3, R3.2, R9, R10 |
+| RF-016 | R4, R5, R5.2              |
+| RF-017 | R6, R7, R8, R11           |
+| RF-002 | R12                       |

@@ -12,11 +12,11 @@
     {
       "id": 1,
       "name": "system_config",
-      "title": "Configuración del Sistema y Persistencia",
-      "description": "Interfaz Admin para configuración dinámica de puertos hardware (báscula, módem GSM), baudrate, paridad. Prueba de conectividad serial/GSM. Persistencia en config.yaml con aplicación automática tras reinicio y sincronización de reloj.",
+      "title": "Configuración del Sistema — Puertos RS485/RS232 y GSM",
+      "description": "Interfaz Admin para configuración dinámica de puertos hardware: RS485 (báscula), RS232 (PC externo) y módem GSM. Parámetros: ruta, baudrate, paridad, data bits, stop bits. Prueba de conectividad serial/GSM con comando AT. Persistencia en config.yaml con carga automática tras reinicio y sincronización de reloj.",
       "acceptance": [
-        "RF-015: Interfaz gráfica Admin para modificar rutas hardware, baudrate, paridad",
-        "RF-016: Función 'Test' para verificar comunicación serial y GSM antes de guardar",
+        "RF-015: Interfaz Admin para modificar rutas RS485, RS232, GSM, baudrate, paridad",
+        "RF-016: Función 'Test' para verificar comunicación serial (RS485/RS232) y GSM",
         "RF-017: Guardado en config.yaml, carga automática tras reinicio, sincronización de reloj"
       ],
       "sdd": true,
@@ -143,6 +143,20 @@
       "sdd": true,
       "status": "pending",
       "depends_on": []
+    },
+    {
+      "id": 11,
+      "name": "rs232_transmission",
+      "title": "Transmisión de Datos a PC vía RS232",
+      "description": "Envío automático de tramas de información estructurada a un PC externo a través del puerto RS232 tras cada registro de pesaje exitoso. Formato de trama configurable (ASCII/CSV/JSON) con campos: Peso, Fecha, Hora, Tipo de Material, Hacienda, Suerte.",
+      "acceptance": [
+        "RF-022: Envío de trama RS232 al PC externo tras cada registro exitoso",
+        "RF-022: Formato de trama configurable (ASCII/CSV/JSON)",
+        "RF-022: Trama incluye Peso, Fecha, Hora, Tipo de Material, Hacienda, Suerte"
+      ],
+      "sdd": true,
+      "status": "pending",
+      "depends_on": [1, 6]
     }
   ]
 }
