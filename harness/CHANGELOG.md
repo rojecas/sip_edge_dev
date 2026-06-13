@@ -215,6 +215,16 @@
 
 ---
 
+## [1.7.0] - 2026-06-13
+
+### Added
+- `harness/docs/specs.md`: Convención de naming para specs con prefijo numérico `<id>_<name>` (ej. `01_system_config`). Permite identificar orden de implementación en revisión histórica.
+
+### Changed
+- `harness/.opencode/agents/spec-author.md`: Actualizadas rutas de spec para usar `<id>_<name>` en lugar de `<name>`. El agente crea carpetas como `01_system_config/`.
+
+---
+
 ## [1.0.0] - 2026-06-11
 
 ### Added

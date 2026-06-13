@@ -3,10 +3,10 @@
 > Este archivo se vacia al cerrar cada sesion y se mueve a `history.md`.
 > Los cierres y bloqueos van en archivos separados: ver `harness/docs/sessions.md`.
 
-- **Feature en curso:** system_config
-- **Inicio:** 13-Jun-2026
-- **Agente:** spec-author
-- **Estado:** spec_ready — esperando aprobación humana
+- **Feature en curso:** ninguna
+- **Inicio:** (fecha)
+- **Agente:** (leader, implementer, reviewer, spec-author)
+- **Estado:** (en progreso / bloqueada / cerrando)
 
 ---
 
@@ -14,7 +14,7 @@
 
 | ID | Nombre | Status |
 |----|--------|--------|
-| 1  | system_config | spec_ready |
+| 1  | system_config | pending |
 | 2  | auth_rbac | pending |
 | 3  | user_management | pending |
 | 4  | farm_lot_crud | pending |
@@ -24,18 +24,16 @@
 | 8  | ai_agent | pending |
 | 9  | emergency_mode | pending |
 | 10 | backup_system | pending |
+| 11 | rs232_transmission | pending |
 
 ---
 
 ## Plan
 
-1. Entorno Docker levantado y verificado (compose.yml, Dockerfile, MariaDB, FastAPI).
-2. feature_list.json generado desde ERS v1.2 con 10 features y dependencias.
-3. Spec de `system_config` redactado (requirements.md, design.md, tasks.md).
-4. **⏸ PAUSA — Esperando aprobación humana del spec `system_config`.**
+(que se va a hacer en esta sesion)
 
 ---
 
 ## Bloqueos activos
 
-Ninguno.
+(si la feature esta bloqueada, referencia a `progress/blocked-<name>.md`)

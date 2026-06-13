@@ -20,7 +20,7 @@
         "RF-017: Guardado en config.yaml, carga automática tras reinicio, sincronización de reloj"
       ],
       "sdd": true,
-      "status": "spec_ready",
+      "status": "pending",
       "depends_on": []
     },
     {

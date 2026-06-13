@@ -9,13 +9,18 @@ Cada feature nueva (`"sdd": true` en `feature_list.json`) tiene una carpeta
 dedicada en cuanto deja `pending`:
 
 ```
-specs/<feature-name>/
+specs/<id>_<feature-name>/
 ├── requirements.md   # QUÉ se necesita (EARS notation)
 ├── design.md         # CÓMO se construirá (decisiones técnicas)
 └── tasks.md          # PASOS concretos a implementar
 ```
 
-El `feature-name` coincide con el campo `name` de `feature_list.json`.
+El `<id>` es el campo `id` de `feature_list.json` (cero-padded a 2 dígitos).
+El `<feature-name>` coincide con el campo `name` de `feature_list.json`.
+Ejemplo: `01_system_config`, `02_auth_rbac`.
+
+Esta convención con prefijo numérico permite identificar el orden de implementación
+en una revisión histórica del directorio `specs/`.
 
 ## Estados de una feature
 
