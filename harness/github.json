@@ -1,6 +1,6 @@
 {
-  "repo": "owner/repo",
-  "enabled": false,
-  "labels": ["enhancement"],
-  "_comment": "Configuracion de integracion con GitHub. Requiere gh CLI instalado y autenticado (gh auth login). Cambia 'enabled' a true para activar la sincronizacion automatica de issues."
+  "repo": "rojecas/sip_edge",
+  "enabled": true,
+  "labels": ["enhancement", "sdd"],
+  "_comment": "GitHub sync enabled. Issues are created on in_progress and closed on done."
 }
