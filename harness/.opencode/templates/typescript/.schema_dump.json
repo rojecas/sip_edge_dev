@@ -1,0 +1,7 @@
+{
+  "engine": "sqlite",
+  "connection": {
+    "path": "database/{{PROJECT_NAME}}.sqlite"
+  },
+  "_comment": "For MySQL/PostgreSQL, set engine to 'mysql' and provide connection details."
+}

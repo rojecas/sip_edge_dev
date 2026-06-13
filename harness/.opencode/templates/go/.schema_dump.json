@@ -1,0 +1,6 @@
+{
+  "engine": "sqlite",
+  "connection": {
+    "path": "database/{{PROJECT_NAME}}.sqlite"
+  }
+}

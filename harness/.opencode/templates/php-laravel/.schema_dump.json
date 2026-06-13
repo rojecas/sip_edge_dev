@@ -1,0 +1,11 @@
+{
+  "engine": "mysql",
+  "connection": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "database": "{{PROJECT_NAME}}",
+    "user": "root",
+    "password": ""
+  },
+  "_comment": "For SQLite, set engine to 'sqlite' and connection.path to the .sqlite file path."
+}

@@ -1,0 +1,46 @@
+services:
+  mariadb:
+    image: mariadb:10.5
+    container_name: sip_edge_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-sip_edge_root}
+      MYSQL_DATABASE: ${DB_NAME:-sip_edge}
+      MYSQL_USER: ${DB_USER:-sip_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-sip_pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sip_edge_backend
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-sip_edge}
+      DB_USER: ${DB_USER:-sip_user}
+      DB_PASSWORD: ${DB_PASSWORD:-sip_pass}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-sip_edge_root}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./harness:/app/harness
+    working_dir: /app
+
+volumes:
+  mariadb_data:

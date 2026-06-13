@@ -1,0 +1,6 @@
+{
+  "repo": "owner/repo",
+  "enabled": false,
+  "labels": ["enhancement"],
+  "_comment": "Configuracion de integracion con GitHub. Requiere gh CLI instalado y autenticado (gh auth login). Cambia 'enabled' a true para activar la sincronizacion automatica de issues."
+}

@@ -1,0 +1,148 @@
+{
+  "project": "sip_edge",
+  "description": "Sistema Inteligente de Pesaje y Control de Materia Extraña (SIP-Edge)",
+  "rules": {
+    "one_feature_at_a_time": true,
+    "require_tests_to_close": true,
+    "require_approved_spec_to_implement": true,
+    "valid_status": ["pending", "spec_ready", "in_progress", "done", "blocked"],
+    "sdd_required_when": "feature has \"sdd\": true"
+  },
+  "features": [
+    {
+      "id": 1,
+      "name": "system_config",
+      "title": "Configuración del Sistema y Persistencia",
+      "description": "Interfaz Admin para configuración dinámica de puertos hardware (báscula, módem GSM), baudrate, paridad. Prueba de conectividad serial/GSM. Persistencia en config.yaml con aplicación automática tras reinicio y sincronización de reloj.",
+      "acceptance": [
+        "RF-015: Interfaz gráfica Admin para modificar rutas hardware, baudrate, paridad",
+        "RF-016: Función 'Test' para verificar comunicación serial y GSM antes de guardar",
+        "RF-017: Guardado en config.yaml, carga automática tras reinicio, sincronización de reloj"
+      ],
+      "sdd": true,
+      "status": "spec_ready",
+      "depends_on": []
+    },
+    {
+      "id": 2,
+      "name": "auth_rbac",
+      "title": "Autenticación y Control de Acceso Basado en Roles",
+      "description": "Validación de identidad mediante usuario/contraseña con hash bcrypt. RBAC con tres roles: Operador (solo formulario de pesaje), Corresponsal (solo recepción SMS), Administrador (acceso total).",
+      "acceptance": [
+        "RF-001: Autenticación por credenciales con hash bcrypt",
+        "RF-002: Restricción de funcionalidades según rol (Operador/Corresponsal/Admin)"
+      ],
+      "sdd": true,
+      "status": "pending",
+      "depends_on": [1]
+    },
+    {
+      "id": 3,
+      "name": "user_management",
+      "title": "Gestión de Usuarios (CRUD)",
+      "description": "Interfaz gráfica Admin para Crear/Leer/Actualizar/Desactivar usuarios (Nombre, Documento, Rol, Estado). Desactivación lógica sin eliminación física.",
+      "acceptance": [
+        "RF-021: CRUD de usuarios con campos Nombre, Documento, Rol, Estado"
+      ],
+      "sdd": true,
+      "status": "pending",
+      "depends_on": [2]
+    },
+    {
+      "id": 4,
+      "name": "farm_lot_crud",
+      "title": "Gestión de Haciendas y Suertes",
+      "description": "CRUD de Haciendas con borrado lógico si existen registros asociados. Gestión de Suertes/Lotes vinculados obligatoriamente a Hacienda padre. Selección en cascada dinámica en el formulario de pesaje.",
+      "acceptance": [
+        "RF-006: CRUD de Haciendas, borrado lógico si tiene registros",
+        "RF-007: Gestión de Suertes vinculadas a Hacienda padre",
+        "RF-008: Carga dinámica de Suertes según Hacienda seleccionada"
+      ],
+      "sdd": true,
+      "status": "pending",
+      "depends_on": [1]
+    },
+    {
+      "id": 5,
+      "name": "scale_integration",
+      "title": "Integración Serial con Báscula",
+      "description": "Protocolo comando-respuesta bidireccional con báscula vía RS232/USB. El sistema envía comandos específicos al presionar botones (Tara Total, Peso Mineral, etc.) y espera respuesta con timeout configurable (500ms-3000ms, default 1500ms).",
+      "acceptance": [
+        "RF-003: Envío de comando al puerto serial y recepción de respuesta",
+        "RF-003: Timeout configurable entre 500ms y 3000ms (default 1500ms)"
+      ],
+      "sdd": true,
+      "status": "pending",
+      "depends_on": [1]
+    },
+    {
+      "id": 6,
+      "name": "weighing_capture",
+      "title": "Captura y Persistencia de Registros de Pesaje",
+      "description": "Formulario de pesaje en estilo kiosco con campo de peso readonly (solo modificable por respuesta válida de báscula). Almacenamiento atómico en MariaDB de (Peso, ID Usuario, Fecha, Hora, Tipo de Material, Hacienda, Suerte). Transacción commit/rollback.",
+      "acceptance": [
+        "RF-004: Persistencia en MariaDB con campos Peso, ID Usuario, Fecha, Hora, Tipo de Material, Hacienda, Suerte",
+        "RF-005: Registro de peso y metadata como transacción atómica única",
+        "RNF-004: Campo de peso readonly en UI, solo modificable por respuesta serial válida"
+      ],
+      "sdd": true,
+      "status": "pending",
+      "depends_on": [2, 4, 5]
+    },
+    {
+      "id": 7,
+      "name": "sms_service",
+      "title": "Servicio de Notificaciones y Reportes SMS",
+      "description": "Envío de SMS vía módulo GSM con comandos AT. Reportes programados de resumen de turno (06:00, 14:00, 22:00 y horarios configurables). Alertas de seguridad inmediatas por intentos de operación no autorizados.",
+      "acceptance": [
+        "RF-012: Envío de SMS a listado preconfigurado de usuarios autorizados",
+        "RF-013: Reportes programados de turno (06:00, 14:00, 22:00) con horarios configurables",
+        "RF-014: Notificación inmediata de intentos con rol no autorizado o sesión expirada"
+      ],
+      "sdd": true,
+      "status": "pending",
+      "depends_on": [1, 6]
+    },
+    {
+      "id": 8,
+      "name": "ai_agent",
+      "title": "Agente IA de Orquestación y Análisis (TinyLLM)",
+      "description": "Agente basado en Qwen 2.5 3B (GGUF) ejecutado con Llama.cpp. Function Calling para ejecutar herramientas SQL parametrizadas. Detección proactiva de anomalías estadísticas (Z-score > 3) sobre últimos 120 registros o 4 horas.",
+      "acceptance": [
+        "RF-009: Orquestador de consultas con Function Calling",
+        "RF-011: Análisis SQL estructurado con herramientas parametrizadas, evitando alucinaciones numéricas",
+        "RF-010: Detección proactiva de anomalías con Z-score > 3 sobre ventana de 120 registros o 4 horas"
+      ],
+      "sdd": true,
+      "status": "pending",
+      "depends_on": [6]
+    },
+    {
+      "id": 9,
+      "name": "emergency_mode",
+      "title": "Modo Manual de Emergencia",
+      "description": "Modo manual activable por Admin vía comando SMS predefinido (MANUAL_ON). Desactiva temporalmente el bloqueo de hardware (RNF-004) por máximo 15 minutos. Campo de peso editable durante este período.",
+      "acceptance": [
+        "RF-020: Activación vía SMS con comando predefinido MANUAL_ON",
+        "RF-020: Desactivación automática tras 15 minutos",
+        "RF-020: Campo de peso editable mientras el modo manual está activo"
+      ],
+      "sdd": true,
+      "status": "pending",
+      "depends_on": [7]
+    },
+    {
+      "id": 10,
+      "name": "backup_system",
+      "title": "Sistema de Respaldos y Exportación",
+      "description": "Rutina diaria de volcado (dump.sql.gz) con rotación FIFO de 30 días. Exportación a medios externos USB/SD con verificación CRC32.",
+      "acceptance": [
+        "RF-018: Volcado diario dump.sql.gz con rotación FIFO de 30 días",
+        "RF-019: Copia de respaldos a USB/SD con verificación CRC32"
+      ],
+      "sdd": true,
+      "status": "pending",
+      "depends_on": []
+    }
+  ]
+}

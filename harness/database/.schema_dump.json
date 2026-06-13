@@ -1,0 +1,7 @@
+{
+  "engine": "sqlite",
+  "connection": {
+    "path": "database/sip_edge.sqlite"
+  },
+  "_comment": "For MySQL, set engine to 'mysql' and provide host, port, database, user, password."
+}
