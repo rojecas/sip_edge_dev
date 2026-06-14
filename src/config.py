@@ -17,9 +17,6 @@ VALID_STOP_BITS = {1.0, 1.5, 2.0}
 VALID_TEST_PORTS = {"rs485", "rs232", "gsm"}
 DEFAULT_SESSION_TIMEOUT_MINUTES = 15
 DEFAULT_SCALE_TIMEOUT = 3
-DEFAULT_BACKUP_USB_MOUNT_PATH = "/mnt/backup_usb"
-DEFAULT_BACKUP_LOCAL_DIR = "/home/bkmngr/backups"
-DEFAULT_BACKUP_KEEP_DAYS = 30
 
 
 @dataclass(frozen=True)
@@ -54,13 +51,6 @@ class ScaleConfig:
     timeout_seconds: int
 
 
-@dataclass(frozen=True)
-class BackupConfig:
-    usb_mount_path: str
-    local_dir: str
-    keep_days: int
-
-
 def default_config() -> SystemConfig:
     return SystemConfig(
         rs485=SerialPortConfig(
@@ -82,17 +72,14 @@ def default_config() -> SystemConfig:
     )
 
 
-def load_config(path: str) -> tuple[SystemConfig, SessionConfig, ScaleConfig, BackupConfig]:
+def load_config(path: str) -> tuple[SystemConfig, SessionConfig, ScaleConfig]:
     session_config = SessionConfig(DEFAULT_SESSION_TIMEOUT_MINUTES)
     scale_config = ScaleConfig(DEFAULT_SCALE_TIMEOUT)
-    backup_config = BackupConfig(
-        DEFAULT_BACKUP_USB_MOUNT_PATH, DEFAULT_BACKUP_LOCAL_DIR, DEFAULT_BACKUP_KEEP_DAYS
-    )
     if not os.path.exists(path):
         config = default_config()
         logger.warning("config.yaml not found, created with defaults")
-        _atomic_write_sections(config, session_config, scale_config, backup_config, path)
-        return config, session_config, scale_config, backup_config
+        _atomic_write_sections(config, session_config, scale_config, path)
+        return config, session_config, scale_config
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
@@ -116,24 +103,12 @@ def load_config(path: str) -> tuple[SystemConfig, SessionConfig, ScaleConfig, Ba
             if not isinstance(timeout, int) or timeout < 1 or timeout > 10:
                 timeout = DEFAULT_SCALE_TIMEOUT
             scale_config = ScaleConfig(timeout_seconds=timeout)
-        if "backup" in data and data["backup"] is not None:
-            usb_mount_path = data["backup"].get("usb_mount_path", DEFAULT_BACKUP_USB_MOUNT_PATH)
-            local_dir = data["backup"].get("local_dir", DEFAULT_BACKUP_LOCAL_DIR)
-            keep_days = data["backup"].get("keep_days", DEFAULT_BACKUP_KEEP_DAYS)
-            if not isinstance(keep_days, int) or keep_days <= 0:
-                logger.warning("backup.keep_days invalid (%s), using default %d", keep_days, DEFAULT_BACKUP_KEEP_DAYS)
-                keep_days = DEFAULT_BACKUP_KEEP_DAYS
-            backup_config = BackupConfig(
-                usb_mount_path=usb_mount_path,
-                local_dir=local_dir,
-                keep_days=keep_days,
-            )
-        return config, session_config, scale_config, backup_config
+        return config, session_config, scale_config
     except Exception:
         logger.warning("Failed to load config.yaml, using defaults", exc_info=True)
         config = default_config()
-        _atomic_write_sections(config, session_config, scale_config, backup_config, path)
-        return config, session_config, scale_config, backup_config
+        _atomic_write_sections(config, session_config, scale_config, path)
+        return config, session_config, scale_config
 
 
 def save_config(config: SystemConfig, path: str) -> None:
@@ -177,12 +152,6 @@ def _save_system_config_atomic(config: SystemConfig, path: str) -> None:
         existing["session"] = {"session_timeout_minutes": DEFAULT_SESSION_TIMEOUT_MINUTES}
     if "scale" not in existing:
         existing["scale"] = {"timeout_seconds": DEFAULT_SCALE_TIMEOUT}
-    if "backup" not in existing:
-        existing["backup"] = {
-            "usb_mount_path": DEFAULT_BACKUP_USB_MOUNT_PATH,
-            "local_dir": DEFAULT_BACKUP_LOCAL_DIR,
-            "keep_days": DEFAULT_BACKUP_KEEP_DAYS,
-        }
     yaml_text = yaml.dump(existing, default_flow_style=False, allow_unicode=True)
     _atomic_write(yaml_text, path)
 
@@ -214,7 +183,7 @@ def _atomic_write(content: str, path: str) -> None:
 
 def _atomic_write_sections(
     system_config: SystemConfig, session_config: SessionConfig,
-    scale_config: ScaleConfig, backup_config: BackupConfig, path: str
+    scale_config: ScaleConfig, path: str
 ) -> None:
     existing = {}
     if os.path.exists(path):
@@ -229,11 +198,6 @@ def _atomic_write_sections(
     existing["last_updated"] = system_config.last_updated
     existing["session"] = {"session_timeout_minutes": session_config.session_timeout_minutes}
     existing["scale"] = {"timeout_seconds": scale_config.timeout_seconds}
-    existing["backup"] = {
-        "usb_mount_path": backup_config.usb_mount_path,
-        "local_dir": backup_config.local_dir,
-        "keep_days": backup_config.keep_days,
-    }
     yaml_text = yaml.dump(existing, default_flow_style=False, allow_unicode=True)
     _atomic_write(yaml_text, path)
 
