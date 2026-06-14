@@ -80,6 +80,7 @@ El sistema opera en la capa de *Edge Computing*. Interactúa con tres actores pr
 - **Operador de Laboratorio**: Autenticación por credenciales (usuario/contraseña). Interacción mínima y ágil en kiosco.
 - **Corresponsal/Gerente**: Recibe reportes gerenciales y alertas vía SMS (no interactúa con sistema).
 - **Administrador**: Acceso total a configuración, gestión de usuarios y copias de seguridad. Autenticación por credenciales.
+- **Backup Operator (`bkmngr`)**: Rol a nivel de sistema operativo (no RBAC de aplicacion). Usuario Linux dedicado que ejecuta el script de respaldo via cron. Tiene acceso de solo lectura a la base de datos (`SELECT`, `LOCK TABLES`) para ejecutar `mysqldump`. No tiene acceso interactivo a la aplicacion SIP-Edge.
 
 > ✅ **Corrección aplicada**: Eliminada referencia a *"biometría pasiva"* (S-001 eliminado – ver sección 2.4).
 
@@ -166,7 +167,7 @@ El sistema opera en la capa de *Edge Computing*. Interactúa con tres actores pr
 `[RF-015]` **[Must Have]** Configuración Dinámica de Puertos: Interfaz gráfica Admin para modificar rutas hardware (Báscula RS485, PC RS232, Módem GSM), baudrate, paridad.
 `[RF-016]` **[Should Have]** Prueba de Conectividad: Función "Test" para verificar comunicación serial/GSM antes de guardar cambios.
 `[RF-017]` **[Must Have]** Persistencia de Configuración: Guardado en `config.yaml`, aplicación automática tras reinicio y sincronización de reloj.
-`[RF-018]` **[Must Have]** Rutina de Respaldo Automático: Tarea diaria de volcado (`dump.sql.gz`) con rotación FIFO de 30 días (elimina más antiguo al día 31).
+`[RF-018]` **[Must Have]** Rutina de Respaldo Automático: Tarea diaria de volcado (`dump.sql.gz`) con rotación FIFO de 30 días (elimina más antiguo al día 31). El sistema expone endpoints `GET /api/backup/status` y `POST /api/backup/run` (admin) para monitoreo y ejecucion manual. El script de respaldo es ejecutado por el usuario de sistema `bkmngr` (Backup Operator) via cron.
 `[RF-019]` **[Should Have]** Exportación a Medios Externos: Copia de respaldos a USB/SD con verificación CRC32.
 `[RF-020]` **[Must Have]** Modo Manual de Emergencia: Activable por Admin mediante comando SMS predefinido (`MANUAL_ON`). Desactiva bloqueo de hardware (RNF-006) temporalmente (máx. 15 minutos).
 
