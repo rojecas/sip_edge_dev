@@ -1,0 +1,32 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "harness/AGENTS.md",
+    "harness/docs/architecture.md",
+    "harness/docs/conventions.md",
+    "harness/docs/verification.md",
+    "harness/docs/specs.md",
+    "harness/docs/database.md",
+    "harness/docs/environment.md"
+  ],
+  "command": {
+    "init": {
+      "description": "Run init.ps1 to verify environment before starting work",
+      "template": "Execute ./init.ps1 and report if all checks pass. If it fails, do NOT proceed until issues are resolved."
+    },
+    "next": {
+      "description": "Start the next pending SDD feature",
+      "template": "Read harness/feature_list.json, find the first feature with status 'pending' and 'sdd': true, then launch the spec-author agent via the sdd-workflow skill to begin Spec Driven Development."
+    }
+  },
+  "skills": {
+    "paths": ["harness/.opencode/skills"]
+  },
+  "permission": {
+    "external_directory": {
+      "~/.config/opencode/**": "allow",
+      "*": "allow"
+    }
+  },
+  "mcp": {}
+}

@@ -215,6 +215,14 @@
 
 ---
 
+## [1.7.1] - 2026-06-13
+
+### Fixed
+- `harness/init.ps1` — Seccion 6 (tests) no detectaba entornos Docker y ejecutaba
+  `python -m unittest` nativamente, fallando cuando las dependencias estan solo en el
+  contenedor. Ahora detecta `$hasCompose` y ejecuta via
+  `docker compose exec -T backend python -m unittest discover -s tests -v`.
+
 ## [1.7.0] - 2026-06-13
 
 ### Added

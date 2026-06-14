@@ -137,7 +137,11 @@ Write-Host "-- 6. Ejecutando tests -------------------------------------"
 if (Test-Path -LiteralPath "tests" -PathType Container) {
     $prevEAP = $ErrorActionPreference
     $ErrorActionPreference = "SilentlyContinue"
-    $testResult = & python -m unittest discover -s tests -v 2>&1
+    if ($hasCompose) {
+        $testResult = & docker compose exec -T backend python -m unittest discover -s tests -v 2>&1
+    } else {
+        $testResult = & python -m unittest discover -s tests -v 2>&1
+    }
     $ErrorActionPreference = $prevEAP
     $testExit = $LASTEXITCODE
     if ($testExit -eq 0 -or $testExit -eq 5) {

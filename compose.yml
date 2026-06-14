@@ -34,6 +34,9 @@ services:
       DB_USER: ${DB_USER:-sip_user}
       DB_PASSWORD: ${DB_PASSWORD:-sip_pass}
       DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-sip_edge_root}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-sip_edge_jwt_secret_key_dev}
+      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-admin}
+      DEV_MODE: ${DEV_MODE:-true}
     ports:
       - "8000:8000"
     volumes:

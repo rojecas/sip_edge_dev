@@ -2,46 +2,239 @@
 
 > El agente DEBE leer este archivo **antes de ejecutar cualquier comando bash**.
 > Describe DONDE y COMO se ejecutan los comandos, y que servicios estan disponibles.
-> init.ps1 auto-detecta el contexto (Docker vs nativo) y avisa si hay discrepancias.
 
-## Execution mode
+---
 
-**Mode:** docker
-**Compose file:** compose.yml
-**Service:** backend
+## 1. Modos de ejecucion
 
-## Shell
+Este proyecto tiene **dos entornos** distintos:
 
-Prefix ALL commands with: docker compose exec backend
-Ejemplo: docker compose exec backend python -m unittest discover -s tests -v
+| Entorno | Proposito | Como acceder |
+|---------|-----------|-------------|
+| **Local (dev)** | Desarrollo, tests, specs | Docker compose en la maquina local |
+| **EdgeBox (prod)** | Ejecucion real en hardware industrial | SSH al EdgeBox-RPI-200 |
 
-## Runtime
+---
 
-- Python 3.11 inside container
-- Container image: python:3.11-slim (build via Dockerfile)
+## 2. EdgeBox-RPI-200 (Produccion)
 
-## Services
+### Hardware
 
-| Service   | Host access      | Container access |
-|-----------|-----------------|------------------|
-| MariaDB   | 127.0.0.1:3306  | mariadb:3306     |
-| Backend   | 127.0.0.1:8000  | (N/A)            |
+| Componente | Detalle |
+|------------|---------|
+| **Dispositivo** | EdgeBox-RPI-200 (SeeedStudio) |
+| **CPU** | Raspberry Pi CM4 — 4x Cortex-A72 @ 1.5 GHz (aarch64) |
+| **RAM** | 8 GB |
+| **Almacenamiento** | 32 GB eMMC |
+| **SO** | Debian 13 (Trixie) aarch64, kernel 6.12 |
+| **Hostname** | SIP-Edge |
 
-## Init / Lifecycle
+### Acceso SSH
 
 ```bash
-# Start all services
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42
+```
+
+| Parametro | Valor |
+|-----------|-------|
+| **Clave privada** | `~/.ssh/sip_edge_edgebox` (dedicada, generada en setup) |
+| **Usuario** | `sipedge` |
+| **IP Ethernet** | `192.168.1.42/24` |
+| **Password sudo** | `sipedge1234` (usar `sudo -S` para comandos batch; sudo requiere tty) |
+
+### Red
+
+| Interfaz | Tipo | IP | Estado |
+|----------|------|----|--------|
+| `eth0` | Ethernet | 192.168.1.42/24 | UP |
+| `wwan0` | 4G LTE (Quectel EC25) | DHCP del operador | Configurado (plan de datos pendiente) |
+
+### Modem 4G — Quectel EC25
+
+| Parametro | Valor |
+|-----------|-------|
+| **IMEI** | 862708046475815 |
+| **Operador** | Tigo Colombia (732103) |
+| **APN** | `internet.tigo.com.co` |
+| **Numero** | 573013643187 |
+| **Puertos AT** | `/dev/ttyUSB2`, `/dev/ttyUSB3` |
+| **Gestion** | ModemManager (`mmcli -m 0`) |
+
+### Puertos seriales industriales
+
+| Puerto fisico | Dispositivo | Proposito |
+|--------------|-------------|-----------|
+| RS485 | `/dev/ttyACM0` | Bascula DINI ARGEO DFWLI-2 |
+| RS232 | `/dev/ttyACM1` | Transmision a PC externo |
+
+- Permisos: `root:dialout` — el usuario `sipedge` esta en el grupo `dialout`.
+- Parametros por defecto: 115200 baud, 8 data bits, sin paridad, 1 stop bit.
+
+### RTC (Real-Time Clock)
+
+| Componente | Detalle |
+|------------|---------|
+| **Chip** | PCF8563 (I2C) |
+| **Dispositivo** | `/dev/rtc0` |
+| **Sincronizacion** | `save-hwclock.service` activo |
+
+### Watchdog (WDT)
+
+| Parametro | Valor |
+|-----------|-------|
+| **Hardware** | BCM2711 (`bcm2835_wdt`) |
+| **Timeout** | 30 segundos (`RuntimeWatchdogSec=30`) |
+| **Dispositivo** | `/dev/watchdog`, `/dev/watchdog0` |
+
+---
+
+## 3. Software en la EdgeBox
+
+### Servicios systemd (todos `enabled`)
+
+| Servicio | Puerto | Funcion |
+|----------|--------|---------|
+| `mariadb.service` | 3306 (localhost) | Base de datos |
+| `sip-edge.service` | 8000 (0.0.0.0) | Backend FastAPI |
+| `ModemManager.service` | — | Gestion modem 4G |
+| `NetworkManager.service` | — | Gestion de red |
+| `ssh.service` | 22 | Acceso remoto |
+| `cron.service` | — | Tareas programadas |
+
+### Base de datos — MariaDB
+
+| Parametro | Valor |
+|-----------|-------|
+| **Version** | 11.8.6 |
+| **Engine** | InnoDB |
+| **Base de datos** | `sip_edge` |
+| **Usuario** | `sip_user`@`localhost` |
+| **Password** | `sip_pass` |
+| **Socket** | `/run/mysqld/mysqld.sock` |
+
+### Aplicacion SIP-Edge
+
+| Parametro | Valor |
+|-----------|-------|
+| **Ubicacion** | `/home/sipedge/sip_edge/` |
+| **Python** | 3.13.5 en venv (`/home/sipedge/sip_edge/venv/`) |
+| **Config YAML** | `/home/sipedge/sip_edge/config.yaml` |
+| **Variables entorno** | `/home/sipedge/sip_edge/.env` |
+| **DEV_MODE** | `false` (hardware real activo) |
+| **API** | `http://192.168.1.42:8000` |
+
+### llama.cpp — Motor de inferencia LLM
+
+| Parametro | Valor |
+|-----------|-------|
+| **Version** | b9632 (ggml v0.15.1) |
+| **Binarios** | 49 herramientas en `/usr/local/bin/` |
+| **Servidor** | `llama-server` en puerto 8080 |
+| **Modelos** | `/home/models/*.gguf` (~4.9 GB total) |
+
+Modelos disponibles:
+| Modelo | Tamano | Cuantizacion |
+|--------|--------|-------------|
+| `qwen2.5-1.5b-instruct-q4_k_m.gguf` | 1.1 GB | Q4_K_M |
+| `gemma-4-E2B-it-Q4_K_M.gguf` | 2.9 GB | Q4_K_M |
+| `Qwen3.5-2B-UD-Q2_K_XL.gguf` | 922 MB | Q2_K_XL |
+
+---
+
+## 4. Entorno Local (Desarrollo)
+
+### Docker Compose
+
+```bash
+# Iniciar servicios
 docker compose up -d
 
-# Verify environment
-./init.ps1
+# Verificar
+docker compose ps
 
-# Install dependencies (inside container)
-docker compose exec backend pip install -r requirements.txt
+# Detener
+docker compose down
+```
 
-# Run tests
+### Servicios en Docker
+
+| Servicio | Container | Puerto host |
+|----------|----------|-------------|
+| Backend (FastAPI) | `sip_edge_backend` | 8000 |
+| MariaDB | `sip_edge_db` | 3306 |
+
+### Variables de entorno (dev)
+
+Definidas en `compose.yml` (no en `.env`). Valores por defecto:
+```
+DB_HOST=mariadb
+DB_NAME=sip_edge
+DB_USER=sip_user
+DB_PASSWORD=sip_pass
+JWT_SECRET_KEY=sip_edge_jwt_secret_key_dev
+ADMIN_DEFAULT_PASSWORD=admin
+DEV_MODE=true
+```
+
+### Shell
+
+**Todos los comandos que interactuan con el codigo deben ejecutarse dentro del contenedor:**
+
+```bash
+# Tests
 docker compose exec backend python -m unittest discover -s tests -v
 
-# Access backend API
-# http://127.0.0.1:8000
+# Instalar dependencias
+docker compose exec backend pip install -r requirements.txt
+
+# Ver init
+./init.ps1
+```
+
+### Volumenes montados (live-reload en dev)
+
+- `./src` → `/app/src`
+- `./tests` → `/app/tests`
+- `./harness` → `/app/harness`
+
+---
+
+## 5. Comandos utiles
+
+### En la EdgeBox (via SSH)
+
+```bash
+# Estado del servicio
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "sudo systemctl status sip-edge"
+
+# Logs en tiempo real
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "sudo journalctl -u sip-edge -f"
+
+# Reiniciar servicio
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "sudo systemctl restart sip-edge"
+
+# Actualizar codigo (git pull + restart)
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "cd /home/sipedge/sip_edge && git pull && sudo systemctl restart sip-edge"
+
+# Estado del modem 4G
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "mmcli -m 0"
+
+# Verificar puertos seriales
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "ls -la /dev/ttyACM*"
+
+# Verificar MariaDB
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "sudo systemctl status mariadb"
+```
+
+### En local (desarrollo Docker)
+
+```bash
+# API health check
+curl http://127.0.0.1:8000/health
+
+# Ejecutar un test especifico
+docker compose exec backend python -m unittest tests.test_config.TestConfigEndpoints.test_get_config_returns_200 -v
+
+# Ver dependencias instaladas
+docker compose exec backend pip list
 ```
