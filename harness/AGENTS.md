@@ -14,11 +14,17 @@
 
 1. Ejecuta `./init.ps1` y verifica que termina sin errores. Si falla, **para**
    y resuelve el entorno antes de tocar codigo.
-2. Lee `harness/progress/current.md` para entender en que estado quedo la ultima sesion.
-3. Lee `harness/feature_list.json`. Toda feature nueva (`"sdd": true`) pasa por
+2. Si `init.ps1` reporto `[WARN]` en la seccion 1.5 (`.session = open`), advierte
+   al usuario: "La sesion anterior no se cerro correctamente. Revisa
+   harness/progress/current.md". Pregunta si desea continuar o ejecutar
+   `./scripts/close.ps1` primero.
+3. Escribe `open` en `harness/.session` para activar el fusible de proteccion.
+   El script `./scripts/close.ps1` lo pondra en `closed` al finalizar.
+4. Lee `harness/progress/current.md` para entender en que estado quedo la ultima sesion.
+5. Lee `harness/feature_list.json`. Toda feature nueva (`"sdd": true`) pasa por
    **Spec Driven Development** — ver `harness/docs/specs.md` y S4 de este archivo.
-4. Lee `harness/docs/specs.md` antes de tocar cualquier spec o feature `sdd: true`.
-5. Lee `harness/docs/sessions.md` para conocer el estandar de documentacion
+6. Lee `harness/docs/specs.md` antes de tocar cualquier spec o feature `sdd: true`.
+7. Lee `harness/docs/sessions.md` para conocer el estandar de documentacion
    (planes, cierres, bloqueos).
 
 ## 2. Mapa del repositorio
@@ -154,6 +160,10 @@ registrado con un bump de version y una entrada en `harness/CHANGELOG.md`.
 ```
 <proyecto>/
 ├── init.ps1                  # wrapper que delega en harness/init.ps1
+├── opencode.json             # config de opencode (instrucciones, comandos, agentes, skills)
+├── .opencode/                # agentes y skills (copia de harness/.opencode/agents/ y skills/)
+│   ├── agents/               # leader, spec-author, implementer, reviewer
+│   └── skills/               # sdd-workflow
 ├── src/                      # codigo fuente del proyecto
 ├── tests/                    # tests del proyecto
 ├── scripts/                  # setup_wizard.ps1
@@ -170,9 +180,12 @@ registrado con un bump de version y una entrada en `harness/CHANGELOG.md`.
 
 ### Reglas al ejecutar el scaffold
 
-1. **Solo tres directorios en raiz:** `src/`, `tests/`, `scripts/`.
-   NO crear `docs/`, `progress/`, `specs/` en raiz. Esos viven dentro de `harness/`.
+1. **Solo tres directorios de proyecto en raiz:** `src/`, `tests/`, `scripts/`.
+   Los directorios `docs/`, `progress/`, `specs/` viven dentro de `harness/`.
    Si el usuario quiere un `docs/` propio, que lo cree el manualmente.
+   **El scaffold DEBE crear `opencode.json` y `.opencode/` en raiz** para que
+   opencode detecte los subagentes y las skills (el contenido se copia de
+   `harness/.opencode/agents/` y `harness/.opencode/skills/`).
 
 2. **`feature_list.json` va en `harness/`**, no en la raiz del proyecto.
    El template `harness/init.ps1` espera `harness/feature_list.json`.
@@ -202,6 +215,7 @@ registrado con un bump de version y una entrada en `harness/CHANGELOG.md`.
 | `feature_list.json` en raiz causa `[FAIL]` en init.ps1 | Template espera `harness/feature_list.json` | Poner `feature_list.json` en `harness/` |
 | `validate_features.py` busca `harness/feature_list.json` por defecto | Script asume que base es `harness/` | Mantener `feature_list.json` en `harness/` |
 | Directorios copiados como archivos | `Copy-Item` sin `-Recurse` en directorio | Usar `Copy-Item -Recurse` para dirs; si no, copiar archivo por archivo |
+| opencode no detecta subagentes ni skills en proyecto nuevo | scaffold no generaba `opencode.json` ni `.opencode/` en raiz | Generar `opencode.json` en raiz y copiar agents + skills a `.opencode/` |
 
 ## 9. Actualizar un proyecto derivado
 

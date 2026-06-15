@@ -215,6 +215,40 @@
 
 ---
 
+## [1.7.0-sync] - 2026-06-14
+
+### Added (from factory [1.7.0])
+- `harness/.session` — Fusible de proteccion de sesion. Contiene `open` o `closed`.
+  `init.ps1` lo verifica al arrancar; si esta `open`, advierte que la sesion anterior
+  no se cerro correctamente. `close.ps1` lo pone en `closed` al finalizar.
+- `harness/init.ps1` — Nueva seccion 1.5 que lee `harness/.session` y reporta
+  `[WARN]` si la sesion anterior quedo abierta, o `[OK]` si cerro correctamente.
+- `scripts/close.ps1` — Script de cierre de sesion limpio que ejecuta 3 pasos:
+  verificacion de documentacion pendiente, sincronizacion con repositorio remoto
+  (`git pull --rebase` + `git push`, o warning si no hay remote), y ejecucion de
+  `init.ps1` como verificacion final. Soporta flags `-SkipDocs`, `-SkipGit`,
+  `-SkipVerify`. Al finalizar escribe `closed` en `harness/.session`.
+- `opencode.json` — Nuevos comandos built-in: `/close` (invoca `./scripts/close.ps1`)
+  y `/proyect_init` (genera/actualiza AGENTS.md).
+- `.opencode/agents/` y `.opencode/skills/` en raiz del proyecto — Copiados desde
+  `harness/.opencode/` para que opencode detecte subagentes y skills por
+  auto-descubrimiento.
+
+### Changed (from factory [1.7.0] + [1.6.4])
+- `harness/AGENTS.md` — Seccion 1 actualizada con pasos 2-3 sobre `.session` y
+  `close.ps1`. Seccion 8 actualizada con `opencode.json` y `.opencode/` en la
+  estructura final del proyecto. Nueva leccion capturada sobre opencode y
+  auto-descubrimiento de subagentes.
+
+### Version
+- `harness/VERSION` → 1.7.0 (sincronizado con la fabrica)
+
+### Nota
+Los cambios locales del proyecto ([1.7.0] spec naming convention, [1.7.1] Docker
+detection fix) se preservan como historico y continuan aplicados.
+
+---
+
 ## [1.7.1] - 2026-06-13
 
 ### Fixed

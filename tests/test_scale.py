@@ -10,6 +10,7 @@ from unittest import mock
 from fastapi.testclient import TestClient
 
 from src.config import (
+    BackupConfig,
     DEFAULT_SCALE_TIMEOUT,
     DEFAULT_SESSION_TIMEOUT_MINUTES,
     ScaleConfig,
@@ -99,7 +100,7 @@ class TestScaleConfig(unittest.TestCase):
             self.assertEqual(scale.timeout_seconds, DEFAULT_SCALE_TIMEOUT)
             new_scale = ScaleConfig(timeout_seconds=7)
             save_scale_config(new_scale, path)
-            _, _, _, reloaded = load_config(path)
+            _, _, reloaded, _ = load_config(path)
             self.assertEqual(reloaded.timeout_seconds, 7)
 
     def test_load_scale_config_invalid_timeout_falls_back(self):
@@ -295,6 +296,7 @@ class TestScaleEndpoint(unittest.TestCase):
         app.state.config = cfg
         app.state.session = sess
         app.state.scale_config = scale
+        app.state.backup_config = backup
         app.state.scale_service = None
         app.dependency_overrides[get_current_user] = lambda: {
             "user_id": 1, "role": "admin", "iat": 9999999999

@@ -65,10 +65,11 @@ def _build_test_app():
 
     main_mod.CONFIG_PATH = os.path.join(tempfile.mkdtemp(), "config.yaml")
 
-    from src.config import SessionConfig, SystemConfig, default_config
+    from src.config import BackupConfig, SessionConfig, SystemConfig, default_config
 
     main_mod.app.state.config = default_config()
     main_mod.app.state.session = SessionConfig(session_timeout_minutes=15)
+    main_mod.app.state.backup_config = BackupConfig("/mnt/backup_usb", "/home/bkmngr/backups", 30)
 
     from src.database import get_db as _original_get_db
 

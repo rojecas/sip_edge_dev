@@ -8,6 +8,7 @@ from unittest import mock
 from fastapi.testclient import TestClient
 
 from src.config import (
+    BackupConfig,
     ScaleConfig,
     SerialPortConfig,
     GsmConfig,

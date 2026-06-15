@@ -67,11 +67,12 @@ def _build_test_app():
 
     main_mod.CONFIG_PATH = os.path.join(tempfile.mkdtemp(), "config.yaml")
 
-    from src.config import ScaleConfig, SessionConfig, default_config
+    from src.config import BackupConfig, ScaleConfig, SessionConfig, default_config
 
     main_mod.app.state.config = default_config()
     main_mod.app.state.session = SessionConfig(session_timeout_minutes=15)
     main_mod.app.state.scale_config = ScaleConfig(timeout_seconds=3)
+    main_mod.app.state.backup_config = BackupConfig("/mnt/backup_usb", "/home/bkmngr/backups", 30)
     main_mod.app.state.scale_service = None
 
     def _override_get_db():

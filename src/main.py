@@ -8,7 +8,16 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import datetime, timezone
 
-from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    HTTPException,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -25,6 +34,7 @@ from src.auth import (
     verify_password,
 )
 from src.config import (
+    BackupConfig,
     GsmConfig,
     ScaleConfig,
     SerialPortConfig,
@@ -39,7 +49,7 @@ from src.config import (
 )
 import src.database as _db
 from src.database import get_db, init_db
-from src.models import Base, User, Weighing
+from src.models import BackupLog, Base, User, Weighing
 from src.haciendas import haciendas_router, suertes_router
 from src.weighings import router as weighings_router
 from src.users import router as users_router
@@ -71,7 +81,7 @@ def _on_scale_data(data: dict, clients: set[WebSocket], loop: asyncio.AbstractEv
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.config, app.state.session, app.state.scale_config = load_config(CONFIG_PATH)
+    app.state.config, app.state.session, app.state.scale_config, app.state.backup_config = load_config(CONFIG_PATH)
     from src.scale import ScaleService
 
     dev_mode = os.environ.get("DEV_MODE", "false").lower() in ("true", "1", "yes")
@@ -106,6 +116,58 @@ app.include_router(users_router)
 app.include_router(haciendas_router)
 app.include_router(suertes_router)
 app.include_router(weighings_router)
+
+backup_router = APIRouter(prefix="/api/backup", tags=["backup"])
+
+
+@backup_router.get("/status")
+async def get_backup_status(
+    _: dict = Depends(check_inactivity),
+    __: dict = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    logs = (
+        db.query(BackupLog)
+        .order_by(BackupLog.created_at.desc())
+        .limit(10)
+        .all()
+    )
+    return [
+        {
+            "id": log.id,
+            "filename": log.filename,
+            "file_size": log.file_size,
+            "local_checksum": log.local_checksum,
+            "usb_copied": log.usb_copied,
+            "usb_checksum": log.usb_checksum,
+            "error_message": log.error_message,
+            "created_at": log.created_at.isoformat(),
+        }
+        for log in logs
+    ]
+
+
+def _run_backup_background():
+    """Wrapper para ejecutar backup en background thread."""
+    from src.backup import run_backup
+    config: BackupConfig = app.state.backup_config
+    run_backup(config.usb_mount_path, config.local_dir, config.keep_days)
+
+
+@backup_router.post("/run")
+async def run_backup_endpoint(
+    background_tasks: BackgroundTasks,
+    _: dict = Depends(check_inactivity),
+    __: dict = Depends(require_role("admin")),
+):
+    background_tasks.add_task(_run_backup_background)
+    return JSONResponse(
+        status_code=202,
+        content={"status": "accepted", "message": "Backup started"},
+    )
+
+
+app.include_router(backup_router)
 
 app.add_middleware(
     CORSMiddleware,

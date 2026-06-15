@@ -39,6 +39,25 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 Write-Host ""
+Write-Host "-- 1.5. Verificando estado de sesion anterior ----------------"
+
+$sessionFile = "harness/.session"
+if (Test-Path -LiteralPath $sessionFile -PathType Leaf) {
+    $sessionStatus = (Get-Content -LiteralPath $sessionFile -Raw).Trim()
+    if ($sessionStatus -eq "open") {
+        warn "La sesion anterior NO se cerro correctamente (harness/.session = open)"
+        Write-Host "  Revisa harness/progress/current.md y git status para verificar el estado."
+        Write-Host "  Ejecuta ./scripts/close.ps1 si quieres cerrar la sesion anterior formalmente."
+    } elseif ($sessionStatus -eq "closed") {
+        ok "Sesion anterior cerrada correctamente (harness/.session = closed)"
+    } else {
+        warn "harness/.session contiene un valor desconocido: '$sessionStatus'"
+    }
+} else {
+    warn "No se encontro harness/.session. El agente debe crearlo al iniciar trabajo."
+}
+
+Write-Host ""
 Write-Host "-- 2. Verificando archivos base del harness ------------------"
 
 $baseFiles = @(
