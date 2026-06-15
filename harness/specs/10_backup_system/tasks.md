@@ -89,10 +89,10 @@
 
 ## Fase 7: Verificacion en EdgeBox
 
-- [ ] T18 — Verificar que `mysqldump` esta disponible en la EdgeBox. Si no,
+- [x] T18 — Verificar que `mysqldump` esta disponible en la EdgeBox. Si no,
   instalar `mariadb-client`. Verificar que el script `scripts/backup.py` se
   ejecuta correctamente con el entorno de produccion.
 
-- [ ] T19 — Configurar cron en la EdgeBox para ejecutar `scripts/backup.py` a
+- [x] T19 — Configurar cron en la EdgeBox para ejecutar `scripts/backup.py` a
   las 23:55 diariamente. Verificar que el log de cron muestra ejecucion exitosa.
   Cubre: R16.

@@ -182,7 +182,7 @@
         "RF-025: Endpoint POST /api/backup/run (admin) \u2014 dispara backup en background y retorna 202"
       ],
       "sdd": true,
-      "status": "in_progress",
+      "status": "done",
       "depends_on": [],
       "github_issue": "https://github.com/rojecas/sip_edge/issues/7"
     },
