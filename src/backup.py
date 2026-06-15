@@ -39,6 +39,7 @@ def _mysqldump_to_file(output_path: str) -> None:
                     f"--host={host}",
                     f"--port={port}",
                     f"--user={user}",
+                    "--password",
                     name,
                 ],
                 stdin=subprocess.PIPE,
