@@ -101,3 +101,21 @@
   - Cambiar de Docker en produccion a nativo libero ~500MB RAM y simplifico el deploy (git pull + restart)
   - Conveniencia de tener un shell SSH con clave para administrar la EdgeBox remotamente
   - `sudo` requiere tty en la EdgeBox; usar `-S` con password para comandos batch
+
+---
+
+## 2026-06-14 — Feature 10 backup_system + harness sync
+
+- **Agente:** opencode (leader + implementer)
+- **Feature:** 10 (backup_system) — spec_ready → in_progress → done
+- **Archivos modificados:** 13 source/test files, 4 new files
+- **Tests:** 23 nuevos (218 total, 0 fallos)
+- **Verificacion EdgeBox:** mysqldump + cron 23:55 instalado
+- **Harness update:** version 1.7.0 sincronizada desde fabrica (`.session`, `close.ps1`, `.opencode/` auto-descubrimiento)
+- **Lecciones:**
+  - `mysqldump` requiere flag `--password` para leer la contrasena por stdin
+  - El wrapper `./scripts/close.ps1` espera rutas relativas al proyecto desde `scripts/`
+  - La tabla `backup_logs` ya existia en `models.py` antes de iniciar la feature
+  - `JSONResponse` con `status_code=202` necesario para POST (FastAPI default 200 en dict returns)
+  - Tests de `run_backup` necesitan patchear `src.database.SessionLocal` (no solo `src.backup`)
+  - SQLite in-memory acumula registros entre tests; truncar `backup_logs` en `setUp`
