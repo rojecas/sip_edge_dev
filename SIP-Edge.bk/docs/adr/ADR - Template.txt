@@ -1,0 +1,16 @@
+# ADR-0XX – Nombre descriptivo del ADR
+
+## Estado
+Aceptado
+
+## Contexto
+(Problema que motivó la decisión)
+
+## Decisión
+(Qué se decidió)
+
+## Alternativas consideradas
+(Opcional pero recomendable)
+
+## Consecuencias
+(Positivas y negativas)

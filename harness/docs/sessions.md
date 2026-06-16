@@ -1,4 +1,4 @@
-# Sesiones — Como documentar el trabajo
+﻿# Sesiones â€” Como documentar el trabajo
 
 > Estandar de documentacion para sesiones de desarrollo. Define los
 > artefactos que garantizan trazabilidad historica y permiten reconstruir
@@ -6,7 +6,7 @@
 
 ## Artefactos obligatorios
 
-### A1 — Plan de feature/bug
+### A1 â€” Plan de feature/bug
 
 Se crea **antes** de tocar codigo.
 
@@ -25,12 +25,12 @@ Contenido minimo del plan (features no-SDD):
   firmas nuevas aparecen, que alternativas se descartaron.
 - **Plan de verificacion:** escenarios concretos que se probaran.
 
-#### A1.1 — Plan de bug (`harness/progress/plan-bug-<name>.md`)
+#### A1.1 â€” Plan de bug (`harness/progress/plan-bug-<name>.md`)
 
 Para items con `"type": "bug"`. Lo crea el `bug-fixer` durante la fase de diagnostico.
 
 ```markdown
-# Plan bug — <bug name>
+# Plan bug â€” <bug name>
 
 ## Sintoma
 <que falla, como se manifiesta, mensaje de error>
@@ -51,16 +51,16 @@ Para items con `"type": "bug"`. Lo crea el `bug-fixer` durante la fase de diagno
 - [ ] Tests existentes no rotos
 ```
 
-### A2 — Cierre (`harness/progress/closure-<name>.md`)
+### A2 â€” Cierre (`harness/progress/closure-<name>.md`)
 
 Se crea al marcar `"done"` en `feature_list.json`. Es el documento que
 permite a un agente futuro (o a un humano) entender **que se hizo, por que
 y como verificarlo**.
 
-#### A2.1 — Cierre de feature
+#### A2.1 â€” Cierre de feature
 
 ```markdown
-# Cierre — <feature name>
+# Cierre â€” <feature name>
 
 ## Resumen
 <1-2 parrafos: que se implemento>
@@ -80,17 +80,17 @@ y como verificarlo**.
 - [ ] `./init.ps1` verde
 - [ ] <test especifico 1>
 - [ ] <test especifico 2>
-- [ ] Trazabilidad R<n> ↔ tests (si SDD)
+- [ ] Trazabilidad R<n> â†” tests (si SDD)
 - [ ] Closure listo para release-manager
 
 ## Lecciones / pitfalls
 - <algo que salio mal o que se aprendio>
 ```
 
-#### A2.2 — Cierre de bug
+#### A2.2 â€” Cierre de bug
 
 ```markdown
-# Cierre — <bug name>
+# Cierre â€” <bug name>
 
 ## Resumen
 <1 parrafo: que bug se corrigio>
@@ -111,7 +111,8 @@ y como verificarlo**.
 | `tests/test_foo.py` | Regression test `test_xxx` |
 
 ## Verificacion
-- [ ] `./init.ps1` verde
+- [ ] `./init.ps1` verde (local Docker)
+- [ ] Nivel 4 — Verificación en EdgeBox (si aplica hardware)
 - [ ] Regression test `test_xxx` pasa
 - [ ] Tests existentes no rotos
 - [ ] Closure listo para release-manager
@@ -120,7 +121,7 @@ y como verificarlo**.
 - <algo que salio mal o que se aprendio>
 ```
 
-### A3 — Registro de bloqueo (`harness/progress/blocked-<name>.md`)
+### A3 â€” Registro de bloqueo (`harness/progress/blocked-<name>.md`)
 
 Se crea al marcar `"blocked"` en `feature_list.json`. Documenta el estado
 del bloqueo para que otro agente o un humano pueda retomar.
@@ -128,7 +129,7 @@ del bloqueo para que otro agente o un humano pueda retomar.
 Contenido obligatorio:
 
 ```markdown
-# Bloqueo — <feature name>
+# Bloqueo â€” <feature name>
 
 ## Contexto
 <que se estaba implementando, en que fase>
@@ -153,3 +154,4 @@ Contenido obligatorio:
 - NO mezclar el cierre de dos features en un solo archivo.
 - NO marcar `done` sin haber creado el closure correspondiente.
 - NO marcar `blocked` sin haber creado el registro de bloqueo.
+

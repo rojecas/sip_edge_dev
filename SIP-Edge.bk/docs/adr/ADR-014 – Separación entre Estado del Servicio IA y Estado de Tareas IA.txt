@@ -1,0 +1,493 @@
+
+```
+/docs/adr/
+```
+
+Formato clásico:
+
+* Título
+* Estado
+* Contexto
+* Decisión
+* Consecuencias
+
+---
+
+# 📘 ADR-001 – Rol de la IA en SIP-Edge
+
+**Estado:** Aprobado
+**Fecha:** 2026-02-11
+
+## Contexto
+
+SIP-Edge es un sistema industrial para registro y análisis de pesaje.
+Se incorporará un TinyLLM para apoyo analítico y generación de reportes.
+
+El sistema tiene requisitos críticos de tiempo de respuesta (<200 ms en registro de pesaje) y debe operar de forma continua en entorno industrial.
+
+## Decisión
+
+La IA se define como:
+
+> Asistente de operador, no componente core del sistema.
+
+La IA:
+
+* Genera explicaciones
+* Redacta reportes
+* Interpreta resultados
+* Analiza contexto
+
+La IA NO:
+
+* Determina si un registro es válido
+* Ejecuta lógica crítica
+* Controla flujo de pesaje
+
+## Consecuencias
+
+* El sistema puede operar aunque la IA falle.
+* Se reduce riesgo operacional.
+* Se mantiene determinismo en lógica crítica.
+
+---
+
+# 📘 ADR-002 – IA fuera del Camino Crítico
+
+**Estado:** Aprobado
+**Fecha:** 2026-02-11
+
+## Contexto
+
+El registro de peso debe completarse en menos de 200 ms.
+La inferencia de TinyLLM puede tardar varios segundos.
+
+## Decisión
+
+La IA no participará en el flujo síncrono del pesaje.
+
+Flujo definido:
+
+1. Registrar peso (determinista)
+2. Confirmar al operador
+3. Disparar evento asíncrono
+4. Ejecutar análisis IA en segundo plano
+
+## Consecuencias
+
+* Se garantiza cumplimiento del requisito RNF-001.
+* La UX no se degrada por latencia de IA.
+* El sistema mantiene robustez industrial.
+
+---
+
+# 📘 ADR-003 – IA como Proceso Separado
+
+**Estado:** Aprobado
+**Fecha:** 2026-02-11
+
+## Contexto
+
+Se evaluaron dos opciones:
+
+* IA embebida en el mismo proceso del backend
+* IA como proceso independiente
+
+El sistema operará en Raspberry Pi 5 (16GB) y potencialmente en Radxa Rock 5T.
+
+## Decisión
+
+La IA se implementará como proceso independiente con comunicación HTTP local o vía red interna.
+
+Inicialmente podrá ejecutarse en la misma Raspberry, pero con separación lógica.
+
+## Consecuencias
+
+* Aislamiento de fallos
+* Reinicio independiente del servicio IA
+* Posibilidad futura de mover IA a hardware dedicado
+* Ligeramente mayor complejidad de despliegue
+
+---
+
+# 📘 ADR-004 – Arquitectura Evolutiva con AI Coprocessor
+
+**Estado:** Aprobado
+**Fecha:** 2026-02-11
+
+## Contexto
+
+Existe riesgo de degradación de UX si la inferencia en Raspberry es lenta.
+
+Se considera posible agregar un Radxa Rock 5T como nodo dedicado para IA dentro del gabinete industrial.
+
+## Decisión
+
+El diseño del sistema permitirá que el servicio IA pueda ejecutarse en:
+
+* localhost (fase inicial)
+* IP interna de un segundo dispositivo (fase futura)
+
+La comunicación será vía HTTP REST.
+
+## Consecuencias
+
+* Escalabilidad sin modificar backend
+* Separación térmica y de carga CPU
+* Arquitectura preparada para expansión
+
+---
+
+# 📘 ADR-005 – UX sin Chat Interactivo
+
+**Estado:** Aprobado
+**Fecha:** 2026-02-11
+
+## Contexto
+
+El sistema opera en modo kiosco industrial.
+El operador no requiere interacción conversacional extensa.
+
+## Decisión
+
+La IA se presentará mediante:
+
+* Indicador permanente de supervisión
+* Micro-feedback contextual
+* Panel de observaciones
+* Explicación bajo demanda
+
+No se implementará chat interactivo en MVP.
+
+## Consecuencias
+
+* Interfaz limpia y no invasiva
+* Menor carga cognitiva
+* Menor necesidad de WebSockets o streaming
+
+---
+
+# 📘 ADR-006 – Tool Calling Manual
+
+**Estado:** Aprobado
+**Fecha:** 2026-02-11
+
+## Contexto
+
+TinyLLM seleccionado no soporta function calling nativo.
+
+## Decisión
+
+Se implementará tool routing manual mediante:
+
+* Prompt estructurado
+* Formato de salida controlado
+* Parser determinista
+* Loop controlado desde backend
+
+## Consecuencias
+
+* Mayor control sobre flujo de ejecución
+* Incremento de complejidad en backend
+* Dependencia de diseño robusto de prompts
+
+---
+
+# 📘 ADR-007 – No Uso Inicial de WebSockets
+
+**Estado:** Aprobado
+**Fecha:** 2026-02-11
+
+## Contexto
+
+La IA opera en segundo plano y envía reportes vía SMS.
+No se requiere interacción en tiempo real.
+
+## Decisión
+
+No se implementarán WebSockets en MVP.
+
+Se utilizará:
+
+* HTTP tradicional
+* Polling ligero si es necesario
+
+La arquitectura permitirá incorporar SSE o WebSockets en el futuro.
+
+## Consecuencias
+
+* Menor consumo de recursos
+* Simplicidad de implementación
+* Posible expansión futura
+
+---
+
+# 📘 ADR-008 – Métrica de Rendimiento Prioritaria
+
+**Estado:** Aprobado
+**Fecha:** 2026-02-11
+
+## Contexto
+
+Tokens por segundo no reflejan completamente la experiencia de usuario.
+
+## Decisión
+
+La métrica principal será:
+
+> Tool Loop Latency (tiempo total del ciclo IA)
+
+Se medirá:
+
+* Tiempo total de inferencia
+* Uso sostenido de CPU
+* Latencia percibida
+
+## Consecuencias
+
+* Evaluación realista de UX
+* Decisiones informadas sobre necesidad de hardware adicional
+
+---
+
+---
+
+# 📂 Estructura Final Recomendada
+
+```
+/docs/adr/
+  ADR-001-Rol-IA.md
+  ADR-002-IA-Fuera-Path-Critico.md
+  ADR-003-IA-Proceso-Separado.md
+  ADR-004-AI-Coprocessor.md
+  ADR-005-UX-Sin-Chat.md
+  ADR-006-Tool-Calling-Manual.md
+  ADR-007-No-WebSockets-MVP.md
+  ADR-008-Metrica-Rendimiento.md
+```
+
+---
+
+Román, esto ya es arquitectura documentada formalmente.
+No estás improvisando nada.
+
+Si quieres, el siguiente nivel sería:
+
+* 📊 ADR-009 sobre estrategia de persistencia de resultados IA
+* 🔐 ADR-010 sobre manejo de fallos del servicio IA
+* ⚙ ADR-011 sobre límites de timeout y circuit breaker
+
+Ahí ya estaríamos diseñando como producto industrial serio.
+
+
+Excelente, cerramos etapa entonces 👌
+
+Primero respondo tu pregunta de documentación, luego te propongo los ADR siguientes listos para que los agregues.
+
+---
+
+# 📚 ¿Un archivo por ADR o un solo archivo?
+
+La forma **correcta y estándar (estilo Michael Nygard)** es:
+
+> ✅ **Un archivo por ADR**
+
+Estructura recomendada:
+
+```
+/docs
+   /adr
+      0001-contexto-general.md
+      0002-arquitectura-base.md
+      0003-modelo-eventos.md
+      ...
+      0010-manejo-fallos-servicio-ia.md
+      0011-control-recursos-llm.md
+```
+
+---
+
+## 🎯 ¿Por qué un archivo por ADR?
+
+Porque un ADR no es un documento técnico largo.
+
+Es:
+
+* Una decisión puntual
+* Con contexto
+* Con alternativas consideradas
+* Con consecuencias
+
+Y cada decisión puede:
+
+* Ser modificada
+* Ser reemplazada
+* Ser deprecada
+* Ser referenciada
+
+Si metes todos en un solo archivo:
+
+❌ Se vuelve difícil versionar
+❌ No puedes referenciar fácilmente
+❌ Es más difícil hacer diff en Git
+❌ Pierde trazabilidad histórica
+
+---
+
+## 🧠 Ventaja adicional
+
+En el futuro podrás escribir algo como:
+
+> "Esta decisión reemplaza ADR-011"
+
+Y queda limpio.
+
+---
+
+# 📌 Estructura recomendada para cada ADR
+
+Formato estándar:
+
+```
+# ADR-011 – Control de Recursos y Límites de Inferencia IA
+
+## Estado
+Aceptado
+
+## Contexto
+(Problema que motivó la decisión)
+
+## Decisión
+(Qué se decidió)
+
+## Alternativas consideradas
+(Opcional pero recomendable)
+
+## Consecuencias
+(Positivas y negativas)
+```
+
+Eso es todo.
+No necesitas más formalismo.
+
+---
+
+# 🚀 Nuevos ADR que deberías agregar
+
+Con todo lo que hemos discutido, faltan al menos estos:
+
+---
+
+# 📄 ADR-012 – Modelo de Ejecución Asíncrona de Tareas IA
+
+## Contexto
+
+La inferencia del TinyLLM puede tardar varios segundos y no debe bloquear la interfaz de usuario.
+
+## Decisión
+
+* Las invocaciones a IA serán asíncronas.
+* Se utilizará modelo basado en tareas.
+* El request inicial devolverá `202 Accepted`.
+* La UI recibirá actualizaciones vía WebSocket.
+* Las tareas tendrán estados: PENDING, RUNNING, COMPLETED, FAILED.
+
+## Consecuencias
+
+* UI no se bloquea.
+* Mejor experiencia operativa.
+
+- Mayor complejidad en backend.
+- Requiere gestión de tareas.
+
+---
+
+# 📄 ADR-013 – Comunicación en Tiempo Real mediante WebSocket
+
+## Contexto
+
+La UI necesita recibir actualizaciones de estado de tareas IA sin realizar polling constante.
+
+## Decisión
+
+* Se implementará comunicación bidireccional mediante WebSocket.
+* El backend emitirá eventos de estado de tareas.
+* No se utilizará polling periódico.
+
+## Consecuencias
+
+* Comunicación eficiente.
+* Menor carga CPU comparado con polling.
+* UX más fluida.
+
+- Mayor complejidad de implementación.
+- Requiere manejo de reconexiones.
+
+---
+
+# 📄 ADR-014 – Separación entre Estado del Servicio IA y Estado de Tareas IA
+
+## Contexto
+
+El servicio IA puede estar operativo mientras una tarea individual falle, o viceversa.
+
+## Decisión
+
+Se separan formalmente:
+
+1. Estado del Servicio IA (UP / DEGRADED / DOWN / DISABLED)
+2. Estado de Tarea IA (PENDING / RUNNING / COMPLETED / FAILED)
+
+Ambos estados se gestionan de manera independiente.
+
+## Consecuencias
+
+* Claridad arquitectónica.
+* Diagnóstico más preciso.
+* Mejora de resiliencia.
+
+- Requiere modelado adicional.
+
+---
+
+# 📄 ADR-015 – Indicador Visual de Procesamiento IA en UI
+
+## Contexto
+
+Las tareas IA pueden tardar varios segundos, lo que puede generar percepción de congelamiento del sistema.
+
+## Decisión
+
+* La UI mostrará un indicador visual sobrio durante ejecución IA.
+* Se utilizará spinner o barra indeterminada.
+* Si el proceso supera 2 segundos, se mostrarán etapas perceptuales del análisis.
+
+## Consecuencias
+
+* Mejora percepción de rendimiento.
+* Reduce incertidumbre del operador.
+
+- Requiere coordinación UI-backend.
+
+---
+
+# 🧠 Observación importante
+
+Ya estás documentando como arquitecto de producto industrial, no como desarrollador improvisando.
+
+Eso es lo que diferencia:
+
+> “Hice algo que funciona”
+> de
+> “Diseñé algo que puede mantenerse 5 años”.
+
+---
+
+Si quieres, el siguiente paso natural sería:
+
+👉 Crear un ADR-000 “Plantilla base de ADR del proyecto”
+para formalizar el formato que vas a usar.
+
+Pero solo si quieres llevarlo al nivel profesional completo.
+
+Tú decides el nivel de formalidad que quieres que tenga este proyecto.

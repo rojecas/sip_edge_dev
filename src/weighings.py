@@ -27,6 +27,7 @@ class WeighingCreate(BaseModel):
     peso_muestra: Decimal = Field(ge=0)
     peso_mineral: Decimal = Field(ge=0)
     peso_vegetal_extrano: Decimal = Field(ge=0)
+    manual_entry: bool = Field(default=False)
 
 
 class WeighingResponse(BaseModel):
@@ -44,6 +45,7 @@ class WeighingResponse(BaseModel):
     usuario_id: int
     created_at: datetime
     enviado_pc: bool
+    manual_entry: bool
 
     class Config:
         from_attributes = True
@@ -113,6 +115,7 @@ def create_weighing(
         peso_mineral=body.peso_mineral,
         peso_vegetal_extrano=body.peso_vegetal_extrano,
         usuario_id=current_user["user_id"],
+        manual_entry=body.manual_entry,
     )
     db.add(record)
     db.commit()

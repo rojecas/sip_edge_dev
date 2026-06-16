@@ -1,0 +1,69 @@
+---
+
+# ✅ ADR-010 – Manejo de Fallos del Servicio IA (Resumen Ejecutivo)
+
+## 🎯 Decisión
+
+El servicio de IA se considera un **componente auxiliar y degradable** del sistema.
+El sistema debe seguir operando aunque la IA falle.
+
+---
+
+## 🧱 Clasificación
+
+* La IA **no es crítica** para la operación principal (lectura, registro y lógica determinista).
+* Si la IA falla:
+
+  * El sistema continúa funcionando.
+  * Se desactiva temporalmente el análisis inteligente.
+  * Se informa al operador mediante un indicador claro.
+
+---
+
+## 🎛 Estados del Servicio IA
+
+El servicio IA tendrá los siguientes estados:
+
+* **UP** → Operación normal.
+* **DEGRADED** → Fallos intermitentes o latencia elevada.
+* **DOWN** → No responde (circuit breaker abierto).
+* **DISABLED** → Desactivado manualmente.
+
+Cada transición se registra en logs/audit.
+
+---
+
+## 🔄 Estrategia de Resiliencia
+
+* Implementación de **timeout controlado**.
+* Implementación de **contador de fallos consecutivos**.
+* Implementación de **circuit breaker simple**.
+* Cooldown antes de reintentos.
+
+---
+
+## 🧵 Modelo de ejecución
+
+* Las tareas IA son **asíncronas**.
+* No bloquean la UI.
+* Se muestra indicador visual mientras se ejecutan.
+* Comunicación UI ←→ backend mediante WebSocket.
+
+---
+
+## 🧠 Separación importante
+
+Se distinguen dos niveles de estado:
+
+1. Estado del servicio IA (UP / DOWN / etc.)
+2. Estado de cada tarea IA (PENDING / RUNNING / COMPLETED / FAILED)
+
+---
+
+## 🖥 UX
+
+* Indicador sobrio (spinner / barra indeterminada).
+* Etapas perceptuales si el proceso tarda >2s.
+* Mensaje claro en caso de fallo o indisponibilidad.
+
+---

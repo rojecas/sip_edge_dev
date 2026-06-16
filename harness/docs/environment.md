@@ -1,4 +1,4 @@
-# Environment — sip_edge
+﻿# Environment â€” sip_edge
 
 > El agente DEBE leer este archivo **antes de ejecutar cualquier comando bash**.
 > Describe DONDE y COMO se ejecutan los comandos, y que servicios estan disponibles.
@@ -23,7 +23,7 @@ Este proyecto tiene **dos entornos** distintos:
 | Componente | Detalle |
 |------------|---------|
 | **Dispositivo** | EdgeBox-RPI-200 (SeeedStudio) |
-| **CPU** | Raspberry Pi CM4 — 4x Cortex-A72 @ 1.5 GHz (aarch64) |
+| **CPU** | Raspberry Pi CM4 â€” 4x Cortex-A72 @ 1.5 GHz (aarch64) |
 | **RAM** | 8 GB |
 | **Almacenamiento** | 32 GB eMMC |
 | **SO** | Debian 13 (Trixie) aarch64, kernel 6.12 |
@@ -49,7 +49,7 @@ ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42
 | `eth0` | Ethernet | 192.168.1.42/24 | UP |
 | `wwan0` | 4G LTE (Quectel EC25) | DHCP del operador | Configurado (plan de datos pendiente) |
 
-### Modem 4G — Quectel EC25
+### Modem 4G â€” Quectel EC25
 
 | Parametro | Valor |
 |-----------|-------|
@@ -67,7 +67,7 @@ ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42
 | RS485 | `/dev/ttyACM0` | Bascula DINI ARGEO DFWLI-2 |
 | RS232 | `/dev/ttyACM1` | Transmision a PC externo |
 
-- Permisos: `root:dialout` — el usuario `sipedge` esta en el grupo `dialout`.
+- Permisos: `root:dialout` â€” el usuario `sipedge` esta en el grupo `dialout`.
 - Parametros por defecto: 115200 baud, 8 data bits, sin paridad, 1 stop bit.
 
 ### RTC (Real-Time Clock)
@@ -96,12 +96,12 @@ ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42
 |----------|--------|---------|
 | `mariadb.service` | 3306 (localhost) | Base de datos |
 | `sip-edge.service` | 8000 (0.0.0.0) | Backend FastAPI |
-| `ModemManager.service` | — | Gestion modem 4G |
-| `NetworkManager.service` | — | Gestion de red |
+| `ModemManager.service` | â€” | Gestion modem 4G |
+| `NetworkManager.service` | â€” | Gestion de red |
 | `ssh.service` | 22 | Acceso remoto |
-| `cron.service` | — | Tareas programadas |
+| `cron.service` | â€” | Tareas programadas |
 
-### Base de datos — MariaDB
+### Base de datos â€” MariaDB
 
 | Parametro | Valor |
 |-----------|-------|
@@ -123,7 +123,7 @@ ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42
 | **DEV_MODE** | `false` (hardware real activo) |
 | **API** | `http://192.168.1.42:8000` |
 
-### llama.cpp — Motor de inferencia LLM
+### llama.cpp â€” Motor de inferencia LLM
 
 | Parametro | Valor |
 |-----------|-------|
@@ -193,9 +193,9 @@ docker compose exec backend pip install -r requirements.txt
 
 ### Volumenes montados (live-reload en dev)
 
-- `./src` → `/app/src`
-- `./tests` → `/app/tests`
-- `./harness` → `/app/harness`
+- `./src` â†’ `/app/src`
+- `./tests` â†’ `/app/tests`
+- `./harness` â†’ `/app/harness`
 
 ---
 
@@ -224,7 +224,15 @@ ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "ls -la /dev/ttyACM*"
 
 # Verificar MariaDB
 ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "sudo systemctl status mariadb"
-```
+
+# Ejecutar tests de hardware en EdgeBox (post-deploy)
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "cd /home/sipedge/sip_edge && source venv/bin/activate && python -m unittest discover -s tests_hardware -v"
+
+# Smoke test de health check en EdgeBox
+curl http://192.168.1.42:8000/health
+
+# Logs del servicio tras deploy
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "sudo journalctl -u sip-edge --no-pager -n 50"```
 
 ### En local (desarrollo Docker)
 
@@ -238,3 +246,4 @@ docker compose exec backend python -m unittest tests.test_config.TestConfigEndpo
 # Ver dependencias instaladas
 docker compose exec backend pip list
 ```
+

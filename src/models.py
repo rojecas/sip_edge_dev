@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models for SIP-Edge."""
 
-from sqlalchemy import BigInteger, Boolean, Column, Date, Enum, ForeignKey, Integer, Numeric, String, Text, Time, TIMESTAMP, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, Column, Date, Enum, ForeignKey, Index, Integer, Numeric, String, Text, Time, TIMESTAMP, UniqueConstraint, func
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -18,6 +18,7 @@ class User(Base):
     document = Column(String(32), nullable=False, default="")
     role = Column(Enum("admin", "operator", "corresponsal"), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
+    phone = Column(String(32), nullable=True, default=None)
     failed_login_attempts = Column(
         Integer, nullable=False, default=0, server_default="0"
     )
@@ -76,6 +77,7 @@ class Weighing(Base):
     usuario_id = Column(BigInteger().with_variant(Integer, "sqlite"), ForeignKey("users.id"), nullable=False)
     created_at = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp())
     enviado_pc = Column(Boolean, nullable=False, default=False)
+    manual_entry = Column(Boolean, nullable=False, default=False)
 
 
 class BackupLog(Base):
@@ -89,3 +91,62 @@ class BackupLog(Base):
     usb_checksum = Column(String(8), nullable=True, default=None)
     error_message = Column(Text, nullable=True, default=None)
     created_at = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp())
+
+
+class EmergencyModeLog(Base):
+    """Log de auditoria para el modo manual de emergencia.
+
+    Cada accion (solicitud, activacion, extension, suspension, expiracion,
+    comando invalido) queda registrada aqui para trazabilidad completa.
+    """
+
+    __tablename__ = "emergency_mode_log"
+
+    id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
+    request_id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("emergency_mode_log.id"),
+        nullable=True,
+        default=None,
+        index=True,
+    )
+    status = Column(String(20), nullable=False, default="pending")
+    analyst_id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("users.id"),
+        nullable=True,
+        default=None,
+        index=True,
+    )
+    supervisor_id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("users.id"),
+        nullable=True,
+        default=None,
+        index=True,
+    )
+    motivo = Column(Text, nullable=True, default=None)
+    started_at = Column(TIMESTAMP, nullable=True, default=None)
+    duration_seconds = Column(Integer, nullable=True, default=None)
+    expires_at = Column(TIMESTAMP, nullable=True, default=None)
+    cmd_source = Column(String(10), nullable=False)
+    cmd_raw = Column(String(255), nullable=True, default=None)
+    created_at = Column(
+        TIMESTAMP, nullable=False, server_default=func.current_timestamp()
+    )
+    updated_at = Column(
+        TIMESTAMP,
+        nullable=True,
+        default=None,
+        server_onupdate=func.current_timestamp(),
+    )
+    sender_phone = Column(String(32), nullable=True, default=None)
+
+    __table_args__ = (
+        Index("idx_eml_status_expires", "status", "expires_at"),
+        {"sqlite_autoincrement": True},
+    )

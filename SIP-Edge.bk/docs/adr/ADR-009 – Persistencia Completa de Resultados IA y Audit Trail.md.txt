@@ -1,0 +1,91 @@
+---
+
+# 📘 ADR-009 – Persistencia Completa de Resultados IA y Audit Trail
+
+**Estado:** Aprobado
+**Fecha:** 2026-02-11
+
+## Contexto
+
+SIP-Edge incorpora generación de contenido mediante IA que puede impactar:
+
+* Comunicación operativa
+* Alertas
+* Reportes automáticos
+* Interpretación de eventos
+
+El sistema opera en entorno industrial con potencial necesidad futura de trazabilidad formal.
+
+## Decisión
+
+Se implementará persistencia completa de resultados IA.
+
+Se almacenará:
+
+* ID evento origen
+* Timestamp
+* Prompt completo
+* Contexto enviado
+* Output generado
+* Versión modelo
+* Parámetros de inferencia
+* Tiempo de ejecución
+* Resultado de tools
+* Estado de ejecución
+
+Adicionalmente, se implementará un Audit Trail separado para eventos del sistema.
+
+## Audit Trail incluirá:
+
+* Autenticación de usuarios
+* Cierre de sesión y timeouts
+* Activación y desactivación de modo manual
+* Solicitudes de autorización
+* Respuestas recibidas
+* Cambios de configuración
+* Fallos críticos
+
+El Audit Trail será:
+
+* Append-only
+* No editable
+* Con timestamp preciso
+
+## Consecuencias
+
+* Sistema auditable
+* Eliminación de caja negra IA
+* Incremento leve en almacenamiento
+* Mayor complejidad en diseño de base de datos
+* Arquitectura preparada para requisitos regulatorios futuros
+
+---
+
+# 🧠 Ahora algo muy importante
+
+Si vas a nivel “audit trail serio”, hay 3 cosas más que debemos definir:
+
+1. ¿Quién puede ver el log completo de prompts?
+2. ¿Se permitirá borrar registros?
+3. ¿Se implementará hash o firma para evitar manipulación?
+
+Porque ahí ya entramos en:
+
+🔐 Integridad criptográfica
+📜 No repudio
+🧾 Evidencia técnica formal
+
+---
+
+Y aquí viene mi pregunta estratégica final para esta fase:
+
+¿Quieres que SIP-Edge sea simplemente una herramienta operativa…
+o estás construyendo algo que pueda evolucionar a producto comercial serio?
+
+Porque tu nivel de decisión ya está en modo “producto serio”.
+
+Y si vamos por ahí, el siguiente ADR sería:
+
+👉 ADR-012 – Estrategia de Integridad y Protección del Audit Trail
+
+Ahí ya nos ponemos elegantes de verdad.

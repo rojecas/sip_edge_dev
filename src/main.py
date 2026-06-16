@@ -52,6 +52,7 @@ import src.database as _db
 from src.database import get_db, init_db
 from src.models import BackupLog, Base, User, Weighing
 from src.sms_service import SMSService
+from src.emergency_mode import EmergencyModeService, emergency_router
 from src.haciendas import haciendas_router, suertes_router
 from src.weighings import router as weighings_router
 from src.users import router as users_router
@@ -125,8 +126,21 @@ async def lifespan(app: FastAPI):
     app.state.sms_service = SMSService(sms_config, modem_index, dev_mode=dev_mode)
     app.state.sms_service.start_scheduler()
 
+    # Inicializar EmergencyModeService
+    app.state.emergency_service = EmergencyModeService(
+        db_session_factory=_db.SessionLocal,
+        sms_service=app.state.sms_service,
+        modem_index=modem_index,
+        dev_mode=dev_mode,
+    )
+    # Restaurar estado desde BD (R14)
+    app.state.emergency_service.restore_from_db()
+    # Iniciar tareas de background
+    await app.state.emergency_service.start()
+
     yield
 
+    await app.state.emergency_service.stop()
     app.state.sms_service.stop_scheduler()
     app.state.scale_service.stop()
 
@@ -142,6 +156,7 @@ app.include_router(users_router)
 app.include_router(haciendas_router)
 app.include_router(suertes_router)
 app.include_router(weighings_router)
+app.include_router(emergency_router)
 
 backup_router = APIRouter(prefix="/api/backup", tags=["backup"])
 

@@ -1,240 +1,255 @@
-{
-  "project": "sip_edge",
-  "description": "Sistema Inteligente de Pesaje y Control de Materia Extra\u00c3\u00b1a (SIP-Edge)",
-  "rules": {
-    "one_feature_at_a_time": true,
-    "require_tests_to_close": true,
-    "require_approved_spec_to_implement": true,
-    "valid_status": [
-      "pending",
-      "spec_ready",
-      "in_progress",
-      "done",
-      "blocked",
-      "untriaged",
-      "triaged"
-    ],
-    "sdd_required_when": "feature has \"sdd\": true"
-  },
-  "features": [
-    {
-      "id": 1,
-      "name": "system_config",
-      "title": "Configuraci\u00c3\u00b3n del Sistema \u00e2\u20ac\u201d Puertos RS485/RS232 y GSM",
-      "type": "feature",
-      "description": "Interfaz Admin para configuraci\u00c3\u00b3n din\u00c3\u00a1mica de puertos hardware: RS485 (b\u00c3\u00a1scula), RS232 (PC externo) y m\u00c3\u00b3dem GSM. Par\u00c3\u00a1metros: ruta, baudrate, paridad, data bits, stop bits. Prueba de conectividad serial/GSM con comando AT. Persistencia en config.yaml con carga autom\u00c3\u00a1tica tras reinicio y sincronizaci\u00c3\u00b3n de reloj.",
-      "acceptance": [
-        "RF-015: Interfaz Admin para modificar rutas RS485, RS232, GSM, baudrate, paridad",
-        "RF-016: Funci\u00c3\u00b3n 'Test' para verificar comunicaci\u00c3\u00b3n serial (RS485/RS232) y GSM",
-        "RF-017: Guardado en config.yaml, carga autom\u00c3\u00a1tica tras reinicio, sincronizaci\u00c3\u00b3n de reloj"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/1"
-    },
-    {
-      "id": 2,
-      "name": "auth_rbac",
-      "title": "Autenticaci\u00c3\u00b3n, RBAC y Bloqueo por Inactividad",
-      "description": "Autenticacion JWT con hash bcrypt. RBAC con tres roles: admin (total), operator (solo pesaje), corresponsal (sin login, solo contacto SMS). Bloqueo por inactividad configurable en modo kiosco: si el usuario no presenta actividad dentro del timeout, el sistema fuerza re-login. Persistencia en MariaDB (tabla users completa) y config.yaml seccion session para timeout. Seed de admin inicial en primer arranque.",
-      "acceptance": [
-        "RF-001: Autenticacion por credenciales con hash bcrypt y token JWT",
-        "RF-002: Restriccion de funcionalidades segun rol (admin/operator/corresponsal)",
-        "Nuevo: Bloqueo por inactividad con timeout configurable en config.yaml",
-        "Nuevo: Login endpoint + proteccion de endpoints con dependencia JWT",
-        "Nuevo: Conexion a MariaDB via SQLAlchemy + tabla users + seed admin"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        1
-      ],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/2",
-      "type": "feature"
-    },
-    {
-      "id": 3,
-      "name": "user_management",
-      "title": "Gesti\u00c3\u00b3n de Usuarios (CRUD)",
-      "description": "Interfaz gr\u00c3\u00a1fica Admin para Crear/Leer/Actualizar/Desactivar usuarios (Nombre, Documento, Rol, Estado). Desactivaci\u00c3\u00b3n l\u00c3\u00b3gica sin eliminaci\u00c3\u00b3n f\u00c3\u00adsica.",
-      "acceptance": [
-        "RF-021: CRUD de usuarios con campos Nombre, Documento, Rol, Estado"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        1
-      ],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/3",
-      "type": "feature"
-    },
-    {
-      "id": 4,
-      "name": "farm_lot_crud",
-      "title": "Gesti\u00c3\u00b3n de Haciendas y Suertes",
-      "description": "CRUD de Haciendas con borrado l\u00c3\u00b3gico si existen registros asociados. Gesti\u00c3\u00b3n de Suertes/Lotes vinculados obligatoriamente a Hacienda padre. Selecci\u00c3\u00b3n en cascada din\u00c3\u00a1mica en el formulario de pesaje.",
-      "acceptance": [
-        "RF-006: CRUD de Haciendas, borrado l\u00c3\u00b3gico si tiene registros",
-        "RF-007: Gesti\u00c3\u00b3n de Suertes vinculadas a Hacienda padre",
-        "RF-008: Carga din\u00c3\u00a1mica de Suertes seg\u00c3\u00ban Hacienda seleccionada"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        1
-      ],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/4",
-      "type": "feature"
-    },
-    {
-      "id": 5,
-      "name": "scale_integration",
-      "title": "Integraci\u00c3\u00b3n Serial con B\u00c3\u00a1scula DINI ARGEO DFWLI-2",
-      "description": "Capa de comunicaci\u00c3\u00b3n serial RS485 con balanza DINI ARGEO DFWLI-2. Comando-respuesta bidireccional: el sistema puede enviar comandos (REXT, TARE, TMAN, ZERO, CLEAR) y la balanza puede enviar datos espont\u00c3\u00a1neamente (bot\u00c3\u00b3n PRINT). Timeout configurable 1-10s (default 3s). Escucha as\u00c3\u00adncrona con indicador de medida estable.",
-      "acceptance": [
-        "RF-003: Env\u00c3\u00ado de comando al puerto RS485 y recepci\u00c3\u00b3n de respuesta",
-        "RF-003: Timeout configurable entre 1 y 10 segundos (default 3s)",
-        "Nuevo: Escucha as\u00c3\u00adncrona de datos entrantes desde la balanza (bot\u00c3\u00b3n PRINT)",
-        "Nuevo: Exponer ScaleService como singleton consumible por otras capas"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        1
-      ],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/5",
-      "type": "feature"
-    },
-    {
-      "id": 6,
-      "name": "weighing_capture",
-      "title": "Captura de Pesaje Multipaso con Confirmaci\u00c3\u00b3n y Env\u00c3\u00ado RS232",
-      "description": "Flujo de trabajo del operador en kiosco: seleccionar Hacienda+Suerte, ingresar tractomula/vagon/guia, tarar y leer pesos en 3 pasos (muestra, mineral, vegetal) usando foco en campo activo. Botones Tara/Leer junto a cada campo o botones f\u00c3\u00adsicos de la balanza. Confirmar persiste en MariaDB y env\u00c3\u00ada trama RS232 al PC externo. Reset con confirmaci\u00c3\u00b3n en pantalla.",
-      "acceptance": [
-        "RF-004: Persistencia en MariaDB con tabla weighings (tractomula, vagon, guia, hacienda, suerte, 3 pesos, usuario)",
-        "RF-005: Transacci\u00c3\u00b3n at\u00c3\u00b3mica commit/rollback al confirmar",
-        "Nuevo: Focus management por campo activo (como entrada de teclado)",
-        "Nuevo: Bot\u00c3\u00b3n Confirmar persiste + env\u00c3\u00ada trama RS232 al PC",
-        "Nuevo: Bot\u00c3\u00b3n Reset con confirmaci\u00c3\u00b3n en pantalla"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        2,
-        4,
-        5
-      ],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/6",
-      "type": "feature"
-    },
-    {
-      "id": 7,
-      "name": "sms_service",
-      "title": "Servicio de Notificaciones y Reportes SMS",
-      "description": "Env\u00c3\u00ado de SMS v\u00c3\u00ada m\u00c3\u00b3dulo GSM con comandos AT. Reportes programados de resumen de turno (06:00, 14:00, 22:00 y horarios configurables). Alertas de seguridad inmediatas por intentos de operaci\u00c3\u00b3n no autorizados.",
-      "acceptance": [
-        "RF-012: Env\u00c3\u00ado de SMS a listado preconfigurado de usuarios autorizados",
-        "RF-013: Reportes programados de turno (06:00, 14:00, 22:00) con horarios configurables",
-        "RF-014: Notificaci\u00c3\u00b3n inmediata al administrador cuando un usuario acumule 3 o m\u00c3\u00a1s intentos fallidos de inicio de sesi\u00c3\u00b3n consecutivos"
-      ],
-      "type": "feature",
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        1,
-        6
-      ],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/8"
-    },
-    {
-      "id": 8,
-      "name": "ai_agent",
-      "title": "Agente IA de Orquestaci\u00c3\u00b3n y An\u00c3\u00a1lisis (TinyLLM)",
-      "description": "Agente basado en Qwen 2.5 3B (GGUF) ejecutado con Llama.cpp. Function Calling para ejecutar herramientas SQL parametrizadas. Detecci\u00c3\u00b3n proactiva de anomal\u00c3\u00adas estad\u00c3\u00adsticas (Z-score > 3) sobre \u00c3\u00baltimos 120 registros o 4 horas.",
-      "acceptance": [
-        "RF-009: Orquestador de consultas con Function Calling",
-        "RF-011: An\u00c3\u00a1lisis SQL estructurado con herramientas parametrizadas, evitando alucinaciones num\u00c3\u00a9ricas",
-        "RF-010: Detecci\u00c3\u00b3n proactiva de anomal\u00c3\u00adas con Z-score > 3 sobre ventana de 120 registros o 4 horas"
-      ],
-      "sdd": true,
-      "status": "pending",
-      "depends_on": [
-        6
-      ],
-      "type": "feature"
-    },
-    {
-      "id": 9,
-      "name": "emergency_mode",
-      "title": "Modo Manual de Emergencia",
-      "description": "Modo manual activable por Admin v\u00c3\u00ada comando SMS predefinido (MANUAL_ON). Desactiva temporalmente el bloqueo de hardware (RNF-004) por m\u00c3\u00a1ximo 15 minutos. Campo de peso editable durante este per\u00c3\u00adodo.",
-      "acceptance": [
-        "RF-020: Activaci\u00c3\u00b3n v\u00c3\u00ada SMS con comando predefinido MANUAL_ON",
-        "RF-020: Desactivaci\u00c3\u00b3n autom\u00c3\u00a1tica tras 15 minutos",
-        "RF-020: Campo de peso editable mientras el modo manual est\u00c3\u00a1 activo"
-      ],
-      "sdd": true,
-      "status": "pending",
-      "depends_on": [
-        7
-      ],
-      "type": "feature"
-    },
-    {
-      "id": 10,
-      "name": "backup_system",
-      "title": "Sistema de Respaldos y Exportaci\u00c3\u00b3n",
-      "description": "Rutina diaria de volcado (dump.sql.gz) con rotaci\u00c3\u00b3n FIFO de 30 d\u00c3\u00adas. Exportaci\u00c3\u00b3n a medios externos USB/SD con verificaci\u00c3\u00b3n CRC32. Tabla backup_logs para trazabilidad de ejecuciones. Endpoints API para monitoreo (GET /api/backup/status) y disparo manual (POST /api/backup/run).",
-      "acceptance": [
-        "RF-018: Volcado diario dump.sql.gz con rotaci\u00c3\u00b3n FIFO de 30 d\u00c3\u00adas",
-        "RF-019: Copia de respaldos a USB/SD con verificaci\u00c3\u00b3n CRC32",
-        "RF-023: Tabla backup_logs con registro de cada ejecuci\u00c3\u00b3n (\u00c3\u00a9xito/fallo, CRC32, copia USB)",
-        "RF-024: Endpoint GET /api/backup/status (admin) \u00e2\u20ac\u201d \u00c3\u00baltimos 10 registros de backup_logs",
-        "RF-025: Endpoint POST /api/backup/run (admin) \u00e2\u20ac\u201d dispara backup en background y retorna 202"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/7",
-      "type": "feature"
-    },
-    {
-      "id": 11,
-      "name": "rs232_transmission",
-      "title": "Transmisi\u00c3\u00b3n de Datos a PC v\u00c3\u00ada RS232",
-      "description": "M\u00c3\u00b3dulo de transmisi\u00c3\u00b3n RS232 al PC externo. Consumido por feature 6 (weighing_capture) al presionar Confirmar. Formato de trama configurable (ASCII/CSV/JSON) con campos: Fecha, Hora, Tractomula, Vag\u00c3\u00b3n, Gu\u00c3\u00ada, Hacienda, Suerte, Pesos (muestra, mineral, vegetal). Puerto RS232 configurado en system_config.",
-      "acceptance": [
-        "RF-022: Env\u00c3\u00ado de trama RS232 al PC externo tras cada registro exitoso",
-        "RF-022: Formato de trama configurable (ASCII/CSV/JSON)",
-        "RF-022: Trama incluye Peso, Fecha, Hora, Tipo de Material, Hacienda, Suerte"
-      ],
-      "sdd": true,
-      "status": "pending",
-      "depends_on": [
-        1,
-        6
-      ],
-      "type": "feature"
-    },
-    {
-      "id": 12,
-      "name": "password_reset_sms",
-      "title": "Restablecimiento de Contrase\u00c3\u00b1a v\u00c3\u00ada SMS",
-      "description": "El Admin puede generar una contrase\u00c3\u00b1a de un solo uso para cualquier usuario, la cual se env\u00c3\u00ada autom\u00c3\u00a1ticamente por SMS al n\u00c3\u00bamero registrado. El usuario debe cambiar su contrase\u00c3\u00b1a en el pr\u00c3\u00b3ximo inicio de sesi\u00c3\u00b3n (flag force_password_change).",
-      "acceptance": [
-        "RF-NUEVO: Admin puede solicitar reset de contrase\u00c3\u00b1a para un usuario desde CRUD",
-        "RF-NUEVO: Sistema genera contrase\u00c3\u00b1a temporal y la env\u00c3\u00ada por SMS",
-        "RF-NUEVO: Usuario debe cambiar contrase\u00c3\u00b1a al pr\u00c3\u00b3ximo login si force_password_change est\u00c3\u00a1 activo",
-        "RF-NUEVO: flag force_password_change en tabla users"
-      ],
-      "sdd": true,
-      "status": "pending",
-      "depends_on": [
-        3,
-        7
-      ],
-      "type": "feature"
-    }
-  ]
+﻿{
+    "project":  "sip_edge",
+    "description":  "Sistema Inteligente de Pesaje y Control de Materia ExtraÃ±a (SIP-Edge)",
+    "rules":  {
+                  "one_feature_at_a_time":  true,
+                  "require_tests_to_close":  true,
+                  "require_approved_spec_to_implement":  true,
+                  "valid_status":  [
+                                       "pending",
+                                       "spec_ready",
+                                       "in_progress",
+                                       "done",
+                                       "blocked",
+                                       "untriaged",
+                                       "triaged"
+                                   ],
+                  "sdd_required_when":  "feature has \"sdd\": true"
+              },
+    "features":  [
+                     {
+                         "id":  1,
+                         "name":  "system_config",
+                         "title":  "ConfiguraciÃ³n del Sistema â€” Puertos RS485/RS232 y GSM",
+                         "type":  "feature",
+                         "description":  "Interfaz Admin para configuraciÃ³n dinÃ¡mica de puertos hardware: RS485 (bÃ¡scula), RS232 (PC externo) y mÃ³dem GSM. ParÃ¡metros: ruta, baudrate, paridad, data bits, stop bits. Prueba de conectividad serial/GSM con comando AT. Persistencia en config.yaml con carga automÃ¡tica tras reinicio y sincronizaciÃ³n de reloj.",
+                         "acceptance":  [
+                                            "RF-015: Interfaz Admin para modificar rutas RS485, RS232, GSM, baudrate, paridad",
+                                            "RF-016: FunciÃ³n \u0027Test\u0027 para verificar comunicaciÃ³n serial (RS485/RS232) y GSM",
+                                            "RF-017: Guardado en config.yaml, carga automÃ¡tica tras reinicio, sincronizaciÃ³n de reloj"
+                                        ],
+                         "sdd":  true,
+                         "status":  "done",
+                         "depends_on":  [
+
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/1"
+                     },
+                     {
+                         "id":  2,
+                         "name":  "auth_rbac",
+                         "title":  "AutenticaciÃ³n, RBAC y Bloqueo por Inactividad",
+                         "description":  "Autenticacion JWT con hash bcrypt. RBAC con tres roles: admin (total), operator (solo pesaje), corresponsal (sin login, solo contacto SMS). Bloqueo por inactividad configurable en modo kiosco: si el usuario no presenta actividad dentro del timeout, el sistema fuerza re-login. Persistencia en MariaDB (tabla users completa) y config.yaml seccion session para timeout. Seed de admin inicial en primer arranque.",
+                         "acceptance":  [
+                                            "RF-001: Autenticacion por credenciales con hash bcrypt y token JWT",
+                                            "RF-002: Restriccion de funcionalidades segun rol (admin/operator/corresponsal)",
+                                            "Nuevo: Bloqueo por inactividad con timeout configurable en config.yaml",
+                                            "Nuevo: Login endpoint + proteccion de endpoints con dependencia JWT",
+                                            "Nuevo: Conexion a MariaDB via SQLAlchemy + tabla users + seed admin"
+                                        ],
+                         "sdd":  true,
+                         "status":  "done",
+                         "depends_on":  [
+                                            1
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/2",
+                         "type":  "feature"
+                     },
+                     {
+                         "id":  3,
+                         "name":  "user_management",
+                         "title":  "GestiÃ³n de Usuarios (CRUD)",
+                         "description":  "Interfaz grÃ¡fica Admin para Crear/Leer/Actualizar/Desactivar usuarios (Nombre, Documento, Rol, Estado). DesactivaciÃ³n lÃ³gica sin eliminaciÃ³n fÃ­sica.",
+                         "acceptance":  [
+                                            "RF-021: CRUD de usuarios con campos Nombre, Documento, Rol, Estado"
+                                        ],
+                         "sdd":  true,
+                         "status":  "done",
+                         "depends_on":  [
+                                            1
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/3",
+                         "type":  "feature"
+                     },
+                     {
+                         "id":  4,
+                         "name":  "farm_lot_crud",
+                         "title":  "GestiÃ³n de Haciendas y Suertes",
+                         "description":  "CRUD de Haciendas con borrado lÃ³gico si existen registros asociados. GestiÃ³n de Suertes/Lotes vinculados obligatoriamente a Hacienda padre. SelecciÃ³n en cascada dinÃ¡mica en el formulario de pesaje.",
+                         "acceptance":  [
+                                            "RF-006: CRUD de Haciendas, borrado lÃ³gico si tiene registros",
+                                            "RF-007: GestiÃ³n de Suertes vinculadas a Hacienda padre",
+                                            "RF-008: Carga dinÃ¡mica de Suertes segÃºn Hacienda seleccionada"
+                                        ],
+                         "sdd":  true,
+                         "status":  "done",
+                         "depends_on":  [
+                                            1
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/4",
+                         "type":  "feature"
+                     },
+                     {
+                         "id":  5,
+                         "name":  "scale_integration",
+                         "title":  "IntegraciÃ³n Serial con BÃ¡scula DINI ARGEO DFWLI-2",
+                         "description":  "Capa de comunicaciÃ³n serial RS485 con balanza DINI ARGEO DFWLI-2. Comando-respuesta bidireccional: el sistema puede enviar comandos (REXT, TARE, TMAN, ZERO, CLEAR) y la balanza puede enviar datos espontÃ¡neamente (botÃ³n PRINT). Timeout configurable 1-10s (default 3s). Escucha asÃ­ncrona con indicador de medida estable.",
+                         "acceptance":  [
+                                            "RF-003: EnvÃ­o de comando al puerto RS485 y recepciÃ³n de respuesta",
+                                            "RF-003: Timeout configurable entre 1 y 10 segundos (default 3s)",
+                                            "Nuevo: Escucha asÃ­ncrona de datos entrantes desde la balanza (botÃ³n PRINT)",
+                                            "Nuevo: Exponer ScaleService como singleton consumible por otras capas"
+                                        ],
+                         "sdd":  true,
+                         "status":  "done",
+                         "depends_on":  [
+                                            1
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/5",
+                         "type":  "feature"
+                     },
+                     {
+                         "id":  6,
+                         "name":  "weighing_capture",
+                         "title":  "Captura de Pesaje Multipaso con ConfirmaciÃ³n y EnvÃ­o RS232",
+                         "description":  "Flujo de trabajo del operador en kiosco: seleccionar Hacienda+Suerte, ingresar tractomula/vagon/guia, tarar y leer pesos en 3 pasos (muestra, mineral, vegetal) usando foco en campo activo. Botones Tara/Leer junto a cada campo o botones fÃ­sicos de la balanza. Confirmar persiste en MariaDB y envÃ­a trama RS232 al PC externo. Reset con confirmaciÃ³n en pantalla.",
+                         "acceptance":  [
+                                            "RF-004: Persistencia en MariaDB con tabla weighings (tractomula, vagon, guia, hacienda, suerte, 3 pesos, usuario)",
+                                            "RF-005: TransacciÃ³n atÃ³mica commit/rollback al confirmar",
+                                            "Nuevo: Focus management por campo activo (como entrada de teclado)",
+                                            "Nuevo: BotÃ³n Confirmar persiste + envÃ­a trama RS232 al PC",
+                                            "Nuevo: BotÃ³n Reset con confirmaciÃ³n en pantalla"
+                                        ],
+                         "sdd":  true,
+                         "status":  "done",
+                         "depends_on":  [
+                                            2,
+                                            4,
+                                            5
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/6",
+                         "type":  "feature"
+                     },
+                     {
+                         "id":  7,
+                         "name":  "sms_service",
+                         "title":  "Servicio de Notificaciones y Reportes SMS",
+                         "description":  "EnvÃ­o de SMS vÃ­a mÃ³dulo GSM con comandos AT. Reportes programados de resumen de turno (06:00, 14:00, 22:00 y horarios configurables). Alertas de seguridad inmediatas por intentos de operaciÃ³n no autorizados.",
+                         "acceptance":  [
+                                            "RF-012: EnvÃ­o de SMS a listado preconfigurado de usuarios autorizados",
+                                            "RF-013: Reportes programados de turno (06:00, 14:00, 22:00) con horarios configurables",
+                                            "RF-014: NotificaciÃ³n inmediata al administrador cuando un usuario acumule 3 o mÃ¡s intentos fallidos de inicio de sesiÃ³n consecutivos"
+                                        ],
+                         "type":  "feature",
+                         "sdd":  true,
+                         "status":  "done",
+                         "depends_on":  [
+                                            1,
+                                            6
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/8"
+                     },
+                     {
+                         "id":  8,
+                         "name":  "ai_agent",
+                         "title":  "Agente IA de OrquestaciÃ³n y AnÃ¡lisis (TinyLLM)",
+                         "description":  "Agente basado en Qwen 2.5 3B (GGUF) ejecutado con Llama.cpp. Function Calling para ejecutar herramientas SQL parametrizadas. DetecciÃ³n proactiva de anomalÃ­as estadÃ­sticas (Z-score \u003e 3) sobre Ãºltimos 120 registros o 4 horas.",
+                         "acceptance":  [
+                                            "RF-009: Orquestador de consultas con Function Calling",
+                                            "RF-011: AnÃ¡lisis SQL estructurado con herramientas parametrizadas, evitando alucinaciones numÃ©ricas",
+                                            "RF-010: DetecciÃ³n proactiva de anomalÃ­as con Z-score \u003e 3 sobre ventana de 120 registros o 4 horas"
+                                        ],
+                         "sdd":  true,
+                         "status":  "pending",
+                         "depends_on":  [
+                                            6
+                                        ],
+                         "type":  "feature"
+                     },
+                     {
+                         "id":  9,
+                         "name":  "emergency_mode",
+                         "title":  "Modo Manual de Emergencia",
+                         "description":  "Modo manual de emergencia con dos orígenes de activación. El analista solicita el cambio a modo manual desde el kiosco mediante un modal, seleccionando un supervisor (usuario con rol admin) de una lista e ingresando un motivo obligatorio. SIP-Edge envía un SMS al supervisor seleccionado con los datos del analista y el motivo. El supervisor autoriza respondiendo \u0027manual on\u0027 (default 24h) o \u0027manual on Xh\u0027/\u0027manual on Xm\u0027 para un período específico. El comando SMS es case-insensitive. El modo manual puede activarse también directamente por comando SMS \u0027manual on [duración]\u0027 del supervisor. El campo de peso es editable mientras el modo manual esté activo. El supervisor puede extender el tiempo con \u0027manual on EXT Xh/Xm\u0027, suspenderlo con \u0027manual off\u0027, y el sistema se desactiva automáticamente al vencer. Múltiples solicitudes pueden coexistir (un admin puede estar en campo sin cobertura). Toda acción queda registrada en BD para auditoría. El estado del modo manual persiste ante cortes de energía.",
+                         "acceptance":  [
+                                            "RF-020a: El analista puede solicitar modo manual desde el kiosco mediante un modal que muestra la lista de usuarios con rol admin y un campo de motivo obligatorio.",
+                                            "RF-020b: Al enviar la solicitud, SIP-Edge envía un SMS al admin seleccionado con: nombre/ID del analista, motivo y las instrucciones para autorizar.",
+                                            "RF-020c: El supervisor autoriza respondiendo al SMS con \u0027manual on\u0027 (activa por 24h por defecto) o \u0027manual on Xh\u0027 / \u0027manual on Xm\u0027 para un período específico. El comando es case-insensitive.",
+                                            "RF-020d: El supervisor puede activar modo manual directamente enviando un SMS \u0027manual on [duración]\u0027 sin necesidad de solicitud previa.",
+                                            "RF-020e: El campo de peso es editable mientras el modo manual esté activo.",
+                                            "RF-020f: El supervisor puede extender el tiempo restante enviando \u0027manual on EXT Xh\u0027 / \u0027manual on EXT Xm\u0027. Case-insensitive.",
+                                            "RF-020g: El supervisor puede suspender el modo manual anticipadamente enviando \u0027manual off\u0027. Case-insensitive.",
+                                            "RF-020h: El modo manual se desactiva automáticamente al alcanzar el tiempo autorizado.",
+                                            "RF-020i: El sistema permite múltiples solicitudes simultáneas a distintos admins. La primera respuesta \u0027manual on\u0027 recibida activa el modo.",
+                                            "RF-020j: Cada solicitud, autorización, extensión y suspensión queda registrada en la tabla emergency_mode_log para trazabilidad y auditoría.",
+                                            "RF-020k: El estado del modo manual (activo/inactivo y tiempo restante) persiste ante cortes de energía, recuperándose al reiniciar el sistema."
+                                        ],
+                         "sdd":  true,
+                         "status":  "in_progress",
+                         "depends_on":  [
+                                            2,
+                                            3,
+                                            7
+                                        ],
+                         "type":  "feature",
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/9"
+                     },
+                     {
+                         "id":  10,
+                         "name":  "backup_system",
+                         "title":  "Sistema de Respaldos y ExportaciÃ³n",
+                         "description":  "Rutina diaria de volcado (dump.sql.gz) con rotaciÃ³n FIFO de 30 dÃ­as. ExportaciÃ³n a medios externos USB/SD con verificaciÃ³n CRC32. Tabla backup_logs para trazabilidad de ejecuciones. Endpoints API para monitoreo (GET /api/backup/status) y disparo manual (POST /api/backup/run).",
+                         "acceptance":  [
+                                            "RF-018: Volcado diario dump.sql.gz con rotaciÃ³n FIFO de 30 dÃ­as",
+                                            "RF-019: Copia de respaldos a USB/SD con verificaciÃ³n CRC32",
+                                            "RF-023: Tabla backup_logs con registro de cada ejecuciÃ³n (Ã©xito/fallo, CRC32, copia USB)",
+                                            "RF-024: Endpoint GET /api/backup/status (admin) â€” Ãºltimos 10 registros de backup_logs",
+                                            "RF-025: Endpoint POST /api/backup/run (admin) â€” dispara backup en background y retorna 202"
+                                        ],
+                         "sdd":  true,
+                         "status":  "done",
+                         "depends_on":  [
+
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/7",
+                         "type":  "feature"
+                     },
+                     {
+                         "id":  11,
+                         "name":  "rs232_transmission",
+                         "title":  "TransmisiÃ³n de Datos a PC vÃ­a RS232",
+                         "description":  "MÃ³dulo de transmisiÃ³n RS232 al PC externo. Consumido por feature 6 (weighing_capture) al presionar Confirmar. Formato de trama configurable (ASCII/CSV/JSON) con campos: Fecha, Hora, Tractomula, VagÃ³n, GuÃ­a, Hacienda, Suerte, Pesos (muestra, mineral, vegetal). Puerto RS232 configurado en system_config.",
+                         "acceptance":  [
+                                            "RF-022: EnvÃ­o de trama RS232 al PC externo tras cada registro exitoso",
+                                            "RF-022: Formato de trama configurable (ASCII/CSV/JSON)",
+                                            "RF-022: Trama incluye Peso, Fecha, Hora, Tipo de Material, Hacienda, Suerte"
+                                        ],
+                         "sdd":  true,
+                         "status":  "pending",
+                         "depends_on":  [
+                                            1,
+                                            6
+                                        ],
+                         "type":  "feature"
+                     },
+                     {
+                         "id":  12,
+                         "name":  "password_reset_sms",
+                         "title":  "Restablecimiento de ContraseÃ±a vÃ­a SMS",
+                         "description":  "El Admin puede generar una contraseÃ±a de un solo uso para cualquier usuario, la cual se envÃ­a automÃ¡ticamente por SMS al nÃºmero registrado. El usuario debe cambiar su contraseÃ±a en el prÃ³ximo inicio de sesiÃ³n (flag force_password_change).",
+                         "acceptance":  [
+                                            "RF-NUEVO: Admin puede solicitar reset de contraseÃ±a para un usuario desde CRUD",
+                                            "RF-NUEVO: Sistema genera contraseÃ±a temporal y la envÃ­a por SMS",
+                                            "RF-NUEVO: Usuario debe cambiar contraseÃ±a al prÃ³ximo login si force_password_change estÃ¡ activo",
+                                            "RF-NUEVO: flag force_password_change en tabla users"
+                                        ],
+                         "sdd":  true,
+                         "status":  "pending",
+                         "depends_on":  [
+                                            3,
+                                            7
+                                        ],
+                         "type":  "feature"
+                     }
+                 ]
 }

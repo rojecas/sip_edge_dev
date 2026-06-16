@@ -1,0 +1,254 @@
+Assets and Requirements
+
+-	Apache2
+-	php8.0 (7.4 at least)
+-	InfluxDB
+
+-------------------------------------------------------------------------------
+Install InfluxDB (1.8.10)
+-------------------------------------------------------------------------------
+	1. The first thing we should do before installing InfluxDB to the Raspberry Pi 
+	is making sure that all the currently installed packages are up to date.
+	We can upgrade all installed packages by running the following two commands.
+sudo apt update
+sudo apt upgrade
+
+	2. With everything now up to date, we can now proceed with installing InfluxDB
+	to the Raspberry Pi.
+	Our next step is to add the InfluxDB repository key to our Raspberry Pi.
+	Adding the key will allow the package manager on Raspbian to search the 
+	repository and verify the packages its installing.
+	We can add the InfluxDB key by running the following command.
+curl https://repos.influxdata.com/influxdb.key | gpg --dearmor | sudo tee /usr/share/keyrings/influxdb-archive-keyring.gpg >/dev/null
+	This command will download the key using curl and pass it directly into the “gpg”
+	program by using a pipe “|“. Once the keyring has been de-armored it gets saved 
+	into the “/usr/share/keyrings/” directory.
+
+	3.	Now that we have the InfluxDB repository key installed to our Raspberry Pi,
+	we will need to go ahead and add its repository to the sources list.
+	Now enter the following command to add the InfluxDB repository to the sources
+	list. Make sure you pick the right command for the version of Raspbian that you are running.
+	Most users running on new installations of Raspbian will likely be running Raspbian Buster.
+
+	Raspbian / Raspberry Pi OS
+echo "deb [signed-by=/usr/share/keyrings/influxdb-archive-keyring.gpg] https://repos.influxdata.com/debian $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/influxdb.list
+
+	4. With the repository added, we now need to go ahead and update the package list again.
+	We need to do this so that the apt package manager searches the repository
+	that we just added for packages. The operating system does not automatically do this.
+	Run the following command on your Raspberry Pi to update the package list.
+sudo apt update
+
+	5. Now that we have set up the repository, we can now move on to installing
+	the InfluxDB software. 
+	To install InfluxDB to our Raspberry Pi, all we need to do is run the command below.
+sudo apt install influxdb
+
+	6. With InfluxDB now installed to our Raspberry Pi, let’s now get it to start at boot.
+	We can do this by making use of the systemctl service manager to enable our InfluxDB
+	service file.
+	Run the following two commands to enable InfluxDB to start at boot on your Raspberry Pi.
+sudo systemctl unmask influxdb
+sudo systemctl enable influxdb
+
+	The first command we use unmasks the influxdb service file. Unmasking the service
+	ensures that we can enable and start the service as a masked service is unable to be started.
+	Our second command enables the influxdb service. This command will tell the service
+	manager to keep an eye on the “influxdb.service” file and setup the service based
+	on its contents.
+
+	7. Now that everything has been set up, we can now proceed to start up InfluxDB
+	on our Raspberry Pi. To start up the InfluxDB server, we will need to run the
+	following command. The service manager will then start up the service and begin
+	monitoring it.
+	
+sudo systemctl start influxdb
+
+
+------------------------------------------------------------------------------
+Using InfluxDB on your Raspberry Pi 
+-------------------------------------------------------------------------------
+
+	1. As we have now installed InfluxDB, we can now start talking with the database.
+	To do this, we will need to launch up Influx’s command-line tool by running
+	the command below. You don’t have to worry about specifying an address to
+	connect to as the tool will automatically detect the local installation of InfluxDB.
+	By default, InfluxDB has no users setup. In our next section, we will explore
+	creating an admin user to lock down access to your InfluxDB. For now, however,
+	we will quickly explore InfluxDB.
+influx
+
+	To close the session and exit from InfluxDB, write the following command:
+EXIT
+
+	2. Crear, Listar y borrar Bases de Datos
+	InfluxDB comes with no databases by default, so our first task will be to create one.
+	Creating a database is simple in InfluxDB and can be done by using “CREATE DATABASE <DBNAME>“.
+	For our example, we will be creating a database called “CCMT_Enviroment“.
+CREATE DATABASE CCMT_Enviroment
+	Para confirmar que el proceso de creación de la base de datos fue correcto,
+	se pueden listar las Bases de Datos con el siguiente comando:
+SHOW DATABASES
+	Para borrar una base de datos se utiliza el comando DROP, de la siguiente manera
+DROP DATABASE CCMT_Enviroment
+
+	3. Hacer accesible la base de datos
+	Before we can start modifying our new database, we must tell the CLI to “use” it.
+	Using a database is as simple as running the following command.
+USE CCMT_Enviroment
+
+	4. Inserting data
+	Our next step is to write some data to our newly created InfluxDB database.
+	To do this, we must first get a basic understanding of InfluxDB’s datastore.
+	Data in InfluxDB are sorted by “time series“. These “time series” can contain
+	as many or as little data points as you need. Each of these data points 
+	represents a single sample of that metric.
+	A data point consists of the time, a measurement name such as “temperature”,
+	and at least one field. You can also use tags which are indexed pieces of
+	data that are a string only. Tags are essential for optimizing database lookups.
+	
+	If you are familiar with the general layout of an SQL table, you can consider
+	“time” to be the primary index, measurement as the table name, and the tags and
+	fields as the column names.
+	
+	You do not need to specify the timestamp unless you want to specify a specific
+	time and date for the data point.
+	Below we have included the basic format of an InfluxDB data point
+<measurement>[,<tag-key>=<tag-value>...] <field-key>=<field-value>[,<field2-key>=<field2-value>...] [unix-nano-timestamp]
+	If you would like to learn more about the InfluxDB line syntax, then you can 
+	check out the InfluxDB official documentation.
+
+	5.	Now that we have a basic understanding of data in InfluxDB, we can now
+	proceed to add our very first data point to our database.
+	For this example database, we are going to be storing measurements of the
+	“temperature” of various locations around a house.
+	So for this, we will be inserting data points with a measurement name of
+	“temperature” and a tag key of “location“, and a field key of “value“.
+	For our first sample point, we will be saying the location is the “living_room“,
+	and the value is “26.9”.
+INSERT temperature,location=Met_Office value=26.9
+INSERT RH,location=Met_Office value=69.9
+
+	6. Examples
+INSERT temperature,location=lab_room value=24.1
+INSERT RH,location=lab_room value=62.9
+INSERT temperature,location=lab_fridge value=15.6
+INSERT RH,location=lab_fridge value=48.2
+INSERT temperature,location=Conf_room value=27.9
+INSERT RH,location=Conf_room value=68.2
+
+INSERT temperature,location=Met_Office value=26.9
+INSERT RH,location=Met_Office value=69.7
+INSERT temperature,location=lab_room value=24.2
+INSERT RH,location=lab_room value=63.1
+INSERT temperature,location=lab_fridge value=15.9
+INSERT RH,location=lab_fridge value=48.0
+INSERT temperature,location=Conf_room value=28.1
+INSERT RH,location=Conf_room value=68.5
+
+	7. Tomar datos con el filtro temperatura
+	Now that we have some sample data, we can now show you how to query this
+	data using “SELECT“ To start with, you can retrieve all data from a measurement
+	by using a command like below. This command will grab all fields and keys from
+	the specified measurement.
+SELECT * FROM temperature
+	Tomar datos con el filtro RH
+SELECT * FROM RH
+
+	8. Let’s say that you now only wanted to retrieve the temperature of the bedroom.
+	You can do that by making use of the “WHERE” statement alongside a “SELECT” statement.
+	We also specify the name of the tags/fields that we want to retrieve the values from.
+	When querying tag fields, you need to remember that all tags are considered to be
+	strings. This means that we must wrap the value we are searching for in single quotes.
+SELECT value FROM temperature WHERE location='Conf_room'
+SELECT value FROM RH WHERE location='Conf_room'
+
+-------------------------------------------------------------------------------
+Adding Authentication to InfluxDB
+-------------------------------------------------------------------------------
+
+	1. The next step is to add extra authentication to our InfluxDB installation on the
+	Raspberry Pi. Without authentication, anyone could interact with your database.
+	To get started, we need to first create a user to act as our admin.
+	To create this user, we must first load up the InfluxDB CLI tool by running the following command.
+influx
+
+	2. Within this interface, we can create a user that will have full access to the
+	database. This user will act as our admin account. To create this admin user,
+	run the following command within InfluxDB’s CLI tool.
+	Make sure that you replace <password> with a secure password of your choice.
+CREATE USER admin WITH PASSWORD '<password>' WITH ALL PRIVILEGES
+
+	This command will create a new user called “admin” with your chosen password 
+	and grant it all privileges.
+
+Control de Condiciones Ambientales - CCMT
+user: admin
+password: j)GhgY86BjzI8b6xE2
+
+CREATE USER admin WITH PASSWORD 'j)GhgY86BjzI8b6xE2' WITH ALL PRIVILEGES
+
+	Entrar a la base de datos
+influx -username admin -password 'j)GhgY86BjzI8b6xE2'
+
+	3. With that done, you can now exit out of InfluxDB by typing in “exit” and pressing ENTER.
+
+	4. Our next job is to modify the InfluxDB config file to enable authentication.
+	We can begin editing the file by using the command below.
+sudo nano /etc/influxdb/influxdb.conf
+
+	5. Within this file, use CTRL + W to find the [HTTP] section and add the 
+	following options underneath that section. Find [HTTP]
+	Add Below
+auth-enabled = true
+pprof-enabled = true
+pprof-auth-enabled = true
+ping-auth-enabled = true
+
+	6. Once added, save the file by pressing CTRL + X, then Y, followed by ENTER
+	7. Now, as we have made changes to InfluxDB’s configuration, we will need to
+	go ahead and restart the service by using the following command.
+	Restarting the service will ensure that our configuration changes are read in.
+sudo systemctl restart influxdb
+
+	8. As we have now turned InfluxDB’s authentication on, we will need to enter
+	our username and password before using the InfluxDB CLI tool.
+	You can use the “auth” command within the tool or pass the username and
+	password in through the command line, as we have below.
+influx -username admin -password <password>
+influx -user admin -password 'j)GhgY86BjzI8b6xE2'
+
+	You should now have a basic understanding of InfluxDB as
+	well as have authentication mode enabled.
+
+	You can easily see how using this database model will make storing data from
+	sensors and other sources very useful.
+	
+
+Usefull commands
+
+SHOW DATABASES
+SHOW MEASUREMENTS
+
+DROP SERIES FROM <BuckeName>  WHERE 'tag'= 'condition ('location = 'lab_fridge')
+
+bucket DELETE -name <Bucket name>
+
+
+
+
+-------------------------------------------------------------------------------
+Grafana
+-------------------------------------------------------------------------------
+
+
+
+-------------------------------------------------------------------------------
+		Python Libs and Client for influxdb
+-------------------------------------------------------------------------------
+pip3 install influxdb
+	# Or, if you prefer...
+python3 -m pip install influxdb
+
+
+

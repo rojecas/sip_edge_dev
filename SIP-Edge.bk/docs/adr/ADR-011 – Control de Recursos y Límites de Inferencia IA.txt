@@ -1,0 +1,108 @@
+---
+# ADR-011 – Control de Recursos y Límites de Inferencia IA
+
+---
+
+## 🎯 Problema
+
+Un TinyLLM en Raspberry tiene:
+
+* CPU limitada
+* RAM limitada
+* Sin GPU potente
+* Sin paralelismo masivo
+
+Si no controlamos:
+
+* Tamaño de prompt
+* Tokens de salida
+* Concurrencia
+* Frecuencia de invocaciones
+
+→ La latencia se dispara
+→ El sistema se siente pesado
+→ La experiencia se degrada
+
+---
+
+## 🧱 Decisiones Arquitectónicas
+
+### 1️⃣ Límite estricto de tokens
+
+* Max input tokens: definido (ej. 512 o 1024)
+* Max output tokens: definido (ej. 256)
+* Nunca permitir prompts abiertos sin límite
+
+---
+
+### 2️⃣ Prompts deterministas y cortos
+
+Nada de:
+
+> “Explica ampliamente…”
+
+Siempre:
+
+> “Resume en máximo 5 líneas…”
+
+---
+
+### 3️⃣ Una sola inferencia simultánea
+
+En Raspberry:
+
+* Solo 1 tarea IA corriendo a la vez.
+* Las demás se encolan o rechazan.
+
+Evita:
+
+* Saturación CPU
+* Thrashing de RAM
+
+---
+
+### 4️⃣ Timeout duro de inferencia
+
+Ejemplo:
+
+* Timeout máximo: 8 segundos.
+* Si no termina → abortar tarea.
+
+---
+
+### 5️⃣ Sin memoria conversacional persistente
+
+Cada invocación es:
+
+* Stateless
+* Contexto controlado
+* No acumulativo
+
+---
+
+### 6️⃣ Monitorización básica
+
+Registrar:
+
+* Tiempo total de inferencia
+* Tokens generados
+* Número de fallos
+
+Para poder medir rendimiento real.
+
+---
+
+## 🎛 Resultado esperado
+
+* Latencia predecible.
+* UX estable.
+* Sin bloqueos inesperados.
+* Comportamiento consistente en planta.
+
+---
+
+# 📌 Resumen ADR-011
+
+El sistema implementará límites estrictos de recursos y control de concurrencia para garantizar que la inferencia del TinyLLM no degrade la experiencia de usuario ni comprometa la estabilidad del sistema.
+
+---

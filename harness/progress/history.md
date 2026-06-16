@@ -118,4 +118,32 @@
   - La tabla `backup_logs` ya existia en `models.py` antes de iniciar la feature
   - `JSONResponse` con `status_code=202` necesario para POST (FastAPI default 200 en dict returns)
   - Tests de `run_backup` necesitan patchear `src.database.SessionLocal` (no solo `src.backup`)
-  - SQLite in-memory acumula registros entre tests; truncar `backup_logs` en `setUp`
+   - SQLite in-memory acumula registros entre tests; truncar `backup_logs` en `setUp`
+
+---
+
+## 2026-06-15 — Harness update v1.7.0 → v1.9.0 (bug workflow + scripts reorg + new agents)
+
+- **Agente:** opencode
+- **Feature:** Ninguna feature de aplicacion — actualizacion de la fabrica del harness
+- **Version factory bump:** 1.7.0 → 1.9.0
+- **Delta aplicado:** [1.8.0] Bug workflow + [1.9.0] Scripts reorganization, new agents
+- **Cambios:**
+  - `harness/scripts/` creado con validate_features.py, github_sync.py, schema_dump.py close.ps1
+  - `harness/.opencode/agents/` creado con bug-fixer.md, intake-agent.md, release-manager.md
+  - `harness/releases/tracker.json` creado
+  - `harness/.opencode/templates/changelog.md` creado
+  - `harness/init.ps1` actualizado (paths scripts/, bug-aware spec checks)
+  - `harness/feature_list.json` — type fields, nuevos statuses (untriaged, triaged)
+  - `harness/AGENTS.md`, `docs/specs.md`, `docs/sessions.md`, `CHECKPOINTS.md` actualizados
+  - `opencode.json` — nuevos comandos /new_feature_bug, /release; close path corregido
+  - `.opencode/agents/` — leader, implementer, reviewer actualizados a 1.9.0
+- **Resultado:** Harness sincronizado con fabrica v1.9.0. Pendiente verificacion init.ps1.
+- **Lecciones:** La actualizacion del harness requiere leer ambos changelogs y aplicar delta en orden. No todos los cambios de la fabrica aplican a proyectos derivados (saltar scaffold, demos, otros stacks).
+
+## Sesion: Feature 7 � sms_service (2026-06-15)
+
+- **Feature:** 7 � sms_service
+- **Estado:** done
+- **Resumen:** Servicio de Notificaciones y Reportes SMS implementado. SMSService con ModemManager dual dev/prod. Contador de intentos fallidos (3+ alerta SMS). Reportes programados por scheduler. Spec corregido, GitHub issue #8 creado/cerrado. Test websocket corregido via DEV_MODE flag.
+
