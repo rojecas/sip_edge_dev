@@ -1,41 +1,47 @@
 {
-  "project_version": "0.1.0",
-  "pending": [
+  "project_version": "1.0.0",
+  "pending": [],
+  "history": [
     {
-      "id": 7,
-      "type": "feature",
-      "name": "sms_service",
-      "title": "Servicio de Notificaciones y Reportes SMS",
-      "completed_at": "2026-06-15"
-    },
-    {
-      "id": 9,
-      "type": "feature",
-      "name": "emergency_mode",
-      "title": "Modo Manual de Emergencia",
-      "completed_at": "2026-06-15"
-    },
-    {
-      "id": 11,
-      "type": "feature",
-      "name": "rs232_transmission",
-      "title": "Transmisión de Datos a PC vía RS232",
-      "completed_at": "2026-06-16"
-    },
-    {
-      "id": 12,
-      "type": "feature",
-      "name": "password_reset_sms",
-      "title": "Restablecimiento de Contraseña vía SMS",
-      "completed_at": "2026-06-16"
-    },
-    {
-      "id": 8,
-      "type": "feature",
-      "name": "ai_agent",
-      "title": "Sistema Inteligente de Reporteria y Deteccion de Anomalias (TinyLLM)",
-      "completed_at": "2026-06-16"
+      "version": "1.0.0",
+      "released_at": "2026-06-16",
+      "items": [
+        {
+          "id": 7,
+          "type": "feature",
+          "name": "sms_service",
+          "title": "Servicio de Notificaciones y Reportes SMS",
+          "completed_at": "2026-06-15"
+        },
+        {
+          "id": 9,
+          "type": "feature",
+          "name": "emergency_mode",
+          "title": "Modo Manual de Emergencia",
+          "completed_at": "2026-06-15"
+        },
+        {
+          "id": 11,
+          "type": "feature",
+          "name": "rs232_transmission",
+          "title": "Transmisión de Datos a PC vía RS232",
+          "completed_at": "2026-06-16"
+        },
+        {
+          "id": 12,
+          "type": "feature",
+          "name": "password_reset_sms",
+          "title": "Restablecimiento de Contraseña vía SMS",
+          "completed_at": "2026-06-16"
+        },
+        {
+          "id": 8,
+          "type": "feature",
+          "name": "ai_agent",
+          "title": "Sistema Inteligente de Reporteria y Deteccion de Anomalias (TinyLLM)",
+          "completed_at": "2026-06-16"
+        }
+      ]
     }
-  ],
-  "history": []
+  ]
 }
