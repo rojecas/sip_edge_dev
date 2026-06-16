@@ -1034,12 +1034,30 @@ class TestSmsPolling(unittest.TestCase):
             db.close()
 
     def test_incoming_sms_invalid_command(self):
-        """R16: texto invalido → se ignora, se loggea como invalid."""
+        """R16: texto que no coincide con ningun patron de emergencia
+        retorna False y NO se loggea en emergency_mode_log."""
         self.assertFalse(self.svc.is_active())
-        self.svc.process_incoming_sms("+573001111111", "hello world")
+        handled = self.svc.process_incoming_sms("+573001111111", "hello world")
+        self.assertFalse(handled, "Non-emergency text should return False")
         self.assertFalse(self.svc.is_active())
 
-        # Verificar log
+        # Verificar que NO se creo log (el handler retorno False)
+        db = self._SessionLocal()
+        try:
+            invalid = (
+                db.query(EmergencyModeLog)
+                .filter(EmergencyModeLog.status == "invalid")
+                .first()
+            )
+            self.assertIsNone(invalid,
+                "Non-emergency text should not be logged by emergency handler")
+        finally:
+            db.close()
+
+    def test_incoming_sms_emergency_pattern_from_nonadmin_logged(self):
+        """Un patron de emergencia ('manual on') de un no-admin
+        se loggea como invalid (porque el patron SI coincide)."""
+        self.svc.process_incoming_sms("+573002222222", "manual on")
         db = self._SessionLocal()
         try:
             invalid = (
@@ -1048,6 +1066,7 @@ class TestSmsPolling(unittest.TestCase):
                 .first()
             )
             self.assertIsNotNone(invalid)
+            self.assertIn("Unauthorized", invalid.cmd_raw or "")
         finally:
             db.close()
 

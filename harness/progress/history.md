@@ -152,53 +152,43 @@
 
 ## 2026-06-15 — Cierre: Feature 9 emergency_mode completada
 
-# Sesion actual
-
-> Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
-> Los cierres y bloqueos van en archivos separados: ver harness/docs/sessions.md.
-
-- **Feature en curso:** 9 â€” emergency_mode
-- **Inicio:** 2026-06-15
-- **Agente:** implementer
-- **Estado:** implementacion completada (T1-T19), T20 completado (EdgeBox)
+- **Agente:** leader → implementer → reviewer → release-manager
+- **Feature:** 9 — emergency_mode
+- **Estado:** done
+- **Resumen:** Modo manual de emergencia implementado. Solicitud por kiosco con modal que lista admins. Autorización por SMS con comando 'manual on'. Tiempo configurable (default 24h). Extensión, suspensión, expiración automática. Peso editable en modo manual. Persistencia ante cortes. Auditoría en emergency_mode_log.
+- **Tests:** Todos pasan, init.ps1 verde, verificación EdgeBox completada.
 
 ---
 
-## Indice de features
+## 2026-06-16 — Release-manager register: Feature 11 rs232_transmission
 
-| ID | Nombre | Status |
-|----|--------|--------|
-| 1  | system_config | done |
-| 2  | auth_rbac | done |
-| 3  | user_management | done |
-| 4  | farm_lot_crud | done |
-| 5  | scale_integration | done |
-| 6  | weighing_capture | done |
-| 7  | sms_service | done |
-| 8  | ai_agent | pending |
-| 9  | emergency_mode | done |
-| 10 | backup_system | done |
-| 11 | rs232_transmission | pending |
-| 12 | password_reset_sms | pending |
+- **Agente:** release-manager (register)
+- **Feature:** 11 — rs232_transmission
+- **Estado:** in_progress → done (registrada en tracker)
+- **Resumen:** Feature #11 completada por implementer y aprobada por reviewer. Se registró en tracker.json como pendiente para release. Se creó GitHub issue #10 y se cerró. Closure document creado.
+- **Archivos modificados por release-manager:**
+  - `harness/feature_list.json` — status → "done", añadido github_issue
+  - `harness/releases/tracker.json` — añadido feature 11 a pending
+  - `harness/progress/closure-rs232_transmission.md` — CREADO
+  - `harness/progress/current.md` — actualizado con estado final
+- **Lecciones:** github_sync.py tiene UnicodeDecodeError en Windows con UTF-8; se usó gh CLI directamente.
 
 ---
 
-## Plan
+## 2026-06-16 — Release-manager register: Feature 12 password_reset_sms
 
-Implementando feature 9 emergency_mode siguiendo tasks.md (T1-T20):
-- [x] Fase 1: Modelo de datos (T1, T2)
-- [x] Fase 2: Logica core (T3-T8)
-- [x] Fase 3: Endpoints API (T9-T13)
-- [x] Fase 4: Integracion pesaje (T14)
-- [x] Fase 5: Tests (T15-T18)
-- [x] Fase 6: Verificacion local (T19)
-- [x] T20 â€” Verificacion EdgeBox (requiere acceso SSH al hardware)
-
----
-
-## Bloqueos activos
-
-Ninguno. T20 completado: verificacion EdgeBox ejecutada con exito.
-Ver `harness/progress/closure-emergency_mode.md` para comandos de verificacion Nivel 4.
-
+- **Agente:** release-manager (register)
+- **Feature:** 12 — password_reset_sms
+- **Estado:** in_progress → done (registrada en tracker)
+- **Resumen:** Restablecimiento remoto de contraseña vía SMS implementado. Admin envía SMS "reset password <username>", sistema genera PIN 4 dígitos (1h, single-use) y lo envía al teléfono del analista. Login con enlace "Olvidó su contraseña" y modal de cambio. Se refactorizó dispatcher SMS compartido para evitar condiciones de carrera.
+- **Archivos modificados por release-manager:**
+  - `harness/feature_list.json` — status feature 12 → "done"
+  - `harness/releases/tracker.json` — añadido feature 12 a pending
+  - `harness/progress/closure-password_reset_sms.md` — CREADO
+  - `harness/progress/current.md` — actualizado con estado final
+  - `VERSION` — CREADO (0.1.0)
+  - `CHANGELOG.md` — CREADO
+- **GitHub:** Issue #11 comentado y cerrado (reason: completed)
+- **Tests:** 362 tests totales, sin regresiones. Reviewer aprobó tras re-evaluación de R15/R16.
+- **Lecciones:** Creados VERSION y CHANGELOG.md en raíz del proyecto que no existían. GitHub sync script falló por encoding cp1252 en Windows.
 

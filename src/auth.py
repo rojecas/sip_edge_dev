@@ -50,6 +50,33 @@ def create_access_token(user_id: int, role: str) -> str:
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=ALGORITHM)
 
 
+def create_reset_token(user_id: int) -> str:
+    """Crea un JWT con expiracion de 5 minutos para reset de contrasena."""
+    import datetime as _dt
+    payload = {
+        "sub": str(user_id),
+        "purpose": "password_reset",
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 300,  # 5 minutes
+    }
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_reset_token(token: str) -> dict:
+    """Decodifica y valida un reset_token JWT.
+
+    Raises:
+        JWTError: Si el token es invalido o ha expirado.
+    """
+    payload = jwt.decode(
+        token, JWT_SECRET_KEY, algorithms=[ALGORITHM],
+        options={"require_exp": True},
+    )
+    if payload.get("purpose") != "password_reset":
+        raise JWTError("Invalid token purpose")
+    return payload
+
+
 def decode_access_token(token: str) -> dict:
     return jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
 

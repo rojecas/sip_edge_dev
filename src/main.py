@@ -19,7 +19,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -52,7 +52,9 @@ import src.database as _db
 from src.database import get_db, init_db
 from src.models import BackupLog, Base, User, Weighing
 from src.sms_service import SMSService
+from src.sms_incoming import IncomingSmsDispatcher
 from src.emergency_mode import EmergencyModeService, emergency_router
+from src.password_reset import PasswordResetService, password_reset_router
 from src.haciendas import haciendas_router, suertes_router
 from src.weighings import router as weighings_router
 from src.users import router as users_router
@@ -126,6 +128,11 @@ async def lifespan(app: FastAPI):
     app.state.sms_service = SMSService(sms_config, modem_index, dev_mode=dev_mode)
     app.state.sms_service.start_scheduler()
 
+    # Inicializar IncomingSmsDispatcher (compartido)
+    app.state.sms_dispatcher = IncomingSmsDispatcher(
+        modem_index=modem_index, dev_mode=dev_mode
+    )
+
     # Inicializar EmergencyModeService
     app.state.emergency_service = EmergencyModeService(
         db_session_factory=_db.SessionLocal,
@@ -133,13 +140,31 @@ async def lifespan(app: FastAPI):
         modem_index=modem_index,
         dev_mode=dev_mode,
     )
-    # Restaurar estado desde BD (R14)
+    # Restaurar estado desde BD
     app.state.emergency_service.restore_from_db()
-    # Iniciar tareas de background
+    # Iniciar tarea de expiry checker
     await app.state.emergency_service.start()
+
+    # Inicializar PasswordResetService
+    app.state.password_reset_service = PasswordResetService(
+        db_session_factory=_db.SessionLocal,
+        sms_service=app.state.sms_service,
+    )
+
+    # Registrar handlers en el dispatcher (orden importa)
+    app.state.sms_dispatcher.register_handler(
+        app.state.emergency_service.process_incoming_sms
+    )
+    app.state.sms_dispatcher.register_handler(
+        app.state.password_reset_service.handle_incoming_sms
+    )
+
+    # Iniciar dispatcher de SMS entrantes
+    await app.state.sms_dispatcher.start()
 
     yield
 
+    await app.state.sms_dispatcher.stop()
     await app.state.emergency_service.stop()
     app.state.sms_service.stop_scheduler()
     app.state.scale_service.stop()
@@ -157,6 +182,7 @@ app.include_router(haciendas_router)
 app.include_router(suertes_router)
 app.include_router(weighings_router)
 app.include_router(emergency_router)
+app.include_router(password_reset_router)
 
 backup_router = APIRouter(prefix="/api/backup", tags=["backup"])
 
@@ -227,6 +253,13 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page():
+    """Sirve la pagina de login con opcion de restablecimiento de contrasena."""
+    from src.login_page import LOGIN_PAGE_HTML
+    return HTMLResponse(content=LOGIN_PAGE_HTML)
 
 
 @app.websocket("/ws/scale")

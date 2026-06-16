@@ -3,10 +3,10 @@
 > Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
 > Los cierres y bloqueos van en archivos separados: ver harness/docs/sessions.md.
 
-- **Feature en curso:** (ninguna)
-- **Inicio:** 
-- **Agente:** 
-- **Estado:** 
+- **Inicio:** (vacío)
+- **Agente:** (vacío)
+- **Feature en curso:** (vacío)
+- **Estado:** (vacío)
 
 ---
 
@@ -24,17 +24,17 @@
 | 8  | ai_agent | pending |
 | 9  | emergency_mode | done |
 | 10 | backup_system | done |
-| 11 | rs232_transmission | pending |
-| 12 | password_reset_sms | pending |
+| 11 | rs232_transmission | done |
+| 12 | password_reset_sms | done |
 
 ---
 
 ## Plan
 
-(por definir)
+(Vacío)
 
 ---
 
 ## Bloqueos activos
 
-(si la feature esta bloqueada, referencia a progress/blocked-<name>.md)
+(none)

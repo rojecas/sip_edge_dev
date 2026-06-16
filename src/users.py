@@ -35,11 +35,13 @@ class UserResponse(BaseModel):
     document: str
     role: str
     is_active: bool
+    force_password_change: bool = False
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+        json_schema_extra = {"exclude": {"reset_pin", "reset_pin_expires_at"}}
 
 
 def _user_to_response(user: User) -> UserResponse:
@@ -50,6 +52,7 @@ def _user_to_response(user: User) -> UserResponse:
         document=user.document,
         role=user.role,
         is_active=user.is_active,
+        force_password_change=bool(user.force_password_change),
         created_at=user.created_at,
         updated_at=user.updated_at,
     )

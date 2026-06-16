@@ -22,6 +22,11 @@ class User(Base):
     failed_login_attempts = Column(
         Integer, nullable=False, default=0, server_default="0"
     )
+    force_password_change = Column(
+        Boolean, nullable=False, default=False, server_default="0"
+    )
+    reset_pin = Column(String(128), nullable=True, default=None)
+    reset_pin_expires_at = Column(TIMESTAMP, nullable=True, default=None)
     created_at = Column(
         TIMESTAMP, nullable=False, server_default=func.current_timestamp()
     )

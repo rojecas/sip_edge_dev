@@ -75,7 +75,8 @@ def _build_frame_data(record: Weighing, hacienda: Hacienda, suerte: Suerte) -> d
 def _send_rs232_frame(frame_data: dict, record: Weighing) -> None:
     try:
         from src.rs232 import send_frame
-        send_frame(frame_data, format="json")
+        frame_data["id"] = record.id
+        send_frame(frame_data, format="csv")
         record.enviado_pc = True
     except ImportError:
         pass

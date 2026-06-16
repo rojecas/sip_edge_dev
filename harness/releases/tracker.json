@@ -14,6 +14,20 @@
       "name": "emergency_mode",
       "title": "Modo Manual de Emergencia",
       "completed_at": "2026-06-15"
+    },
+    {
+      "id": 11,
+      "type": "feature",
+      "name": "rs232_transmission",
+      "title": "Transmisión de Datos a PC vía RS232",
+      "completed_at": "2026-06-16"
+    },
+    {
+      "id": 12,
+      "type": "feature",
+      "name": "password_reset_sms",
+      "title": "Restablecimiento de Contraseña vía SMS",
+      "completed_at": "2026-06-16"
     }
   ],
   "history": []

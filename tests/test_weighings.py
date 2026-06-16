@@ -4,6 +4,7 @@ import asyncio
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -169,8 +170,10 @@ class TestWeighingsCreate(TestWeighingsAuth):
         data = response.json()
         self.assertIn("id", data)
 
-    # T24: RS232 stub - ImportError continues, enviado_pc=False (R23)
-    def test_create_weighing_rs232_stub_import_error(self):
+    # T24: RS232 send failure does not crash — enviado_pc stays False
+    @mock.patch("src.rs232.send_frame")
+    def test_create_weighing_rs232_stub_import_error(self, mock_send):
+        mock_send.side_effect = Exception("simulated RS232 failure")
         token = self._login("operator1", "op1pass")
         response = self.client.post(
             "/api/weighings",
@@ -180,6 +183,19 @@ class TestWeighingsCreate(TestWeighingsAuth):
         self.assertEqual(response.status_code, 201)
         data = response.json()
         self.assertFalse(data["enviado_pc"])
+
+    # T4 (rs232_transmission): Successful RS232 frame send sets enviado_pc=True (R1, R5)
+    @mock.patch("src.rs232.send_frame")
+    def test_create_weighing_sends_rs232(self, mock_send):
+        token = self._login("operator1", "op1pass")
+        response = self.client.post(
+            "/api/weighings",
+            json=self._create_weighing_body(),
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertTrue(data["enviado_pc"])
 
 
 class TestWeighingsList(TestWeighingsAuth):

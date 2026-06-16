@@ -7,9 +7,7 @@ en emergency_mode_log.
 
 import asyncio
 import logging
-import os
 import re
-import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
@@ -45,9 +43,6 @@ _SMS_MANUAL_ON_EXT_M_RE = re.compile(
 _SMS_MANUAL_OFF_RE = re.compile(
     r"^\s*manual\s+off\s*$", re.IGNORECASE
 )
-
-# Regex para parsear salida de mmcli
-_SMS_ID_RE = re.compile(r"/org/freedesktop/ModemManager1/SMS/(\d+)")
 
 
 @dataclass(frozen=True)
@@ -163,53 +158,132 @@ class EmergencyModeService:
     ) -> None:
         self._db_session_factory = db_session_factory
         self._sms_service = sms_service
-        self._modem_index = modem_index
-        self._dev_mode = dev_mode
 
         self._active: bool = False
         self._expires_at: datetime | None = None
         self._active_record_id: int | None = None
 
-        self._sms_poll_task: asyncio.Task | None = None
         self._expiry_check_task: asyncio.Task | None = None
-
-        # Cola interna para simulacion en dev mode
-        self._dev_incoming_queue: list[tuple[str, str]] = []
 
     # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
 
     async def start(self) -> None:
-        """Inicia las tareas en segundo plano (polling SMS + expiry checker)."""
+        """Inicia las tareas en segundo plano (expiry checker)."""
         if self._expiry_check_task is None or self._expiry_check_task.done():
             self._expiry_check_task = asyncio.create_task(self._check_expiry_loop())
             logger.info("EmergencyModeService: expiry checker started")
 
-        if self._sms_poll_task is None or self._sms_poll_task.done():
-            self._sms_poll_task = asyncio.create_task(self._poll_incoming_sms())
-            logger.info("EmergencyModeService: SMS polling started")
-
     async def stop(self) -> None:
         """Cancela las tareas en segundo plano."""
-        for task in (self._sms_poll_task, self._expiry_check_task):
-            if task is not None and not task.done():
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
-        self._sms_poll_task = None
+        if self._expiry_check_task is not None and not self._expiry_check_task.done():
+            self._expiry_check_task.cancel()
+            try:
+                await self._expiry_check_task
+            except asyncio.CancelledError:
+                pass
         self._expiry_check_task = None
         logger.info("EmergencyModeService: background tasks stopped")
 
     # ------------------------------------------------------------------
-    # Dev mode: simulacion de SMS entrantes
+    # Procesamiento de SMS entrantes (handler para IncomingSmsDispatcher)
     # ------------------------------------------------------------------
 
-    def enqueue_incoming_sms(self, sender_phone: str, text: str) -> None:
-        """Encola un SMS entrante simulado (dev mode)."""
-        self._dev_incoming_queue.append((sender_phone, text))
+    def process_incoming_sms(self, sender_phone: str, text: str) -> bool:
+        """Procesa un SMS entrante como handler del dispatcher compartido.
+
+        Retorna True si el SMS fue reconocido como comando de emergencia
+        (valido o invalido), False si no coincide con ningun patron de
+        emergencia y debe ser probado por otros handlers.
+
+        Args:
+            sender_phone: Numero de telefono del remitente.
+            text: Texto completo del SMS.
+        """
+        # Parsear el texto para ver si es un comando de emergencia
+        parsed = parse_emergency_sms(text)
+        if parsed.action == "invalid":
+            # No coincide con ningun patron de emergencia → otro handler
+            return False
+
+        # Es un comando de emergencia: validar emisor
+        db: Session = self._db_session_factory()
+        try:
+            user = (
+                db.query(User)
+                .filter(User.phone == sender_phone, User.is_active == True)
+                .first()
+            )
+
+            if user is None or user.role != "admin":
+                # Emisor no autorizado
+                invalid_log = EmergencyModeLog(
+                    status="invalid",
+                    cmd_source="sms",
+                    cmd_raw=f"Unauthorized sender: {sender_phone}",
+                    sender_phone=sender_phone,
+                )
+                db.add(invalid_log)
+                db.commit()
+                logger.warning(
+                    "SMS de emisor no autorizado o no admin: %s", sender_phone
+                )
+                self._sms_service.send_sms(
+                    sender_phone,
+                    "SIP-Edge: Comando no autorizado. Solo administradores "
+                    "registrados pueden controlar el modo manual.",
+                )
+                return True  # Manejado (aunque rechazado)
+
+            supervisor_id = user.id
+
+            if parsed.action == "activate":
+                self.activate(
+                    request_id=None,
+                    supervisor_id=supervisor_id,
+                    duration_minutes=parsed.duration_minutes,
+                    cmd_raw=parsed.raw_text,
+                    cmd_source="sms",
+                    sender_phone=sender_phone,
+                )
+
+            elif parsed.action == "extend":
+                if not self._active:
+                    invalid_log = EmergencyModeLog(
+                        status="invalid",
+                        supervisor_id=supervisor_id,
+                        cmd_source="sms",
+                        cmd_raw=parsed.raw_text,
+                        sender_phone=sender_phone,
+                    )
+                    db.add(invalid_log)
+                    db.commit()
+                    self._sms_service.send_sms(
+                        sender_phone,
+                        "SIP-Edge: El modo manual no esta activo. "
+                        "Use 'manual on' o 'manual on Xh/Xm' para activarlo.",
+                    )
+                    return True
+                self.extend(
+                    supervisor_id=supervisor_id,
+                    extra_minutes=parsed.duration_minutes,
+                    cmd_raw=parsed.raw_text,
+                    sender_phone=sender_phone,
+                )
+
+            elif parsed.action == "deactivate":
+                if self._active:
+                    self.deactivate(
+                        supervisor_id=supervisor_id,
+                        cmd_raw=parsed.raw_text,
+                        sender_phone=sender_phone,
+                        reason="manual_off",
+                    )
+        finally:
+            db.close()
+
+        return True
 
     # ------------------------------------------------------------------
     # Solicitudes desde kiosco
@@ -579,118 +653,6 @@ class EmergencyModeService:
             db.close()
 
     # ------------------------------------------------------------------
-    # Procesamiento interno de SMS
-    # ------------------------------------------------------------------
-
-    def process_incoming_sms(self, sender_phone: str, text: str) -> None:
-        """Procesa un SMS entrante: parsea, verifica emisor, ejecuta comando.
-
-        Args:
-            sender_phone: Numero de telefono del remitente.
-            text: Texto completo del SMS.
-        """
-        db: Session = self._db_session_factory()
-        try:
-            # Buscar usuario por numero de telefono (R17)
-            user = (
-                db.query(User)
-                .filter(User.phone == sender_phone, User.is_active == True)
-                .first()
-            )
-
-            if user is None or user.role != "admin":
-                # R17: Emisor no autorizado
-                invalid_log = EmergencyModeLog(
-                    status="invalid",
-                    cmd_source="sms",
-                    cmd_raw=f"Unauthorized sender: {sender_phone}",
-                    sender_phone=sender_phone,
-                )
-                db.add(invalid_log)
-                db.commit()
-                logger.warning(
-                    "SMS de emisor no autorizado o no admin: %s", sender_phone
-                )
-                # Responder al remitente
-                self._sms_service.send_sms(
-                    sender_phone,
-                    "SIP-Edge: Comando no autorizado. Solo administradores "
-                    "registrados pueden controlar el modo manual.",
-                )
-                return
-
-            supervisor_id = user.id
-
-            # Parsear el comando (R16)
-            parsed = parse_emergency_sms(text)
-
-            if parsed.action == "invalid":
-                # R16: Comando invalido
-                invalid_log = EmergencyModeLog(
-                    status="invalid",
-                    supervisor_id=supervisor_id,
-                    cmd_source="sms",
-                    cmd_raw=parsed.raw_text,
-                    sender_phone=sender_phone,
-                )
-                db.add(invalid_log)
-                db.commit()
-                # Responder con comandos validos
-                self._sms_service.send_sms(
-                    sender_phone,
-                    "SIP-Edge: Comando no valido. Comandos aceptados: "
-                    "'manual on', 'manual on Xh/Xm', "
-                    "'manual on EXT Xh/Xm', 'manual off'.",
-                )
-                return
-
-            if parsed.action == "activate":
-                self.activate(
-                    request_id=None,
-                    supervisor_id=supervisor_id,
-                    duration_minutes=parsed.duration_minutes,
-                    cmd_raw=parsed.raw_text,
-                    cmd_source="sms",
-                    sender_phone=sender_phone,
-                )
-
-            elif parsed.action == "extend":
-                # R19: Si no esta activo, rechazar extension
-                if not self._active:
-                    invalid_log = EmergencyModeLog(
-                        status="invalid",
-                        supervisor_id=supervisor_id,
-                        cmd_source="sms",
-                        cmd_raw=parsed.raw_text,
-                        sender_phone=sender_phone,
-                    )
-                    db.add(invalid_log)
-                    db.commit()
-                    self._sms_service.send_sms(
-                        sender_phone,
-                        "SIP-Edge: El modo manual no esta activo. "
-                        "Use 'manual on' o 'manual on Xh/Xm' para activarlo.",
-                    )
-                    return
-                self.extend(
-                    supervisor_id=supervisor_id,
-                    extra_minutes=parsed.duration_minutes,
-                    cmd_raw=parsed.raw_text,
-                    sender_phone=sender_phone,
-                )
-
-            elif parsed.action == "deactivate":
-                if self._active:
-                    self.deactivate(
-                        supervisor_id=supervisor_id,
-                        cmd_raw=parsed.raw_text,
-                        sender_phone=sender_phone,
-                        reason="manual_off",
-                    )
-        finally:
-            db.close()
-
-    # ------------------------------------------------------------------
     # Tareas asyncio
     # ------------------------------------------------------------------
 
@@ -722,104 +684,6 @@ class EmergencyModeService:
             except asyncio.CancelledError:
                 logger.info("Expiry checker cancelled during sleep")
                 break
-
-    async def _poll_incoming_sms(self) -> None:
-        """Tarea asyncio que cada 15 segundos consulta SMS entrantes via mmcli."""
-        while True:
-            try:
-                if self._dev_mode:
-                    # En desarrollo: consumir de la cola interna
-                    while self._dev_incoming_queue:
-                        phone, text = self._dev_incoming_queue.pop(0)
-                        self.process_incoming_sms(phone, text)
-                else:
-                    await self._poll_mmcli_sms()
-            except asyncio.CancelledError:
-                logger.info("SMS polling cancelled")
-                break
-            except Exception:
-                logger.exception("Error in SMS polling loop")
-            try:
-                await asyncio.sleep(15)
-            except asyncio.CancelledError:
-                logger.info("SMS polling cancelled during sleep")
-                break
-
-    async def _poll_mmcli_sms(self) -> None:
-        """Ejecuta mmcli para listar y procesar SMS entrantes."""
-        try:
-            # 1. Listar SMS
-            result = await asyncio.to_thread(
-                subprocess.run,
-                [
-                    "mmcli", "-m", str(self._modem_index),
-                    "--messaging-list-sms",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            if result.returncode != 0:
-                logger.warning(
-                    "mmcli list-sms failed: %s",
-                    (result.stderr or "").strip(),
-                )
-                return
-
-            # 2. Extraer IDs
-            sms_ids = _SMS_ID_RE.findall(result.stdout)
-            for sms_id in sms_ids:
-                try:
-                    read = await asyncio.to_thread(
-                        subprocess.run,
-                        ["mmcli", "-s", sms_id],
-                        capture_output=True,
-                        text=True,
-                        timeout=10,
-                    )
-                    if read.returncode != 0:
-                        continue
-
-                    sender = _extract_sms_field(read.stdout, "number")
-                    text = _extract_sms_field(read.stdout, "text")
-                    if sender and text:
-                        self.process_incoming_sms(sender, text)
-
-                    # 3. Eliminar SMS procesado
-                    await asyncio.to_thread(
-                        subprocess.run,
-                        ["mmcli", "-s", sms_id, "--delete"],
-                        capture_output=True,
-                        timeout=10,
-                    )
-                except Exception:
-                    logger.exception(
-                        "Error processing SMS id=%s", sms_id
-                    )
-        except subprocess.TimeoutExpired:
-            logger.warning("mmcli SMS polling timed out")
-        except FileNotFoundError:
-            if not self._dev_mode:
-                logger.warning("mmcli not found, SMS polling disabled")
-
-
-def _extract_sms_field(mmcli_output: str, field: str) -> str | None:
-    """Extrae el valor de un campo de la salida de mmcli -s <id>."""
-    pattern = re.compile(
-        r"^\s*" + re.escape(field) + r"\s*\|\s*(.+?)(?:\s*\[.*?\])?\s*$",
-        re.MULTILINE,
-    )
-    match = pattern.search(mmcli_output)
-    if match:
-        return match.group(1).strip()
-    # Fallback: formato sin pipes
-    pattern2 = re.compile(
-        r"^\s*" + re.escape(field) + r"\s*:\s*(.+)$", re.MULTILINE
-    )
-    match2 = pattern2.search(mmcli_output)
-    if match2:
-        return match2.group(1).strip()
-    return None
 
 
 # ------------------------------------------------------------------
