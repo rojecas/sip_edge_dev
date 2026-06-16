@@ -185,14 +185,14 @@
                                             "RF-020k: El estado del modo manual (activo/inactivo y tiempo restante) persiste ante cortes de energía, recuperándose al reiniciar el sistema."
                                         ],
                          "sdd":  true,
-                         "status":  "in_progress",
-                         "depends_on":  [
-                                            2,
-                                            3,
-                                            7
-                                        ],
-                         "type":  "feature",
-                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/9"
+"status": "done",
+                          "depends_on":  [
+                                             2,
+                                             3,
+                                             7
+                                         ],
+                          "type": "feature",
+                          "github_issue": "https://github.com/rojecas/sip_edge/issues/9"
                      },
                      {
                          "id":  10,

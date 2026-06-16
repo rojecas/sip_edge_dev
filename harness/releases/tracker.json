@@ -7,6 +7,13 @@
       "name": "sms_service",
       "title": "Servicio de Notificaciones y Reportes SMS",
       "completed_at": "2026-06-15"
+    },
+    {
+      "id": 9,
+      "type": "feature",
+      "name": "emergency_mode",
+      "title": "Modo Manual de Emergencia",
+      "completed_at": "2026-06-15"
     }
   ],
   "history": []
