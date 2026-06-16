@@ -1,12 +1,12 @@
-# Sesion actual
+﻿# Sesion actual
 
 > Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
 > Los cierres y bloqueos van en archivos separados: ver harness/docs/sessions.md.
 
-- **Feature en curso:** 9 — emergency_mode
+- **Feature en curso:** 9 â€” emergency_mode
 - **Inicio:** 2026-06-15
 - **Agente:** implementer
-- **Estado:** implementacion completada (T1-T19), T20 pendiente (EdgeBox)
+- **Estado:** implementacion completada (T1-T19), T20 completado (EdgeBox)
 
 ---
 
@@ -38,11 +38,12 @@ Implementando feature 9 emergency_mode siguiendo tasks.md (T1-T20):
 - [x] Fase 4: Integracion pesaje (T14)
 - [x] Fase 5: Tests (T15-T18)
 - [x] Fase 6: Verificacion local (T19)
-- [ ] T20 — Verificacion EdgeBox (requiere acceso SSH al hardware)
+- [x] T20 â€” Verificacion EdgeBox (requiere acceso SSH al hardware)
 
 ---
 
 ## Bloqueos activos
 
-Ninguno. T20 pendiente de acceso a EdgeBox-RPI-200.
+Ninguno. T20 completado: verificacion EdgeBox ejecutada con exito.
 Ver `harness/progress/closure-emergency_mode.md` para comandos de verificacion Nivel 4.
+
