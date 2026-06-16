@@ -9,18 +9,30 @@ Cada feature nueva (`"sdd": true` en `feature_list.json`) tiene una carpeta
 dedicada en cuanto deja `pending`:
 
 ```
-specs/<id>_<feature-name>/
+specs/{NN}_{name}/
 ├── requirements.md   # QUÉ se necesita (EARS notation)
 ├── design.md         # CÓMO se construirá (decisiones técnicas)
 └── tasks.md          # PASOS concretos a implementar
 ```
 
-El `<id>` es el campo `id` de `feature_list.json` (cero-padded a 2 dígitos).
-El `<feature-name>` coincide con el campo `name` de `feature_list.json`.
-Ejemplo: `01_system_config`, `02_auth_rbac`.
+La carpeta se nombra `{NN}_{name}` donde `NN` es el `id` zero-padded a 2 digitos
+y `name` coincide con el campo `name` de `feature_list.json`. Ejemplos:
+`01_system_config`, `18_bug_workflow`.
 
-Esta convención con prefijo numérico permite identificar el orden de implementación
-en una revisión histórica del directorio `specs/`.
+> Nota: antes se usaba solo `<name>`. La convencion `{NN}_{name}` mantiene
+> orden natural por id y facilita la navegacion.
+
+## El campo `type` en `feature_list.json`
+
+Cada entrada en `feature_list.json` DEBE tener un campo `"type"`:
+
+- **`"feature"`** — funcionalidad nueva. Usa `acceptance` (criterios de
+  verificación) y opcionalmente `"sdd": true` (spec requerido).
+- **`"bug"`** — error documentado. Requiere `reproduction` (pasos para
+  reproducir) y `affected_feature_ids` (IDs de features que impacta).
+
+Los bugs NO pasan por SDD. Su flujo es independiente:
+`untriaged -> triaged -> bug-fixer -> reviewer -> release-manager -> done`.
 
 ## Estados de una feature
 
@@ -42,7 +54,8 @@ Solo entonces el `leader` transiciona `spec_ready → in_progress` y lanza
 el `implementer`.
 
 ```
-pending → [spec_author] → spec_ready → ⏸ HUMANO → in_progress → [implementer → reviewer] → done
+intake-agent → [spec_author] → spec_ready → ⏸ HUMANO → in_progress →
+  [implementer → reviewer → release-manager (register)] → done
 ```
 
 ## requirements.md — EARS estricto

@@ -249,6 +249,52 @@ detection fix) se preservan como historico y continuan aplicados.
 
 ---
 
+## [1.9.1] - 2026-06-15
+
+### Changed
+- `harness/AGENTS.md` Seccion 8 — Eliminado `init.ps1` wrapper raiz del arbol de estructura final y reglas asociadas. Removida leccion sobre `Join-Path -LiteralPath` en wrapper raiz.
+- `opencode.json` — Comando `/init` actualizado de `./init.ps1` a `./harness/init.ps1`.
+
+### Removed
+- `init.ps1` (raiz) — Wrapper que delegaba en `harness/init.ps1`. Ahora se invoca directamente `./harness/init.ps1`.
+
+---
+
+## [1.9.0] - 2026-06-15
+
+### Added (from factory [1.8.0] + [1.9.0])
+- `harness/.opencode/agents/bug-fixer.md` — Nuevo agente para diagnosticar y corregir bugs.
+- `harness/.opencode/agents/intake-agent.md` — Nuevo agente para crear features/bugs via conversacion.
+- `harness/.opencode/agents/release-manager.md` — Nuevo agente con modos register y release.
+- `harness/releases/tracker.json` — Estado de releases pendientes e historicos.
+- `harness/.opencode/templates/changelog.md` — Template de CHANGELOG.md para el proyecto.
+- `harness/scripts/` — Directorio canonico de scripts operacionales.
+- `harness/scripts/validate_features.py` — Validador con soporte de campo `type` (feature|bug), `untriaged`/`triaged`.
+- `harness/scripts/github_sync.py` — Sincronizacion GitHub con soporte de bugs.
+- `harness/scripts/close.ps1` — Cierre de sesion en directorio canonico (migrado desde `scripts/`).
+- `harness/scripts/schema_dump.py` — Migrado desde `harness/database/`.
+- `harness/docs/specs.md` — Nueva seccion documentando campo `type` y flujo de bugs.
+- `harness/docs/sessions.md` — Anadidos A1.1 (plan-bug) y A2.2 (cierre de bug).
+- `harness/CHECKPOINTS.md` — C11 para bug workflow.
+- `opencode.json` — Nuevos comandos `/new_feature_bug` y `/release`.
+
+### Changed
+- `harness/feature_list.json` — Anadido `"type": "feature"` a todas las features existentes. `valid_status` incluye `untriaged` y `triaged`.
+- `harness/init.ps1` — Referencias actualizadas de `harness/.opencode/scripts/` a `harness/scripts/`. Nueva seccion 3 con verificacion de specs que omite items type:bug.
+- `harness/AGENTS.md` — Corregidas referencias de scripts. Anadido flujo de bugs (4.1). Anadidos intake-agent y release-manager al mapa. Nuevas reglas: campo `type`, release-manager exclusivo.
+- `harness/docs/specs.md` — Diagrama actualizado con intake-agent y release-manager.
+- `.opencode/agents/leader.md` — Anadidos casos E-H (bugs y no-SDD). Eliminadas llamadas a github_sync. Anadido release-manager step.
+- `.opencode/agents/implementer.md` — Anadido protocolo no-SDD. Eliminado github_sync y changelog.
+- `.opencode/agents/reviewer.md` — Anadido protocolo de revision de bugs. Checklist C11.
+- `opencode.json` — Comando `close` actualizado a `harness/scripts/close.ps1`.
+
+### Removed
+- `harness/database/schema_dump.py` — Movido a `harness/scripts/schema_dump.py`.
+
+### Si no aplica (cambios de fabrica saltados)
+- Scaffold y templates de stacks no Python (typescript, php-laravel, rust, go, cpp-iot) — sip_edge usa stack Python, no aplican.
+- Demo notes-cli y sus features — sip_edge no tiene demo.
+
 ## [1.7.1] - 2026-06-13
 
 ### Fixed

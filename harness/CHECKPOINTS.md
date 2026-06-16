@@ -83,3 +83,11 @@ si quedan boxes vacios en C1-C8.
 - [ ] Toda feature en `in_progress` o `done` tiene `github_issue` (URL valida).
 - [ ] Toda feature `done` tiene su issue cerrado en GitHub.
 - [ ] Las features `blocked` tienen un comentario en GitHub documentando el bloqueo.
+
+## C11 — Bug workflow
+
+- [ ] Todo bug en `triaged`, `in_progress` o `done` tiene `harness/progress/plan-bug-<name>.md` con diagnostico, causa raiz, fix propuesto.
+- [ ] Todo bug `done` tiene `harness/progress/closure-<name>.md` con sintoma, causa raiz, fix aplicado, regression test.
+- [ ] Cada bug `done` tiene un regression test que cubre el escenario de `reproduction`.
+- [ ] El `reproduction` del bug coincide con lo que el test verifica.
+- [ ] `./init.ps1` verde tras aplicar el fix.

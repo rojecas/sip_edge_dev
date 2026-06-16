@@ -3,10 +3,6 @@
 > Este archivo es el **punto de entrada** para cualquier agente que trabaje en este
 > repositorio. NO es una biblia de reglas: es un **mapa**. Lee solo lo que
 > necesites cuando lo necesites (divulgacion progresiva).
->
-> **Harness-SDD es una fabrica de harnesses**, no un proyecto de aplicacion.
-> La demo `notes-cli` en `demo/` es un ejemplo didactico. La fabrica real
-> esta en `harness/`.
 
 ---
 
@@ -46,13 +42,16 @@
 | `harness/docs/environment.md`          | Template con placeholders para describir el entorno                         | Al adaptar a un proyecto |
 | `harness/docs/sessions.md`             | Estandar de documentacion: planes, cierres y bloqueos                       | Antes de crear o cerrar cualquier artefacto de progreso |
 | `harness/CHECKPOINTS.md`               | Criterios objetivos de "estado final correcto"                              | Para auto-evaluarte |
-| `harness/.opencode/agents/`            | Definiciones de subagentes (`leader`, `spec-author`, `implementer`, `reviewer`) | Si orquestas trabajo |
+| `harness/.opencode/agents/`            | Definiciones de subagentes (`leader`, `spec-author`, `implementer`, `reviewer`, `bug-fixer`, `intake-agent`, `release-manager`) | Si orquestas trabajo |
 | `harness/.opencode/templates/`         | Templates por stack (python, typescript, rust, go, cpp-iot, php-laravel)   | Al hacer scaffold |
+| `harness/scripts/`                     | Scripts operacionales: `close.ps1`, `github_sync.py`, `validate_features.py`, `schema_dump.py`, `setup_wizard.ps1` | Durante cierre de sesion o sync |
+| `harness/releases/tracker.json`        | Estado de releases pendientes e historicos                                   | Al hacer release |
 | `harness/database/`                    | `.schema_dump.json`, `migrations/`, `backups/` (solo si el proyecto usa BD) | Antes de escribir migraciones |
 | `harness/github.json`                  | Configuracion de integracion con GitHub (repo, enabled, labels)              | Al configurar GitHub sync |
 | `harness/docs/github.md`               | Documentacion de la integracion GitHub Issues                                 | Antes de usar github_sync.py |
-| `harness/.opencode/scripts/github_sync.py` | Script de sincronizacion con GitHub (create, close, comment, check)       | Al transicionar features |
+| `harness/scripts/github_sync.py`       | Script de sincronizacion con GitHub (create, close, comment, check)       | Al transicionar features |
 | `harness/scripts/setup_wizard.ps1`     | Dispatcher generico de wizard por stack                                     | Durante scaffold |
+| `harness/scripts/close.ps1`            | Cierre de sesion limpio (docs, git, verificacion)                            | Al terminar sesion |
 
 ### Demo (`demo/`)
 
@@ -91,6 +90,8 @@
 - **Antes de ejecutar comandos bash, lee `harness/docs/environment.md`.**
 - **Sincroniza con GitHub.** Si `harness/github.json` tiene `enabled: true`, el leader DEBE crear
   el issue al transicionar a `in_progress` y el implementer DEBE cerrarlo al marcar `done`. Si gh falla, la feature se bloquea.
+- **Cada item en `feature_list.json` DEBE tener campo `type`** con valores `"feature"` o `"bug"`.
+- **El release-manager es el unico que toca version, changelog y GitHub sync.**
 
 ## 4. Flujo de trabajo (SDD)
 
@@ -107,8 +108,21 @@ pending -> [spec-author] -> spec_ready -> HUMANO -> in_progress -> [implementer 
 5. El implementer ejecuta `tasks.md` una a una, marcanbolas `[x]`.
 6. El reviewer verifica trazabilidad `R<n>` <-> test y tasks completas;
    aprueba o rechaza.
-7. Si aprueba, el implementer marca `done` y mueve el resumen a
-   `harness/progress/history.md`.
+7. Si aprueba, el leader lanza `release-manager (register)`, que cierra el issue de GitHub
+   y marca `done`.
+
+### 4.1 Flujo de trabajo (bugs)
+
+```
+untriaged -> HUMANO -> triaged -> [bug-fixer -> reviewer -> release-manager] -> done
+```
+
+1. El humano o `intake-agent` crea un item con `"type": "bug"` y status `untriaged`.
+2. El leader presenta el bug al humano para confirmacion.
+3. Si el humano confirma, el leader cambia a `triaged` y lanza `bug-fixer`.
+4. El bug-fixer diagnostica, escribe `plan-bug-<name>.md`, implementa fix + regression test.
+5. El reviewer verifica cobertura del reproduction, regresiones, y `./init.ps1` verde.
+6. El release-manager cierra el issue y marca `done`.
 
 ## 5. Cierre de sesion (lifecycle)
 
@@ -120,6 +134,7 @@ Antes de terminar:
 3. Mueve el resumen de `harness/progress/current.md` al final de `harness/progress/history.md`.
 4. Vacia `harness/progress/current.md` dejando solo la plantilla.
 5. No dejes archivos temporales, ni prints de debug, ni TODOs sin contexto.
+6. Ejecuta `harness/scripts/close.ps1` para el cierre formal de sesion.
 
 ## 6. Si te bloqueas
 
@@ -159,22 +174,23 @@ registrado con un bump de version y una entrada en `harness/CHANGELOG.md`.
 
 ```
 <proyecto>/
-├── init.ps1                  # wrapper que delega en harness/init.ps1
 ├── opencode.json             # config de opencode (instrucciones, comandos, agentes, skills)
 ├── .opencode/                # agentes y skills (copia de harness/.opencode/agents/ y skills/)
-│   ├── agents/               # leader, spec-author, implementer, reviewer
+│   ├── agents/               # leader, spec-author, implementer, reviewer, bug-fixer, intake-agent, release-manager
 │   └── skills/               # sdd-workflow
 ├── src/                      # codigo fuente del proyecto
 ├── tests/                    # tests del proyecto
 ├── scripts/                  # setup_wizard.ps1
 └── harness/                  # la fabrica autocontenida
-    ├── init.ps1              # verificacion de entorno (el verdadero)
+    ├── init.ps1              # verificacion de entorno
     ├── feature_list.json     # features del proyecto (NO en raiz)
     ├── AGENTS.md, VERSION, CHANGELOG.md, CHECKPOINTS.md, github.json
     ├── .opencode/            # agentes, scripts, skills, templates
     ├── docs/                 # architecture, conventions, specs, sessions, etc.
     ├── specs/                # specs SDD (requirements, design, tasks)
     ├── progress/             # current.md, history.md, closure-*, blocked-*
+    ├── scripts/              # close.ps1, github_sync.py, validate_features.py, schema_dump.py
+    ├── releases/             # tracker.json
     └── database/             # .schema_dump.json, migrations/, backups/, seeds/
 ```
 
@@ -192,17 +208,13 @@ registrado con un bump de version y una entrada en `harness/CHANGELOG.md`.
    `validate_features.py` por defecto busca en `harness/feature_list.json`.
    Mantenerlo ahi evita parchear los scripts.
 
-3. **Usar `Join-Path` SIN `-LiteralPath`** en el wrapper raiz.
-   PowerShell 5.1 (Windows Server 2019/2022) no soporta ese flag.
-   `Test-Path` tambien sin `-LiteralPath` por la misma razon.
-
-4. **Al copiar `harness/` desde la fabrica, usar `Copy-Item -Recurse`**
+3. **Al copiar `harness/` desde la fabrica, usar `Copy-Item -Recurse`**
    para directorios completos. Al copiar archivos individuales dentro de
    directorios, asegurarse de que el directorio destino existe como
    `-PathType Container` (no como archivo). `Copy-Item` puede tratar
    un directorio como archivo si el destino no existe.
 
-5. **Verificar SIEMPRE con `./init.ps1`** al terminar el scaffold.
+4. **Verificar SIEMPRE con `./harness/init.ps1`** al terminar el scaffold.
    No declarar el scaffold como terminado hasta que todos los bloques
    esten `[OK]`.
 
@@ -211,7 +223,6 @@ registrado con un bump de version y una entrada en `harness/CHANGELOG.md`.
 | Error | Causa | Correccion |
 |-------|-------|-----------|
 | `progress/`, `docs/` y `specs/` duplicados en raiz | El scaffold creaba esos dirs en raiz, pero el contenido real iba en `harness/` | Solo crear `src/`, `tests/`, `scripts/` en raiz |
-| `Join-Path -LiteralPath` falla en PS 5.1 | Flag de PS 7+ no disponible en PS 5.1 | Usar `Join-Path` sin `-LiteralPath` |
 | `feature_list.json` en raiz causa `[FAIL]` en init.ps1 | Template espera `harness/feature_list.json` | Poner `feature_list.json` en `harness/` |
 | `validate_features.py` busca `harness/feature_list.json` por defecto | Script asume que base es `harness/` | Mantener `feature_list.json` en `harness/` |
 | Directorios copiados como archivos | `Copy-Item` sin `-Recurse` en directorio | Usar `Copy-Item -Recurse` para dirs; si no, copiar archivo por archivo |
@@ -233,5 +244,5 @@ mejoras del harness:
 5. Actualizar `harness/VERSION` del proyecto a la version de la fabrica.
 6. Actualizar `harness/CHANGELOG.md` del proyecto con una entrada que
    liste los cambios aplicados y los saltados.
-7. Ejecutar `./init.ps1` en el proyecto — todo verde.
+7. Ejecutar `./harness/init.ps1` en el proyecto — todo verde.
 8. Registrar la sesion de actualizacion en `harness/progress/history.md`.

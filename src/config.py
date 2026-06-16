@@ -61,6 +61,16 @@ class BackupConfig:
     keep_days: int
 
 
+DEFAULT_SMS_ADMIN_PHONES: list[str] = []
+DEFAULT_SMS_SCHEDULED_REPORTS: list[str] = ["06:00", "14:00", "22:00"]
+
+
+@dataclass(frozen=True)
+class SmsConfig:
+    admin_phones: list[str]
+    scheduled_reports: list[str]
+
+
 def default_config() -> SystemConfig:
     return SystemConfig(
         rs485=SerialPortConfig(
@@ -82,17 +92,21 @@ def default_config() -> SystemConfig:
     )
 
 
-def load_config(path: str) -> tuple[SystemConfig, SessionConfig, ScaleConfig, BackupConfig]:
+def load_config(path: str) -> tuple[SystemConfig, SessionConfig, ScaleConfig, BackupConfig, SmsConfig]:
     session_config = SessionConfig(DEFAULT_SESSION_TIMEOUT_MINUTES)
     scale_config = ScaleConfig(DEFAULT_SCALE_TIMEOUT)
     backup_config = BackupConfig(
         DEFAULT_BACKUP_USB_MOUNT_PATH, DEFAULT_BACKUP_LOCAL_DIR, DEFAULT_BACKUP_KEEP_DAYS
     )
+    sms_config = SmsConfig(
+        admin_phones=list(DEFAULT_SMS_ADMIN_PHONES),
+        scheduled_reports=list(DEFAULT_SMS_SCHEDULED_REPORTS),
+    )
     if not os.path.exists(path):
         config = default_config()
         logger.warning("config.yaml not found, created with defaults")
-        _atomic_write_sections(config, session_config, scale_config, backup_config, path)
-        return config, session_config, scale_config, backup_config
+        _atomic_write_sections(config, session_config, scale_config, backup_config, sms_config, path)
+        return config, session_config, scale_config, backup_config, sms_config
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
@@ -124,12 +138,27 @@ def load_config(path: str) -> tuple[SystemConfig, SessionConfig, ScaleConfig, Ba
                 logger.warning("backup.keep_days <= 0, usando default %d", DEFAULT_BACKUP_KEEP_DAYS)
                 keep = DEFAULT_BACKUP_KEEP_DAYS
             backup_config = BackupConfig(usb, local, keep)
-        return config, session_config, scale_config, backup_config
+        if "sms" in data and data["sms"] is not None:
+            admin_phones = data["sms"].get("admin_phones", [])
+            if not isinstance(admin_phones, list):
+                admin_phones = []
+            scheduled_reports = data["sms"].get("scheduled_reports", DEFAULT_SMS_SCHEDULED_REPORTS)
+            if not isinstance(scheduled_reports, list) or not scheduled_reports:
+                scheduled_reports = list(DEFAULT_SMS_SCHEDULED_REPORTS)
+            sms_config = SmsConfig(
+                admin_phones=list(admin_phones),
+                scheduled_reports=list(scheduled_reports),
+            )
+        return config, session_config, scale_config, backup_config, sms_config
     except Exception:
         logger.warning("Failed to load config.yaml, using defaults", exc_info=True)
         config = default_config()
-        _atomic_write_sections(config, session_config, scale_config, backup_config, path)
-        return config, session_config, scale_config, backup_config
+        sms_config = SmsConfig(
+            admin_phones=list(DEFAULT_SMS_ADMIN_PHONES),
+            scheduled_reports=list(DEFAULT_SMS_SCHEDULED_REPORTS),
+        )
+        _atomic_write_sections(config, session_config, scale_config, backup_config, sms_config, path)
+        return config, session_config, scale_config, backup_config, sms_config
 
 
 def save_config(config: SystemConfig, path: str) -> None:
@@ -157,6 +186,22 @@ def save_scale_config(config: ScaleConfig, path: str) -> None:
     _atomic_write(yaml_text, path)
 
 
+def save_sms_config(config: SmsConfig, path: str) -> None:
+    existing = {}
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                existing = yaml.safe_load(f) or {}
+        except Exception:
+            existing = {}
+    existing["sms"] = {
+        "admin_phones": config.admin_phones,
+        "scheduled_reports": config.scheduled_reports,
+    }
+    yaml_text = yaml.dump(existing, default_flow_style=False, allow_unicode=True)
+    _atomic_write(yaml_text, path)
+
+
 def _save_system_config_atomic(config: SystemConfig, path: str) -> None:
     existing = {}
     if os.path.exists(path):
@@ -173,6 +218,11 @@ def _save_system_config_atomic(config: SystemConfig, path: str) -> None:
         existing["session"] = {"session_timeout_minutes": DEFAULT_SESSION_TIMEOUT_MINUTES}
     if "scale" not in existing:
         existing["scale"] = {"timeout_seconds": DEFAULT_SCALE_TIMEOUT}
+    if "sms" not in existing:
+        existing["sms"] = {
+            "admin_phones": DEFAULT_SMS_ADMIN_PHONES,
+            "scheduled_reports": DEFAULT_SMS_SCHEDULED_REPORTS,
+        }
     yaml_text = yaml.dump(existing, default_flow_style=False, allow_unicode=True)
     _atomic_write(yaml_text, path)
 
@@ -204,7 +254,8 @@ def _atomic_write(content: str, path: str) -> None:
 
 def _atomic_write_sections(
     system_config: SystemConfig, session_config: SessionConfig,
-    scale_config: ScaleConfig, backup_config: BackupConfig, path: str
+    scale_config: ScaleConfig, backup_config: BackupConfig,
+    sms_config: SmsConfig, path: str
 ) -> None:
     existing = {}
     if os.path.exists(path):
@@ -223,6 +274,10 @@ def _atomic_write_sections(
         "usb_mount_path": backup_config.usb_mount_path,
         "local_dir": backup_config.local_dir,
         "keep_days": backup_config.keep_days,
+    }
+    existing["sms"] = {
+        "admin_phones": sms_config.admin_phones,
+        "scheduled_reports": sms_config.scheduled_reports,
     }
     yaml_text = yaml.dump(existing, default_flow_style=False, allow_unicode=True)
     _atomic_write(yaml_text, path)

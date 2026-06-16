@@ -12,7 +12,7 @@
   "command": {
     "init": {
       "description": "Run init.ps1 to verify environment before starting work",
-      "template": "Execute ./init.ps1 and report if all checks pass. If it fails, do NOT proceed until issues are resolved."
+      "template": "Execute ./harness/init.ps1 and report if all checks pass. If it fails, do NOT proceed until issues are resolved."
     },
     "proyect_init": {
       "description": "Analiza el repositorio y genera/actualiza AGENTS.md",
@@ -22,9 +22,17 @@
       "description": "Start the next pending SDD feature",
       "template": "Read harness/feature_list.json, find the first feature with status 'pending' and 'sdd': true, then launch the spec-author agent via the sdd-workflow skill to begin Spec Driven Development."
     },
+    "new_feature_bug": {
+      "description": "Guia al humano para definir una nueva feature o documentar un bug, y lo escribe en feature_list.json",
+      "template": "Launch the intake-agent (harness/.opencode/agents/intake-agent.md) to guide the user through creating a new feature or documenting a bug. Read the current feature_list.json, then ask the user the intake questions."
+    },
+    "release": {
+      "description": "Crea un release con los cambios pendientes (VERSION bump, CHANGELOG, git tag, GitHub Release)",
+      "template": "Launch the release-manager (harness/.opencode/agents/release-manager.md) in 'release' mode. Read harness/releases/tracker.json, present the pending changes to the user, and if confirmed, execute the release."
+    },
     "close": {
       "description": "Cierre de sesion limpio (documentacion, git sync, verificacion)",
-      "template": "Ejecuta ./scripts/close.ps1 para realizar el cierre de sesion limpio. Si el script falla, reporta los errores."
+      "template": "Ejecuta harness/scripts/close.ps1 para realizar el cierre de sesion limpio. Si el script falla, reporta los errores."
     }
   },
   "skills": {

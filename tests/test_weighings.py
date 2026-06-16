@@ -336,7 +336,6 @@ class TestWeighingWebSocket(TestWeighingsAuth):
             main_mod._on_scale_data(
                 {"net_weight": 10.5, "is_stable": True, "unit": "kg"},
                 main_mod.scale_clients,
-                asyncio.get_event_loop(),
             )
             try:
                 data = ws.receive_json(timeout=1)

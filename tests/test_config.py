@@ -56,7 +56,7 @@ class TestLoadSaveConfig(unittest.TestCase):
     def test_load_defaults_when_no_file(self):
         with tempfile.TemporaryDirectory() as d:
             path = f"{d}/config.yaml"
-            config, session, scale, backup = load_config(path)
+            config, session, scale, backup, sms = load_config(path)
             self.assertIsInstance(config, SystemConfig)
             self.assertEqual(config.rs485.path, "/dev/ttyACM0")
             self.assertEqual(config.rs485.baudrate, 115200)
@@ -73,7 +73,7 @@ class TestLoadSaveConfig(unittest.TestCase):
             path = f"{d}/config.yaml"
             config = default_config()
             save_config(config, path)
-            loaded, session, scale, backup = load_config(path)
+            loaded, session, scale, backup, sms = load_config(path)
             self.assertEqual(loaded.rs485.path, config.rs485.path)
             self.assertEqual(loaded.rs485.baudrate, config.rs485.baudrate)
             self.assertEqual(loaded.rs485.parity, config.rs485.parity)
@@ -97,7 +97,7 @@ class TestLoadSaveConfig(unittest.TestCase):
             path = f"{d}/config.yaml"
             with open(path, "w") as f:
                 f.write("invalid: [yaml: broken")
-            config, session, scale, backup = load_config(path)
+            config, session, scale, backup, sms = load_config(path)
             self.assertEqual(config.rs485.path, "/dev/ttyACM0")
             self.assertEqual(config.rs232.path, "/dev/ttyACM1")
 
@@ -190,11 +190,12 @@ class TestConfigEndpoints(unittest.TestCase):
         from src.config import default_config, save_config
         save_config(default_config(), main_mod.CONFIG_PATH)
         from src.config import load_config
-        config, session, scale, backup = load_config(main_mod.CONFIG_PATH)
+        config, session, scale, backup, sms = load_config(main_mod.CONFIG_PATH)
         app.state.config = config
         app.state.session = session
         app.state.scale_config = scale
         app.state.backup_config = backup
+        app.state.sms_config = sms
         app.dependency_overrides[get_current_user] = lambda: {
             "user_id": 1, "role": "admin", "iat": 9999999999
         }
@@ -276,11 +277,12 @@ class TestConfigTestEndpoint(unittest.TestCase):
         from src.config import default_config, save_config
         save_config(default_config(), main_mod.CONFIG_PATH)
         from src.config import load_config
-        config, session, scale, backup = load_config(main_mod.CONFIG_PATH)
+        config, session, scale, backup, sms = load_config(main_mod.CONFIG_PATH)
         app.state.config = config
         app.state.session = session
         app.state.scale_config = scale
         app.state.backup_config = backup
+        app.state.sms_config = sms
         app.dependency_overrides[get_current_user] = lambda: {
             "user_id": 1, "role": "admin", "iat": 9999999999
         }

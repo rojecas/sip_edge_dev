@@ -37,6 +37,7 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-sip_edge_jwt_secret_key_dev}
       ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-admin}
       DEV_MODE: ${DEV_MODE:-true}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
     ports:
       - "8000:8000"
     volumes:

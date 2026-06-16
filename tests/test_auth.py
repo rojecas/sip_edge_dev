@@ -401,3 +401,191 @@ class TestTokenStructure(unittest.TestCase):
         self.assertEqual(payload["role"], "admin")
         self.assertIn("iat", payload)
         self.assertIsInstance(payload["iat"], int)
+
+
+def _build_test_app_with_sms_mock():
+    """Construye TestClient con un SMSService mockeado en app.state."""
+    import src.database as _db
+    from unittest import mock as umock
+
+    _engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=_engine)
+    _SessionLocal = sessionmaker(bind=_engine)
+
+    db = _SessionLocal()
+    try:
+        admin = User(
+            username="admin",
+            password_hash=hash_password("adminpass"),
+            role="admin",
+            full_name="Administrador",
+            is_active=True,
+        )
+        operator = User(
+            username="operator",
+            password_hash=hash_password("operatorpass"),
+            role="operator",
+            full_name="Operador",
+            is_active=True,
+        )
+        db.add_all([admin, operator])
+        db.commit()
+    finally:
+        db.close()
+
+    import src.main as main_mod
+    from src.config import BackupConfig, ScaleConfig, SessionConfig, SmsConfig, default_config
+
+    main_mod.app.dependency_overrides.clear()
+    main_mod.CONFIG_PATH = os.path.join(tempfile.mkdtemp(), "config.yaml")
+
+    main_mod.app.state.config = default_config()
+    main_mod.app.state.session = SessionConfig(session_timeout_minutes=15)
+    main_mod.app.state.scale_config = ScaleConfig(timeout_seconds=3)
+    main_mod.app.state.backup_config = BackupConfig("/mnt/backup_usb", "/home/bkmngr/backups", 30)
+    main_mod.app.state.sms_config = SmsConfig(
+        admin_phones=["+573001234567"],
+        scheduled_reports=["06:00", "14:00", "22:00"],
+    )
+
+    sms_mock = umock.MagicMock()
+    main_mod.app.state.sms_service = sms_mock
+
+    from src.database import get_db as _original_get_db
+
+    def _override_get_db():
+        s = _SessionLocal()
+        try:
+            yield s
+        finally:
+            s.close()
+
+    main_mod.app.dependency_overrides[_original_get_db] = _override_get_db
+
+    return TestClient(main_mod.app), sms_mock, _SessionLocal
+
+
+class TestLoginFailedAttempts(unittest.TestCase):
+    def setUp(self):
+        self.client, self.sms_mock, self.SessionLocal = _build_test_app_with_sms_mock()
+
+    def _count_failed_attempts(self, username):
+        """Obtiene el contador de intentos fallidos desde la BD."""
+        s = self.SessionLocal()
+        try:
+            user = s.query(User).filter(User.username == username).first()
+            return user.failed_login_attempts if user else None
+        finally:
+            s.close()
+
+    def test_login_failed_increments_counter(self):
+        """R3: 1 login fallido incrementa el contador a 1."""
+        self.client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "wrongpass"},
+        )
+        self.assertEqual(self._count_failed_attempts("admin"), 1)
+
+    def test_login_failed_does_not_alert_before_3(self):
+        """R2: Con 1 o 2 fallos NO se envia alerta."""
+        # 1 fallo
+        self.client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "wrongpass"},
+        )
+        self.sms_mock.send_alert_to_admins.assert_not_called()
+        self.assertEqual(self._count_failed_attempts("admin"), 1)
+
+        # 2 fallos
+        self.client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "wrongpass"},
+        )
+        self.sms_mock.send_alert_to_admins.assert_not_called()
+        self.assertEqual(self._count_failed_attempts("admin"), 2)
+
+    def test_login_failed_triggers_alert_at_3(self):
+        """R2: En el 3er fallo se llama a send_alert_to_admins."""
+        for _ in range(2):
+            self.client.post(
+                "/api/auth/login",
+                json={"username": "admin", "password": "wrongpass"},
+            )
+        self.sms_mock.send_alert_to_admins.assert_not_called()
+
+        # 3er fallo
+        self.client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "wrongpass"},
+        )
+        self.sms_mock.send_alert_to_admins.assert_called_once()
+        alert_arg = self.sms_mock.send_alert_to_admins.call_args[0][0]
+        self.assertIn("admin", alert_arg)
+        self.assertIn("3", alert_arg)
+
+    def test_login_failed_resets_after_alert(self):
+        """R4: Tras la alerta el contador vuelve a 0."""
+        for _ in range(3):
+            self.client.post(
+                "/api/auth/login",
+                json={"username": "admin", "password": "wrongpass"},
+            )
+        self.assertEqual(self._count_failed_attempts("admin"), 0)
+
+    def test_login_success_resets_counter(self):
+        """R3: Login exitoso pone el contador a 0."""
+        # Primero provocar algunos intentos fallidos
+        self.client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "wrongpass"},
+        )
+        self.assertEqual(self._count_failed_attempts("admin"), 1)
+
+        # Luego login exitoso
+        self.client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "adminpass"},
+        )
+        self.assertEqual(self._count_failed_attempts("admin"), 0)
+
+    def test_login_failed_counter_increments_separately_per_user(self):
+        """R3: Cada usuario tiene su propio contador independiente."""
+        # Admin falla una vez
+        self.client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "wrongpass"},
+        )
+        self.assertEqual(self._count_failed_attempts("admin"), 1)
+
+        # Operator falla una vez
+        self.client.post(
+            "/api/auth/login",
+            json={"username": "operator", "password": "wrongpass"},
+        )
+        self.assertEqual(self._count_failed_attempts("operator"), 1)
+
+        # Admin sigue teniendo 1
+        self.assertEqual(self._count_failed_attempts("admin"), 1)
+
+    def test_login_failed_triggers_alert_only_once_per_batch(self):
+        """R4: Alertas no repetidas sin nuevos intentos tras el reset."""
+        for _ in range(3):
+            self.client.post(
+                "/api/auth/login",
+                json={"username": "admin", "password": "wrongpass"},
+            )
+        # La primera rafaga de 3 dispara la alerta y resetea
+        self.assertEqual(self.sms_mock.send_alert_to_admins.call_count, 1)
+        self.assertEqual(self._count_failed_attempts("admin"), 0)
+
+        # Una segunda rafaga de 3 fallos debe disparar otra alerta
+        for _ in range(3):
+            self.client.post(
+                "/api/auth/login",
+                json={"username": "admin", "password": "wrongpass"},
+            )
+        self.assertEqual(self.sms_mock.send_alert_to_admins.call_count, 2)

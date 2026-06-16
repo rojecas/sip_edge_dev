@@ -18,6 +18,9 @@ class User(Base):
     document = Column(String(32), nullable=False, default="")
     role = Column(Enum("admin", "operator", "corresponsal"), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
+    failed_login_attempts = Column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     created_at = Column(
         TIMESTAMP, nullable=False, server_default=func.current_timestamp()
     )

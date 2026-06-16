@@ -39,6 +39,7 @@ from src.config import (
     ScaleConfig,
     SerialPortConfig,
     SessionConfig,
+    SmsConfig,
     SystemConfig,
     VALID_TEST_PORTS,
     load_config,
@@ -50,6 +51,7 @@ from src.config import (
 import src.database as _db
 from src.database import get_db, init_db
 from src.models import BackupLog, Base, User, Weighing
+from src.sms_service import SMSService
 from src.haciendas import haciendas_router, suertes_router
 from src.weighings import router as weighings_router
 from src.users import router as users_router
@@ -61,7 +63,15 @@ CONFIG_PATH = "config.yaml"
 scale_clients: set[WebSocket] = set()
 
 
-def _on_scale_data(data: dict, clients: set[WebSocket], loop: asyncio.AbstractEventLoop) -> None:
+def _resolve_event_loop() -> asyncio.AbstractEventLoop:
+    """Resuelve el event loop: usa el running loop o crea uno nuevo."""
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.new_event_loop()
+
+
+def _on_scale_data(data: dict, clients: set[WebSocket]) -> None:
     message = json.dumps({
         "type": "scale_reading",
         "data": {
@@ -70,6 +80,7 @@ def _on_scale_data(data: dict, clients: set[WebSocket], loop: asyncio.AbstractEv
             "unit": data.get("unit", "kg"),
         },
     })
+    loop = _resolve_event_loop()
     for ws in list(clients):
         try:
             asyncio.run_coroutine_threadsafe(
@@ -81,7 +92,13 @@ def _on_scale_data(data: dict, clients: set[WebSocket], loop: asyncio.AbstractEv
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.config, app.state.session, app.state.scale_config, app.state.backup_config = load_config(CONFIG_PATH)
+    (
+        app.state.config,
+        app.state.session,
+        app.state.scale_config,
+        app.state.backup_config,
+        app.state.sms_config,
+    ) = load_config(CONFIG_PATH)
     from src.scale import ScaleService
 
     dev_mode = os.environ.get("DEV_MODE", "false").lower() in ("true", "1", "yes")
@@ -90,7 +107,7 @@ async def lifespan(app: FastAPI):
     )
     app.state.scale_service.start()
     app.state.scale_service.async_listener(
-        lambda data: _on_scale_data(data, scale_clients, asyncio.get_event_loop())
+        lambda data: _on_scale_data(data, scale_clients)
     )
     init_db()
     Base.metadata.create_all(bind=_db.engine)
@@ -101,7 +118,16 @@ async def lifespan(app: FastAPI):
         seed_admin_user(db)
     finally:
         db.close()
+
+    # Inicializar SMSService
+    sms_config: SmsConfig = app.state.sms_config
+    modem_index = app.state.config.gsm.modem_index
+    app.state.sms_service = SMSService(sms_config, modem_index, dev_mode=dev_mode)
+    app.state.sms_service.start_scheduler()
+
     yield
+
+    app.state.sms_service.stop_scheduler()
     app.state.scale_service.stop()
 
 
@@ -226,7 +252,24 @@ async def login(body: LoginRequest, db: Session = Depends(get_db)):
     if not user.is_active:
         raise HTTPException(status_code=401, detail="Invalid username or password")
     if not verify_password(body.password, user.password_hash):
+        # Contador de intentos fallidos
+        user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+        db.commit()
+        if user.failed_login_attempts >= 3:
+            sms_service = app.state.sms_service
+            alert_msg = (
+                f"Alerta de seguridad: El usuario '{user.username}' "
+                f"ha acumulado {user.failed_login_attempts} intentos fallidos "
+                f"de inicio de sesion."
+            )
+            sms_service.send_alert_to_admins(alert_msg)
+            user.failed_login_attempts = 0
+            db.commit()
         raise HTTPException(status_code=401, detail="Invalid username or password")
+    # Login exitoso: resetear contador
+    if user.failed_login_attempts != 0:
+        user.failed_login_attempts = 0
+        db.commit()
     token = create_access_token(user.id, user.role)
     return TokenResponse(access_token=token, token_type="bearer", role=user.role)
 

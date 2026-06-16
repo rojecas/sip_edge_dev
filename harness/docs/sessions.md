@@ -8,34 +8,62 @@
 
 ### A1 — Plan de feature/bug
 
-Se crea **antes** de tocar codigo. Si la feature tiene `"sdd": true`, el
-plan son los 3 archivos en `harness/specs/<name>/` (`requirements.md`, `design.md`,
-`tasks.md`). Si no tiene SDD, se crea `harness/progress/plan-<name>.md`.
+Se crea **antes** de tocar codigo.
 
-Contenido minimo:
+- Si la feature tiene `"sdd": true`, el plan son los 3 archivos en
+  `harness/specs/{NN}_{name}/` (`requirements.md`, `design.md`, `tasks.md`).
+- Si es un bug (`"type": "bug"`), el plan es `harness/progress/plan-bug-<name>.md`
+  (ver A1.2).
+- Si no tiene SDD ni es bug, se crea `harness/progress/plan-<name>.md`
+  (ver A1.1).
 
-- **Contexto:** que feature o bug se aborda, cual es su `id` en
+Contenido minimo del plan (features no-SDD):
+
+- **Contexto:** que feature se aborda, cual es su `id` en
   `harness/feature_list.json`.
-- **Diagnostico** (solo bugs): sintoma, causa raiz, archivos implicados.
 - **Diseno / solucion propuesta:** que archivos se crean o modifican, que
   firmas nuevas aparecen, que alternativas se descartaron.
 - **Plan de verificacion:** escenarios concretos que se probaran.
-- **Draft de codigo:** opcional, util para bugs donde la solucion no es
-  obvia.
 
-### A2 — Cierre de feature (`harness/progress/closure-<name>.md`)
+#### A1.1 — Plan de bug (`harness/progress/plan-bug-<name>.md`)
+
+Para items con `"type": "bug"`. Lo crea el `bug-fixer` durante la fase de diagnostico.
+
+```markdown
+# Plan bug — <bug name>
+
+## Sintoma
+<que falla, como se manifiesta, mensaje de error>
+
+## Causa raiz
+<que codigo o logica causa el fallo>
+
+## Archivos implicados
+- `src/xxx.py`: <que parte esta mal>
+- `tests/test_xxx.py`: <test existente o nuevo>
+
+## Fix propuesto
+<que cambio corrige la causa raiz, por que>
+
+## Plan de verificacion
+- [ ] Regression test que cubre el escenario de `reproduction`
+- [ ] `./init.ps1` verde
+- [ ] Tests existentes no rotos
+```
+
+### A2 — Cierre (`harness/progress/closure-<name>.md`)
 
 Se crea al marcar `"done"` en `feature_list.json`. Es el documento que
 permite a un agente futuro (o a un humano) entender **que se hizo, por que
 y como verificarlo**.
 
-Contenido obligatorio:
+#### A2.1 — Cierre de feature
 
 ```markdown
 # Cierre — <feature name>
 
 ## Resumen
-<1-2 parrafos: que se implemento/corrigio>
+<1-2 parrafos: que se implemento>
 
 ## Archivos modificados
 | Archivo | Cambio |
@@ -53,7 +81,40 @@ Contenido obligatorio:
 - [ ] <test especifico 1>
 - [ ] <test especifico 2>
 - [ ] Trazabilidad R<n> ↔ tests (si SDD)
-- [ ] GitHub issue cerrado (si `harness/github.json` enabled)
+- [ ] Closure listo para release-manager
+
+## Lecciones / pitfalls
+- <algo que salio mal o que se aprendio>
+```
+
+#### A2.2 — Cierre de bug
+
+```markdown
+# Cierre — <bug name>
+
+## Resumen
+<1 parrafo: que bug se corrigio>
+
+## Sintoma
+<que fallaba>
+
+## Causa raiz
+<que causaba el fallo>
+
+## Fix aplicado
+<que cambio se hizo>
+
+## Archivos modificados
+| Archivo | Cambio |
+|---------|--------|
+| `src/foo.py` | Corregido metodo `bar()` |
+| `tests/test_foo.py` | Regression test `test_xxx` |
+
+## Verificacion
+- [ ] `./init.ps1` verde
+- [ ] Regression test `test_xxx` pasa
+- [ ] Tests existentes no rotos
+- [ ] Closure listo para release-manager
 
 ## Lecciones / pitfalls
 - <algo que salio mal o que se aprendio>

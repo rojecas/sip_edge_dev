@@ -96,11 +96,11 @@ class TestScaleConfig(unittest.TestCase):
     def test_save_scale_config_roundtrip(self):
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "config.yaml")
-            cfg, sess, scale, backup = load_config(path)
+            cfg, sess, scale, backup, sms = load_config(path)
             self.assertEqual(scale.timeout_seconds, DEFAULT_SCALE_TIMEOUT)
             new_scale = ScaleConfig(timeout_seconds=7)
             save_scale_config(new_scale, path)
-            _, _, reloaded, _ = load_config(path)
+            _, _, reloaded, _, _ = load_config(path)
             self.assertEqual(reloaded.timeout_seconds, 7)
 
     def test_load_scale_config_invalid_timeout_falls_back(self):
@@ -118,7 +118,7 @@ class TestScaleConfig(unittest.TestCase):
             }
             with open(path, "w") as f:
                 yaml.dump(data, f)
-            _, _, scale, _ = load_config(path)
+            _, _, scale, _, _ = load_config(path)
             self.assertEqual(scale.timeout_seconds, DEFAULT_SCALE_TIMEOUT)
 
 
@@ -291,12 +291,13 @@ class TestScaleEndpoint(unittest.TestCase):
         cls.original_config_path = main_mod.CONFIG_PATH
         cls.config_path = os.path.join(cls.temp_dir.name, "config.yaml")
         main_mod.CONFIG_PATH = cls.config_path
-        cfg, sess, scale, backup = load_config(cls.config_path)
+        cfg, sess, scale, backup, sms = load_config(cls.config_path)
 
         app.state.config = cfg
         app.state.session = sess
         app.state.scale_config = scale
         app.state.backup_config = backup
+        app.state.sms_config = sms
         app.state.scale_service = None
         app.dependency_overrides[get_current_user] = lambda: {
             "user_id": 1, "role": "admin", "iat": 9999999999
@@ -318,7 +319,7 @@ class TestScaleEndpoint(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["timeout_seconds"], 5)
-        _, _, reloaded, _ = load_config(self.config_path)
+        _, _, reloaded, _, _ = load_config(self.config_path)
         self.assertEqual(reloaded.timeout_seconds, 5)
 
     def test_put_scale_config_invalid_below_range(self):

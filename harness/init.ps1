@@ -47,7 +47,7 @@ if (Test-Path -LiteralPath $sessionFile -PathType Leaf) {
     if ($sessionStatus -eq "open") {
         warn "La sesion anterior NO se cerro correctamente (harness/.session = open)"
         Write-Host "  Revisa harness/progress/current.md y git status para verificar el estado."
-        Write-Host "  Ejecuta ./scripts/close.ps1 si quieres cerrar la sesion anterior formalmente."
+        Write-Host "  Ejecuta harness/scripts/close.ps1 si quieres cerrar la sesion anterior formalmente."
     } elseif ($sessionStatus -eq "closed") {
         ok "Sesion anterior cerrada correctamente (harness/.session = closed)"
     } else {
@@ -109,7 +109,7 @@ if (Test-Path -LiteralPath "harness/database/.schema_dump.json" -PathType Leaf) 
     # Regenerar docs/database.md desde la BD real
     $prevEAP = $ErrorActionPreference
     $ErrorActionPreference = "SilentlyContinue"
-    $null = & python harness/.opencode/scripts/schema_dump.py 2>&1
+    $null = & python harness/scripts/schema_dump.py 2>&1
     $ErrorActionPreference = $prevEAP
     if ($LASTEXITCODE -eq 0) {
         ok "docs/database.md regenerado desde la BD"
@@ -142,12 +142,46 @@ if (Test-Path -LiteralPath "harness/database/.schema_dump.json" -PathType Leaf) 
 Write-Host ""
 Write-Host "-- 5. Validando feature_list.json y specs ------------------"
 
-$valid = & python harness/.opencode/scripts/validate_features.py 2>&1
+$valid = & python harness/scripts/validate_features.py 2>&1
 if ($LASTEXITCODE -ne 0) {
     $valid | Out-Host
     $script:exitCode = 1
 } else {
     ok "feature_list.json es valido"
+}
+
+# Verificar que features sdd: true con status spec_ready/in_progress/done tengan su carpeta specs/
+$featuresJson = Get-Content -LiteralPath "harness/feature_list.json" -Raw | ConvertFrom-Json
+foreach ($feat in $featuresJson.features) {
+    $featType = if ($feat.PSObject.Properties['type']) { $feat.type } else { "feature" }
+    $featStatus = $feat.status
+    $featName = $feat.name
+    $featId = $feat.id
+    $sdd = if ($feat.PSObject.Properties['sdd']) { $feat.sdd } else { $false }
+
+    # Solo verificar specs para features SDD (no bugs)
+    if ($featType -ne "bug" -and $sdd -eq $true -and $featStatus -in @("spec_ready", "in_progress", "done")) {
+        $paddedId = "{0:D2}" -f $featId
+        $specDir = "harness/specs/${paddedId}_$featName"
+        if (Test-Path -LiteralPath $specDir -PathType Container) {
+            $reqFile = Join-Path $specDir "requirements.md"
+            $desFile = Join-Path $specDir "design.md"
+            $tskFile = Join-Path $specDir "tasks.md"
+            $allSpecFiles = $true
+            foreach ($sf in @($reqFile, $desFile, $tskFile)) {
+                if (-not (Test-Path -LiteralPath $sf -PathType Leaf)) {
+                    warn "Falta archivo de spec: $sf (feature $featId - $featName)"
+                    $allSpecFiles = $false
+                }
+            }
+            if ($allSpecFiles) {
+                ok "Spec completo para feature $featId ($featName)"
+            }
+        } else {
+            fail "Falta carpeta de spec: $specDir (feature $featId - $featName)"
+            $script:exitCode = 1
+        }
+    }
 }
 
 Write-Host ""
