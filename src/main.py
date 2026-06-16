@@ -34,6 +34,7 @@ from src.auth import (
     verify_password,
 )
 from src.config import (
+    AgentConfig,
     BackupConfig,
     GsmConfig,
     ScaleConfig,
@@ -43,6 +44,7 @@ from src.config import (
     SystemConfig,
     VALID_TEST_PORTS,
     load_config,
+    save_agent_config,
     save_scale_config,
     save_session_config,
     save_system_config,
@@ -55,6 +57,7 @@ from src.sms_service import SMSService
 from src.sms_incoming import IncomingSmsDispatcher
 from src.emergency_mode import EmergencyModeService, emergency_router
 from src.password_reset import PasswordResetService, password_reset_router
+from src.report_templates import TemplateNotFoundError
 from src.haciendas import haciendas_router, suertes_router
 from src.weighings import router as weighings_router
 from src.users import router as users_router
@@ -101,6 +104,7 @@ async def lifespan(app: FastAPI):
         app.state.scale_config,
         app.state.backup_config,
         app.state.sms_config,
+        app.state.agent_config,
     ) = load_config(CONFIG_PATH)
     from src.scale import ScaleService
 
@@ -126,6 +130,15 @@ async def lifespan(app: FastAPI):
     sms_config: SmsConfig = app.state.sms_config
     modem_index = app.state.config.gsm.modem_index
     app.state.sms_service = SMSService(sms_config, modem_index, dev_mode=dev_mode)
+
+    # Inicializar ReportTemplateService
+    from src.report_templates import ReportTemplateService
+    app.state.report_template_service = ReportTemplateService(
+        db_session_factory=_db.SessionLocal
+    )
+
+    # Inicializar SMSService con report_template_service (se pasa referencia)
+    app.state.sms_service.set_template_service(app.state.report_template_service)
     app.state.sms_service.start_scheduler()
 
     # Inicializar IncomingSmsDispatcher (compartido)
@@ -151,12 +164,46 @@ async def lifespan(app: FastAPI):
         sms_service=app.state.sms_service,
     )
 
+    # Inicializar LlamaClient
+    agent_config: AgentConfig = app.state.agent_config
+    from src.llm_client import LlamaClient
+    app.state.llm_client = LlamaClient(
+        base_url=agent_config.llm_url,
+        model=agent_config.llm_model,
+        timeout=agent_config.llm_timeout,
+        dev_mode=dev_mode,
+    )
+
+    # Inicializar SqlTools
+    from src.sql_tools import SqlTools
+    app.state.sql_tools = SqlTools(db_session_factory=_db.SessionLocal)
+
+    # Inicializar AnomalyDetector
+    from src.anomaly_detector import AnomalyDetector
+    app.state.anomaly_detector = AnomalyDetector(
+        db_session_factory=_db.SessionLocal,
+        config=agent_config,
+    )
+
+    # Inicializar AgentOrchestrator
+    from src.agent_orchestrator import AgentOrchestrator
+    app.state.agent_orchestrator = AgentOrchestrator(
+        llm_client=app.state.llm_client,
+        sql_tools=app.state.sql_tools,
+        sms_service=app.state.sms_service,
+        db_session_factory=_db.SessionLocal,
+    )
+
     # Registrar handlers en el dispatcher (orden importa)
     app.state.sms_dispatcher.register_handler(
         app.state.emergency_service.process_incoming_sms
     )
     app.state.sms_dispatcher.register_handler(
         app.state.password_reset_service.handle_incoming_sms
+    )
+    # Handler de consultas AI via SMS (fallback)
+    app.state.sms_dispatcher.register_handler(
+        _build_ai_sms_handler(app.state.agent_orchestrator)
     )
 
     # Iniciar dispatcher de SMS entrantes
@@ -167,6 +214,7 @@ async def lifespan(app: FastAPI):
     await app.state.sms_dispatcher.stop()
     await app.state.emergency_service.stop()
     app.state.sms_service.stop_scheduler()
+    app.state.llm_client.close()
     app.state.scale_service.stop()
 
 
@@ -176,6 +224,21 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+def _build_ai_sms_handler(agent_orchestrator):
+    """Construye un handler de SMS para consultas AI como fallback.
+
+    Retorna una funcion compatible con el protocolo SmsHandler
+    que procesa SMS no manejados por otros modulos como consultas
+    de lenguaje natural al agente inteligente.
+    """
+    def handler(sender_phone: str, text: str) -> bool:
+        logger.info("AI SMS handler recibiendo: %s de %s", text[:80], sender_phone)
+        agent_orchestrator.handle_sms_query(sender_phone, text)
+        return True  # Siempre procesa como fallback
+
+    return handler
 
 app.include_router(users_router)
 app.include_router(haciendas_router)
@@ -235,6 +298,277 @@ async def run_backup_endpoint(
 
 
 app.include_router(backup_router)
+
+# ------------------------------------------------------------------
+# Agent Router — POST /api/agent/query (T21)
+# ------------------------------------------------------------------
+
+agent_router = APIRouter(prefix="/api/agent", tags=["agent"])
+
+
+class AgentQueryRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=1000)
+
+
+class AgentQueryResponse(BaseModel):
+    response: str
+    dev_mode: bool
+
+
+@agent_router.post("/query")
+async def agent_query(
+    body: AgentQueryRequest,
+    _: dict = Depends(check_inactivity),
+    __: dict = Depends(require_role("admin")),
+):
+    """Envia una consulta directa al agente inteligente (para pruebas)."""
+    orchestrator = app.state.agent_orchestrator
+    sql_tools = app.state.sql_tools
+    llm_client = app.state.llm_client
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "Eres un asistente de analisis de datos de pesaje agricola (SIP-Edge). "
+                "Responde consultas usando exclusivamente las herramientas SQL disponibles. "
+                "NUNCA inventes numeros. Responde en espanol."
+            ),
+        },
+        {"role": "user", "content": body.query},
+    ]
+
+    from src.sql_tools import TOOL_DEFINITIONS
+
+    try:
+        response = llm_client.chat_completion(messages, tools=TOOL_DEFINITIONS)
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": f"LLM error: {str(e)}"},
+        )
+
+    choices = response.get("choices", [])
+    if not choices:
+        return AgentQueryResponse(response="No se pudo procesar la consulta.", dev_mode=os.environ.get("DEV_MODE", "false").lower() in ("true", "1", "yes"))
+
+    msg = choices[0].get("message", {})
+    tool_calls = msg.get("tool_calls", [])
+
+    if tool_calls:
+        # Ejecutar tools
+        for tc in tool_calls:
+            func_info = tc.get("function", {})
+            tool_name = func_info.get("name", "")
+            try:
+                arguments = json.loads(func_info.get("arguments", "{}"))
+            except json.JSONDecodeError:
+                arguments = {}
+            try:
+                result = sql_tools.execute_tool(tool_name, arguments)
+            except Exception as e:
+                result = {"error": str(e)}
+            messages.append({
+                "role": "assistant",
+                "content": msg.get("content"),
+                "tool_calls": [tc],
+            })
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tc.get("id", ""),
+                "content": json.dumps(result, ensure_ascii=False, default=str),
+            })
+        # Segunda vuelta
+        try:
+            response2 = llm_client.chat_completion(messages, tools=TOOL_DEFINITIONS)
+        except Exception as e:
+            return JSONResponse(
+                status_code=503,
+                content={"detail": f"LLM error on second pass: {str(e)}"},
+            )
+        choices2 = response2.get("choices", [])
+        if choices2:
+            final_text = choices2[0].get("message", {}).get("content", "")
+            return AgentQueryResponse(response=final_text or "Sin respuesta.", dev_mode=os.environ.get("DEV_MODE", "false").lower() in ("true", "1", "yes"))
+        return AgentQueryResponse(response="No se pudo generar respuesta.", dev_mode=os.environ.get("DEV_MODE", "false").lower() in ("true", "1", "yes"))
+
+    direct_content = msg.get("content", "")
+    return AgentQueryResponse(response=direct_content or "Sin respuesta.", dev_mode=os.environ.get("DEV_MODE", "false").lower() in ("true", "1", "yes"))
+
+
+app.include_router(agent_router)
+
+# ------------------------------------------------------------------
+# Report Templates Router — CRUD (T22)
+# ------------------------------------------------------------------
+
+reports_router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+
+class TemplateCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    schedule: list[str] = Field(default_factory=list)
+    recipients: list[str] = Field(default_factory=list)
+    metrics: list[str] = Field(default_factory=list)
+    is_active: bool = True
+
+
+class TemplateUpdate(BaseModel):
+    name: str | None = None
+    schedule: list[str] | None = None
+    recipients: list[str] | None = None
+    metrics: list[str] | None = None
+    is_active: bool | None = None
+
+
+@reports_router.get("/templates")
+async def list_templates(
+    _: dict = Depends(check_inactivity),
+    __: dict = Depends(require_role("admin")),
+):
+    svc = app.state.report_template_service
+    templates = svc.get_all()
+    return [
+        {
+            "id": t.id,
+            "name": t.name,
+            "schedule": json.loads(t.schedule) if t.schedule else [],
+            "recipients": json.loads(t.recipients) if t.recipients else [],
+            "metrics": json.loads(t.metrics) if t.metrics else [],
+            "is_active": t.is_active,
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+            "updated_at": t.updated_at.isoformat() if t.updated_at else None,
+        }
+        for t in templates
+    ]
+
+
+@reports_router.post("/templates", status_code=201)
+async def create_template(
+    body: TemplateCreate,
+    _: dict = Depends(check_inactivity),
+    __: dict = Depends(require_role("admin")),
+):
+    svc = app.state.report_template_service
+    try:
+        template = svc.create(body.model_dump())
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {
+        "id": template.id,
+        "name": template.name,
+        "schedule": json.loads(template.schedule) if template.schedule else [],
+        "recipients": json.loads(template.recipients) if template.recipients else [],
+        "metrics": json.loads(template.metrics) if template.metrics else [],
+        "is_active": template.is_active,
+    }
+
+
+@reports_router.put("/templates/{template_id}")
+async def update_template(
+    template_id: int,
+    body: TemplateUpdate,
+    _: dict = Depends(check_inactivity),
+    __: dict = Depends(require_role("admin")),
+):
+    svc = app.state.report_template_service
+    try:
+        data = {k: v for k, v in body.model_dump().items() if v is not None}
+        template = svc.update(template_id, data)
+    except TemplateNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {
+        "id": template.id,
+        "name": template.name,
+        "schedule": json.loads(template.schedule) if template.schedule else [],
+        "recipients": json.loads(template.recipients) if template.recipients else [],
+        "metrics": json.loads(template.metrics) if template.metrics else [],
+        "is_active": template.is_active,
+    }
+
+
+@reports_router.delete("/templates/{template_id}", status_code=204)
+async def delete_template(
+    template_id: int,
+    _: dict = Depends(check_inactivity),
+    __: dict = Depends(require_role("admin")),
+):
+    svc = app.state.report_template_service
+    try:
+        svc.delete(template_id)
+    except TemplateNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+app.include_router(reports_router)
+
+# ------------------------------------------------------------------
+# Anomaly Router — GET /api/anomalies (T23)
+# ------------------------------------------------------------------
+
+anomaly_router = APIRouter(prefix="/api/anomalies", tags=["anomalies"])
+
+
+@anomaly_router.get("")
+async def detect_anomalies_on_demand(
+    window: int = 120,
+    threshold: float = 3.0,
+    _: dict = Depends(check_inactivity),
+    __: dict = Depends(require_role("admin")),
+):
+    detector = app.state.anomaly_detector
+    try:
+        results = detector.detect_on_demand(window, threshold)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    return [
+        {
+            "record_id": r.record_id,
+            "layer": r.layer,
+            "z_score": r.z_score,
+            "metric_value": r.metric_value,
+            "threshold": r.threshold,
+            "detail": r.detail,
+        }
+        for r in results
+    ]
+
+
+@anomaly_router.get("/history")
+async def get_anomaly_history(
+    limit: int = 50,
+    _: dict = Depends(check_inactivity),
+    __: dict = Depends(require_role("admin")),
+    db: Session = Depends(get_db),
+):
+    if limit < 1 or limit > 500:
+        limit = 50
+    from src.models import AnomalyLog as AL
+    logs = (
+        db.query(AL)
+        .order_by(AL.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        {
+            "id": log.id,
+            "record_id": log.record_id,
+            "layer": log.layer,
+            "z_score": float(log.z_score) if log.z_score is not None else None,
+            "metric_value": float(log.metric_value),
+            "threshold": float(log.threshold),
+            "llm_report": log.llm_report,
+            "sent_sms": log.sent_sms,
+            "created_at": log.created_at.isoformat() if log.created_at else None,
+        }
+        for log in logs
+    ]
+
+
+app.include_router(anomaly_router)
 
 app.add_middleware(
     CORSMiddleware,

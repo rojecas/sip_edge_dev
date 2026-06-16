@@ -43,7 +43,7 @@ class TestBackupConfig(unittest.TestCase):
             }
             with open(path, "w") as f:
                 yaml.dump(yaml_data, f)
-            _, _, _, backup, _ = load_config(path)
+            _, _, _, backup, _, _ = load_config(path)
             self.assertEqual(backup.usb_mount_path, "/mnt/custom")
             self.assertEqual(backup.local_dir, "/tmp/backups")
             self.assertEqual(backup.keep_days, 7)
@@ -58,7 +58,7 @@ class TestBackupConfig(unittest.TestCase):
             }
             with open(path, "w") as f:
                 yaml.dump(yaml_data, f)
-            _, _, _, backup, _ = load_config(path)
+            _, _, _, backup, _, _ = load_config(path)
             self.assertEqual(backup.usb_mount_path, DEFAULT_BACKUP_USB_MOUNT_PATH)
             self.assertEqual(backup.local_dir, DEFAULT_BACKUP_LOCAL_DIR)
             self.assertEqual(backup.keep_days, DEFAULT_BACKUP_KEEP_DAYS)
@@ -74,7 +74,7 @@ class TestBackupConfig(unittest.TestCase):
             }
             with open(path, "w") as f:
                 yaml.dump(yaml_data, f)
-            _, _, _, backup, _ = load_config(path)
+            _, _, _, backup, _, _ = load_config(path)
             self.assertEqual(backup.keep_days, DEFAULT_BACKUP_KEEP_DAYS)
 
 

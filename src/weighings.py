@@ -125,7 +125,60 @@ def create_weighing(
     _send_rs232_frame(frame_data, record)
     db.commit()
     db.refresh(record)
+
+    # Hook: Deteccion de anomalias tras pesaje exitoso (T24)
+    _run_anomaly_detection(record)
+
     return record
+
+
+def _run_anomaly_detection(record: Weighing) -> None:
+    """Ejecuta deteccion de anomalias post-pesaje.
+
+    Si se detectan anomalias, invoca al AgentOrchestrator para generar
+    reporte narrativo y enviar SMS.
+    """
+    import asyncio
+
+    from fastapi import FastAPI as _F
+
+    try:
+        # Acceder al app state via la dependencia de FastAPI
+        import src.main as main_mod
+        app = main_mod.app
+        if not hasattr(app.state, "anomaly_detector") or app.state.anomaly_detector is None:
+            logger.debug("AnomalyDetector no inicializado, omitiendo deteccion")
+            return
+        if not hasattr(app.state, "agent_orchestrator") or app.state.agent_orchestrator is None:
+            logger.debug("AgentOrchestrator no inicializado, omitiendo deteccion")
+            return
+
+        detector = app.state.anomaly_detector
+        orchestrator = app.state.agent_orchestrator
+
+        anomalies = detector.run(record)
+        if not anomalies:
+            logger.debug("No se detectaron anomalias para el pesaje %d", record.id)
+            return
+
+        logger.info("Detectadas %d anomalias para el pesaje %d", len(anomalies), record.id)
+
+        # Construir contexto estadistico para el LLM
+        context = {
+            "record_id": record.id,
+            "fecha": record.fecha.isoformat(),
+            "hora": record.hora.isoformat(),
+            "peso_muestra": float(record.peso_muestra),
+            "peso_mineral": float(record.peso_mineral),
+            "peso_vegetal": float(record.peso_vegetal_extrano),
+            "peso_total": float(record.peso_muestra + record.peso_mineral + record.peso_vegetal_extrano),
+            "total_anomalies": len(anomalies),
+        }
+
+        orchestrator.handle_anomaly(anomalies, context)
+
+    except Exception:
+        logger.exception("Error en deteccion de anomalias post-pesaje")
 
 
 @router.get("", response_model=List[WeighingResponse])

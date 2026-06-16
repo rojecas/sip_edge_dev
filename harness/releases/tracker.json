@@ -28,6 +28,13 @@
       "name": "password_reset_sms",
       "title": "Restablecimiento de Contraseña vía SMS",
       "completed_at": "2026-06-16"
+    },
+    {
+      "id": 8,
+      "type": "feature",
+      "name": "ai_agent",
+      "title": "Sistema Inteligente de Reporteria y Deteccion de Anomalias (TinyLLM)",
+      "completed_at": "2026-06-16"
     }
   ],
   "history": []

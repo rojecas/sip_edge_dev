@@ -150,19 +150,27 @@
         {
             "id": 8,
             "name": "ai_agent",
-            "title": "Agente IA de OrquestaciÃ³n y AnÃ¡lisis (TinyLLM)",
-            "description": "Agente basado en Qwen 2.5 3B (GGUF) ejecutado con Llama.cpp. Function Calling para ejecutar herramientas SQL parametrizadas. DetecciÃ³n proactiva de anomalÃ­as estadÃ­sticas (Z-score > 3) sobre Ãºltimos 120 registros o 4 horas.",
+            "title": "Sistema Inteligente de Reporteria y Deteccion de Anomalias (TinyLLM)",
+            "description": "Sistema de tres flujos: (1) Reportes programados configurables por el administrador, con metricas seleccionables (cantidad de pesajes, peso total, promedio, min/max, desglose por hacienda/operador, composicion de materiales, conteo de anomalias, tendencia), enviados via SMS a corresponsales en horarios definidos. (2) Deteccion de anomalias en tiempo real tras cada pesaje, usando Z-Score con ventana movil configurable (default 120 registros o 4 horas) y umbral configurable (default Z > 3). Incluye filtro relacional (ratios entre materiales) y filtro temporal (tasa de cambio entre pesajes consecutivos, N rachas anomalas). Si se detecta una anomalia, se invoca el LLM (Qwen 2.5 1.5B, 3 cores dedicados via taskset) para leer contexto, generar reporte narrativo y enviar SMS a los corresponsales. (3) Consultas ad-hoc via SMS: un corresponsal envia una pregunta en lenguaje natural, el LLM la procesa con Function Calling, ejecuta herramientas SQL parametrizadas (sin alucinaciones numericas), redacta respuesta y la envia por SMS. Todo soportado por un catalogo de herramientas estadisticas: basic_stats, moving_average, trend, breakdown_by_hacienda, breakdown_by_operator, shift_summary, daily_summary, custom_period_summary, detect_anomalies, check_thresholds.",
             "acceptance": [
-                "RF-009: Orquestador de consultas con Function Calling",
-                "RF-011: AnÃ¡lisis SQL estructurado con herramientas parametrizadas, evitando alucinaciones numÃ©ricas",
-                "RF-010: DetecciÃ³n proactiva de anomalÃ­as con Z-score > 3 sobre ventana de 120 registros o 4 horas"
+                "RF-008a: El administrador puede crear/modificar plantillas de reporte programado con metricas seleccionables (count, avg, min/max, breakdown, composition, anomaly_count, trend)",
+                "RF-008b: Los reportes programados se envian via SMS a la lista de corresponsales en los horarios configurados (por defecto 06:00, 14:00, 22:00)",
+                "RF-008c: Tras cada pesaje confirmado, el sistema ejecuta deteccion de anomalias en 3 capas: Z-Score ventana movil (configurable), ratios entre materiales, y tasa de cambio temporal",
+                "RF-008d: Si se detecta una anomalia, el sistema invoca el LLM para generar reporte narrativo y lo envia por SMS a los corresponsales",
+                "RF-008e: Un corresponsal puede enviar un SMS con una pregunta en lenguaje natural sobre los datos recopilados",
+                "RF-008f: El sistema procesa la consulta SMS mediante LLM con Function Calling, ejecuta herramientas SQL parametrizadas, y responde por SMS sin alucinaciones numericas",
+                "RF-008g: El LLM se ejecuta con taskset -c 0-2 y -t 3 (3 cores dedicados), sin interferir con el backend",
+                "RF-008h: Las herramientas estadisticas incluyen: basic_stats, percentiles, moving_average, trend, breakdown_by_hacienda, breakdown_by_operator, material_composition, shift_summary, daily_summary, detect_anomalies, check_thresholds"
             ],
             "sdd": true,
-            "status": "pending",
+            "status": "done",
             "depends_on": [
-                6
+                6,
+                7,
+                12
             ],
-            "type": "feature"
+            "type": "feature",
+            "github_issue": "https://github.com/rojecas/sip_edge/issues/12"
         },
         {
             "id": 9,

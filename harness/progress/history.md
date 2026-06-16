@@ -192,3 +192,21 @@
 - **Tests:** 362 tests totales, sin regresiones. Reviewer aprobó tras re-evaluación de R15/R16.
 - **Lecciones:** Creados VERSION y CHANGELOG.md en raíz del proyecto que no existían. GitHub sync script falló por encoding cp1252 en Windows.
 
+---
+
+## 2026-06-16 — Release-manager register: Feature 8 ai_agent
+
+- **Agente:** release-manager (register)
+- **Feature:** 8 — ai_agent
+- **Estado:** in_progress → done (registrada en tracker)
+- **Resumen:** Sistema Inteligente de Reportería y Detección de Anomalías (TinyLLM) completado. Tres flujos implementados: (1) Reportes programados con plantillas configurables y métricas seleccionables (SQL directo, sin LLM); (2) Detección de anomalías en 3 capas (Z-Score, relacional, temporal) con invocación LLM para narrativa; (3) Consultas ad-hoc por SMS con Function Calling y 12 herramientas SQL parametrizadas. 430 tests, todos verdes. Code review aprobado en 3ª ronda.
+- **Archivos modificados por release-manager:**
+  - `harness/feature_list.json` — feature 8 status → "done"
+  - `harness/releases/tracker.json` — añadido feature 8 a pending
+  - `harness/progress/closure-ai_agent.md` — CREADO
+  - `harness/progress/current.md` — actualizado con estado final
+  - `harness/progress/history.md` — registro de sesión añadido
+- **GitHub:** Issue #12 comentado y cerrado (reason: completed) usando gh CLI directo
+- **Tests:** 430 tests totales, sin regresiones. Reviewer aprobó en 3ª ronda tras correcciones de T32 y tests R1-R5.
+- **Lecciones:** gh CLI funciona correctamente desde Windows para comentar/cerrar issues. github_sync.py tiene problemas de encoding cp1252 en Windows con caracteres UTF-8 no ASCII.
+

@@ -71,6 +71,20 @@ class SmsConfig:
     scheduled_reports: list[str]
 
 
+@dataclass(frozen=True)
+class AgentConfig:
+    llm_url: str = "http://localhost:8080"
+    llm_model: str = "qwen2.5-1.5b-instruct-q4_k_m"
+    llm_timeout: int = 30
+    window_size: int = 120
+    window_hours: int = 4
+    z_threshold: float = 3.0
+    max_vegetal_to_muestra: float = 0.5
+    max_mineral_to_muestra: float = 0.3
+    max_rate_change: float = 0.5
+    max_consecutive_anomalies: int = 3
+
+
 def default_config() -> SystemConfig:
     return SystemConfig(
         rs485=SerialPortConfig(
@@ -92,7 +106,7 @@ def default_config() -> SystemConfig:
     )
 
 
-def load_config(path: str) -> tuple[SystemConfig, SessionConfig, ScaleConfig, BackupConfig, SmsConfig]:
+def load_config(path: str) -> tuple[SystemConfig, SessionConfig, ScaleConfig, BackupConfig, SmsConfig, AgentConfig]:
     session_config = SessionConfig(DEFAULT_SESSION_TIMEOUT_MINUTES)
     scale_config = ScaleConfig(DEFAULT_SCALE_TIMEOUT)
     backup_config = BackupConfig(
@@ -102,11 +116,12 @@ def load_config(path: str) -> tuple[SystemConfig, SessionConfig, ScaleConfig, Ba
         admin_phones=list(DEFAULT_SMS_ADMIN_PHONES),
         scheduled_reports=list(DEFAULT_SMS_SCHEDULED_REPORTS),
     )
+    agent_config = AgentConfig()
     if not os.path.exists(path):
         config = default_config()
         logger.warning("config.yaml not found, created with defaults")
-        _atomic_write_sections(config, session_config, scale_config, backup_config, sms_config, path)
-        return config, session_config, scale_config, backup_config, sms_config
+        _atomic_write_sections(config, session_config, scale_config, backup_config, sms_config, agent_config, path)
+        return config, session_config, scale_config, backup_config, sms_config, agent_config
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
@@ -149,7 +164,21 @@ def load_config(path: str) -> tuple[SystemConfig, SessionConfig, ScaleConfig, Ba
                 admin_phones=list(admin_phones),
                 scheduled_reports=list(scheduled_reports),
             )
-        return config, session_config, scale_config, backup_config, sms_config
+        if "agent" in data and data["agent"] is not None:
+            ad = data["agent"]
+            agent_config = AgentConfig(
+                llm_url=ad.get("llm_url", agent_config.llm_url),
+                llm_model=ad.get("llm_model", agent_config.llm_model),
+                llm_timeout=ad.get("llm_timeout", agent_config.llm_timeout),
+                window_size=ad.get("window_size", agent_config.window_size),
+                window_hours=ad.get("window_hours", agent_config.window_hours),
+                z_threshold=ad.get("z_threshold", agent_config.z_threshold),
+                max_vegetal_to_muestra=ad.get("max_vegetal_to_muestra", agent_config.max_vegetal_to_muestra),
+                max_mineral_to_muestra=ad.get("max_mineral_to_muestra", agent_config.max_mineral_to_muestra),
+                max_rate_change=ad.get("max_rate_change", agent_config.max_rate_change),
+                max_consecutive_anomalies=ad.get("max_consecutive_anomalies", agent_config.max_consecutive_anomalies),
+            )
+        return config, session_config, scale_config, backup_config, sms_config, agent_config
     except Exception:
         logger.warning("Failed to load config.yaml, using defaults", exc_info=True)
         config = default_config()
@@ -157,8 +186,8 @@ def load_config(path: str) -> tuple[SystemConfig, SessionConfig, ScaleConfig, Ba
             admin_phones=list(DEFAULT_SMS_ADMIN_PHONES),
             scheduled_reports=list(DEFAULT_SMS_SCHEDULED_REPORTS),
         )
-        _atomic_write_sections(config, session_config, scale_config, backup_config, sms_config, path)
-        return config, session_config, scale_config, backup_config, sms_config
+        _atomic_write_sections(config, session_config, scale_config, backup_config, sms_config, agent_config, path)
+        return config, session_config, scale_config, backup_config, sms_config, agent_config
 
 
 def save_config(config: SystemConfig, path: str) -> None:
@@ -198,6 +227,20 @@ def save_sms_config(config: SmsConfig, path: str) -> None:
         "admin_phones": config.admin_phones,
         "scheduled_reports": config.scheduled_reports,
     }
+    yaml_text = yaml.dump(existing, default_flow_style=False, allow_unicode=True)
+    _atomic_write(yaml_text, path)
+
+
+def save_agent_config(config: AgentConfig, path: str) -> None:
+    """Persiste la seccion agent en config.yaml preservando las demas secciones."""
+    existing = {}
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                existing = yaml.safe_load(f) or {}
+        except Exception:
+            existing = {}
+    existing["agent"] = asdict(config)
     yaml_text = yaml.dump(existing, default_flow_style=False, allow_unicode=True)
     _atomic_write(yaml_text, path)
 
@@ -255,7 +298,7 @@ def _atomic_write(content: str, path: str) -> None:
 def _atomic_write_sections(
     system_config: SystemConfig, session_config: SessionConfig,
     scale_config: ScaleConfig, backup_config: BackupConfig,
-    sms_config: SmsConfig, path: str
+    sms_config: SmsConfig, agent_config: AgentConfig, path: str
 ) -> None:
     existing = {}
     if os.path.exists(path):
@@ -279,6 +322,7 @@ def _atomic_write_sections(
         "admin_phones": sms_config.admin_phones,
         "scheduled_reports": sms_config.scheduled_reports,
     }
+    existing["agent"] = asdict(agent_config)
     yaml_text = yaml.dump(existing, default_flow_style=False, allow_unicode=True)
     _atomic_write(yaml_text, path)
 

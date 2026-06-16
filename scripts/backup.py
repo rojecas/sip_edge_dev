@@ -17,7 +17,7 @@ from src.database import init_db
 init_db()
 
 from src.config import load_config
-_, _, _, backup_config = load_config(config_path)
+_, _, _, _, backup_config, _ = load_config(config_path)
 
 from src.backup import run_backup
 try:

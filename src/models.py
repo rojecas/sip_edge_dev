@@ -155,3 +155,66 @@ class EmergencyModeLog(Base):
         Index("idx_eml_status_expires", "status", "expires_at"),
         {"sqlite_autoincrement": True},
     )
+
+
+class ReportTemplate(Base):
+    """Plantilla de reporte programado con metricas seleccionables."""
+
+    __tablename__ = "report_templates"
+
+    id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
+    name = Column(String(255), nullable=False)
+    schedule = Column(Text, nullable=False)  # JSON array de horarios "HH:MM"
+    recipients = Column(Text, nullable=False)  # JSON array de telefonos
+    metrics = Column(Text, nullable=False)  # JSON array de metricas
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(
+        TIMESTAMP, nullable=False, server_default=func.current_timestamp()
+    )
+    updated_at = Column(
+        TIMESTAMP,
+        nullable=False,
+        server_default=func.current_timestamp(),
+        server_onupdate=func.current_timestamp(),
+    )
+
+    __table_args__ = (
+        Index("idx_rt_active", "is_active"),
+        {"sqlite_autoincrement": True},
+    )
+
+
+class AnomalyLog(Base):
+    """Registro de anomalias detectadas por capa."""
+
+    __tablename__ = "anomaly_log"
+
+    id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
+    record_id = Column(
+        BigInteger().with_variant(Integer, "sqlite"), nullable=False, index=True
+    )
+    layer = Column(String(20), nullable=False)
+    z_score = Column(Numeric(10, 4), nullable=True, default=None)
+    metric_value = Column(Numeric(10, 4), nullable=False)
+    threshold = Column(Numeric(10, 4), nullable=False)
+    llm_report = Column(Text, nullable=True, default=None)
+    sent_sms = Column(Boolean, nullable=False, default=False)
+    anomaly_context = Column(Text, nullable=True, default=None)  # JSON
+    created_at = Column(
+        TIMESTAMP, nullable=False, server_default=func.current_timestamp()
+    )
+
+    __table_args__ = (
+        Index("idx_al_record", "record_id"),
+        Index("idx_al_layer", "layer"),
+        Index("idx_al_created", "created_at"),
+        {"sqlite_autoincrement": True},
+    )

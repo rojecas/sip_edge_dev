@@ -36,6 +36,11 @@ class SMSService:
         self._scheduler_task: asyncio.Task | None = None
         self._sent_today: set[str] = set()
         self._current_report_day: str = ""
+        self._template_service = None  # Se inyecta externamente
+
+    def set_template_service(self, template_service) -> None:
+        """Inyecta el ReportTemplateService para reportes basados en plantillas."""
+        self._template_service = template_service
 
     # ------------------------------------------------------------------
     # Envio individual
@@ -133,9 +138,17 @@ class SMSService:
         """Envia un mensaje de alerta a todos los numeros en admin_phones."""
         self._send_to_all_admins(message)
 
-    def send_scheduled_report(self, report_text: str) -> None:
-        """Envia un reporte programado a todos los numeros en admin_phones."""
-        self._send_to_all_admins(report_text)
+    def send_scheduled_report(self, report_text: str, recipients: list[str] | None = None) -> None:
+        """Envia un reporte programado a los destinatarios especificados.
+
+        Si recipients es None, envia a todos los admin_phones.
+        """
+        if recipients:
+            for phone in recipients:
+                if phone:
+                    self.send_sms(phone, report_text)
+        else:
+            self._send_to_all_admins(report_text)
 
     def _send_to_all_admins(self, message: str) -> None:
         """Envia el mensaje a todos los numeros en admin_phones."""
@@ -221,7 +234,12 @@ class SMSService:
                 break
 
     async def _check_and_send_reports(self) -> None:
-        """Verifica si la hora actual coincide con un horario de reporte."""
+        """Verifica si la hora actual coincide con un horario de reporte.
+
+        Soporta dos fuentes de reportes programados:
+        1. Horarios fijos de config.yaml (sms.scheduled_reports)
+        2. Plantillas activas en report_templates (BD)
+        """
         now = datetime.now(timezone.utc)
         current_day = now.strftime("%Y-%m-%d")
 
@@ -232,11 +250,50 @@ class SMSService:
 
         current_time = now.strftime("%H:%M")
 
+        # 1. Reportes de horarios fijos (config.yaml)
         for scheduled in self._config.scheduled_reports:
             if scheduled == current_time and scheduled not in self._sent_today:
                 self._sent_today.add(scheduled)
                 logger.info("Enviando reporte programado para %s", scheduled)
                 await self._do_send_report(scheduled)
+
+        # 2. Reportes de plantillas activas (T26)
+        if self._template_service is not None:
+            template_key = f"tpl_{current_time}"
+            if template_key not in self._sent_today:
+                self._sent_today.add(template_key)
+                await self._send_template_reports(current_time)
+
+    async def _send_template_reports(self, current_time: str) -> None:
+        """Envia reportes para todas las plantillas activas en este horario."""
+        try:
+            templates = self._template_service.get_active_by_schedule(current_time)
+        except Exception:
+            logger.exception("Error consultando plantillas de reporte")
+            return
+
+        if not templates:
+            return
+
+        import src.database as _db
+        db = _db.SessionLocal()
+        try:
+            for template in templates:
+                try:
+                    report_text = self._template_service.generate_report(template, db)
+                    # Obtener destinatarios de la plantilla
+                    import json
+                    try:
+                        recipients = json.loads(template.recipients)
+                    except (json.JSONDecodeError, TypeError):
+                        recipients = []
+                    self.send_scheduled_report(report_text, recipients=recipients)
+                    logger.info("Reporte de plantilla '%s' enviado a %d destinatarios",
+                               template.name, len(recipients))
+                except Exception:
+                    logger.exception("Error generando reporte para plantilla %s", template.id)
+        finally:
+            db.close()
 
     async def _do_send_report(self, time_slot: str) -> None:
         """Ejecuta el envio del reporte para el horario dado.

@@ -37,7 +37,7 @@ def send_frame(
 
     from src.config import load_config
 
-    system_config, _, _, _, _ = load_config(config_path)
+    system_config, _, _, _, _, _ = load_config(config_path)
     rs232_cfg = system_config.rs232
 
     csv_line = (
