@@ -1,0 +1,308 @@
+<script>
+  /**
+   * AdminSuertes — Suerte management: filter by hacienda, list, create, edit, delete.
+   */
+  import { api, ApiError, buildQuery } from "../lib/api.js";
+  import { ENDPOINTS, CONFIG } from "../lib/constants.js";
+  import ConfirmModal from "./ConfirmModal.svelte";
+  import SuerteFormModal from "./SuerteFormModal.svelte";
+
+  // Haciendas for dropdown
+  let haciendas = $state([]);
+  let haciendasLoading = $state(true);
+
+  // Selected hacienda
+  let selectedHaciendaId = $state(0);
+
+  // Suertes list
+  let suertes = $state([]);
+  let suertesLoading = $state(false);
+  let suertesError = $state("");
+  let emptyMsg = $state("");
+
+  // Result messages
+  let resultMsg = $state("");
+  let resultError = $state(false);
+
+  // Delete confirm
+  let confirmShow = $state(false);
+  let confirmTarget = $state(null);
+
+  // Form modal
+  let formShow = $state(false);
+  let formMode = $state("create");
+  let formSuerte = $state(null);
+  let formHaciendaId = $state(0);
+  let formError = $state("");
+  let formSubmitting = $state(false);
+
+  // Load haciendas for dropdown on mount
+  $effect(() => { loadHaciendas(); });
+
+  async function loadHaciendas() {
+    haciendasLoading = true;
+    try {
+      const qs = buildQuery({ page: 1, page_size: CONFIG.DEFAULT_HACIENDAS_PAGE_SIZE });
+      haciendas = await api.get(`${ENDPOINTS.HACIENDAS}${qs}`);
+    } catch {
+      haciendas = [];
+    } finally {
+      haciendasLoading = false;
+    }
+  }
+
+  async function loadSuertes() {
+    if (!selectedHaciendaId) {
+      suertes = [];
+      return;
+    }
+    suertesLoading = true;
+    suertesError = "";
+    emptyMsg = "";
+    try {
+      const qs = buildQuery({ hacienda_id: selectedHaciendaId });
+      suertes = await api.get(`${ENDPOINTS.SUERTES}${qs}`);
+      if (!suertes || suertes.length === 0) {
+        emptyMsg = "No hay suertes registradas para esta hacienda.";
+        suertes = [];
+      }
+    } catch (err) {
+      suertesError = err instanceof ApiError ? err.message : "Error de conexión.";
+    } finally {
+      suertesLoading = false;
+    }
+  }
+
+  function onHaciendaChange() {
+    loadSuertes();
+  }
+
+  function showResult(msg, isError = false) {
+    resultMsg = msg;
+    resultError = isError;
+    if (!isError) setTimeout(() => { resultMsg = ""; }, 3000);
+  }
+
+  function openCreate() {
+    formMode = "create";
+    formSuerte = null;
+    formHaciendaId = selectedHaciendaId;
+    formError = "";
+    formSubmitting = false;
+    formShow = true;
+  }
+
+  function openEdit(s) {
+    formMode = "edit";
+    formSuerte = s;
+    formHaciendaId = s.hacienda_id;
+    formError = "";
+    formSubmitting = false;
+    formShow = true;
+  }
+
+  async function handleFormSave(payload) {
+    formSubmitting = true;
+    formError = "";
+    try {
+      if (formMode === "create") {
+        await api.post(ENDPOINTS.SUERTES, payload);
+        formShow = false;
+        await loadSuertes();
+        showResult("Suerte creada exitosamente.");
+      } else {
+        await api.put(`${ENDPOINTS.SUERTES_BY_ID}${formSuerte.id}`, payload);
+        formShow = false;
+        await loadSuertes();
+        showResult("Suerte actualizada exitosamente.");
+      }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        formError = err.message;
+      } else {
+        formError = "Error de conexión.";
+      }
+    } finally {
+      formSubmitting = false;
+    }
+  }
+
+  function closeForm() {
+    formShow = false;
+  }
+
+  function openDelete(s) {
+    confirmTarget = s;
+    confirmShow = true;
+  }
+
+  async function confirmDelete() {
+    if (!confirmTarget) return;
+    try {
+      await api.del(`${ENDPOINTS.SUERTES_BY_ID}${confirmTarget.id}`);
+      confirmShow = false;
+      confirmTarget = null;
+      await loadSuertes();
+      showResult("Suerte eliminada exitosamente.");
+    } catch (err) {
+      confirmShow = false;
+      showResult(err instanceof ApiError ? err.message : "Error de conexión.", true);
+    }
+  }
+
+  function cancelDelete() {
+    confirmShow = false;
+    confirmTarget = null;
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return "—";
+    try {
+      return new Date(dateStr).toLocaleString("es-CO", {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit",
+      });
+    } catch {
+      return dateStr;
+    }
+  }
+</script>
+
+<div class="suertes-page">
+  <div class="page-header">
+    <h1>Suertes</h1>
+  </div>
+
+  <!-- Hacienda selector -->
+  <div class="selector-row">
+    <label>
+      Hacienda:
+      <select bind:value={selectedHaciendaId} onchange={onHaciendaChange}>
+        <option value={0}>-- Seleccione una hacienda --</option>
+        {#each haciendas as h}
+          <option value={h.id}>{h.nombre} ({h.codigo})</option>
+        {/each}
+      </select>
+    </label>
+  </div>
+
+  {#if resultMsg}
+    <div class="result-banner" class:result-error={resultError}>{resultMsg}</div>
+  {/if}
+
+  {#if !selectedHaciendaId}
+    <div class="empty-box">
+      <span class="empty-icon">🌱</span>
+      <p>Seleccione una hacienda para ver sus suertes</p>
+    </div>
+  {:else if suertesLoading}
+    <div class="loading">Cargando suertes...</div>
+  {:else if suertesError}
+    <div class="error-box">
+      <p>{suertesError}</p>
+      <button class="btn btn-secondary" onclick={loadSuertes}>Reintentar</button>
+    </div>
+  {:else if emptyMsg}
+    <div class="empty-box">
+      <span class="empty-icon">📋</span>
+      <p>{emptyMsg}</p>
+      <button class="btn btn-primary" onclick={openCreate}>+ Nueva Suerte</button>
+    </div>
+  {:else}
+    <div class="table-header">
+      <button class="btn btn-primary" onclick={openCreate}>+ Nueva Suerte</button>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Hacienda ID</th>
+            <th>Código Suerte</th>
+            <th>Creado</th>
+            <th>Actualizado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each suertes as s}
+            <tr>
+              <td>{s.id}</td>
+              <td>{s.hacienda_id}</td>
+              <td>{s.codigo_suerte || "—"}</td>
+              <td>{formatDate(s.created_at)}</td>
+              <td>{formatDate(s.updated_at)}</td>
+              <td class="actions-cell">
+                <button class="btn-sm btn-edit" onclick={() => openEdit(s)}>Editar</button>
+                <button class="btn-sm btn-delete" onclick={() => openDelete(s)}>Eliminar</button>
+              </td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {/if}
+</div>
+
+<SuerteFormModal
+  show={formShow}
+  mode={formMode}
+  suerte={formSuerte}
+  haciendaId={formHaciendaId}
+  haciendas={haciendas}
+  error={formError}
+  onClose={closeForm}
+  onSave={handleFormSave}
+/>
+
+<ConfirmModal
+  show={confirmShow}
+  title="Eliminar Suerte"
+  message={confirmTarget ? `¿Está seguro de eliminar la suerte ${confirmTarget.codigo_suerte}?` : ""}
+  confirmText="Eliminar"
+  cancelText="Cancelar"
+  onConfirm={confirmDelete}
+  onCancel={cancelDelete}
+/>
+
+<style>
+  .suertes-page { max-width: 1000px; }
+  .page-header { margin-bottom: 24px; }
+  .page-header h1 { font-size: 24px; }
+  .selector-row { margin-bottom: 24px; }
+  .selector-row label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-secondary); max-width: 360px; }
+  .selector-row select {
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg-input); color: var(--text-primary); font-size: 14px;
+  }
+  .selector-row select:focus { outline: none; border-color: var(--accent); }
+  .result-banner {
+    padding: 12px 18px; border-radius: 8px; font-size: 14px; font-weight: 500;
+    margin-bottom: 16px;
+    background: rgba(81, 207, 102, 0.1); color: var(--success);
+    border: 1px solid var(--success);
+  }
+  .result-error { background: rgba(255, 107, 107, 0.1); color: var(--error); border-color: var(--error); }
+  .loading { color: var(--text-secondary); font-size: 15px; padding: 24px 0; }
+  .error-box { text-align: center; padding: 40px 0; color: var(--error); }
+  .empty-box { text-align: center; padding: 60px 0; color: var(--text-secondary); }
+  .empty-icon { font-size: 48px; display: block; margin-bottom: 12px; opacity: 0.4; }
+  .table-header { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+  .table-wrapper { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 12px 16px; background: var(--bg-secondary); color: var(--text-secondary); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 16px; border-bottom: 1px solid var(--border); color: var(--text-primary); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+  .actions-cell { display: flex; gap: 6px; }
+  .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--border); }
+  .btn-sm { padding: 5px 12px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .btn-edit { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
+  .btn-edit:hover { background: var(--border); }
+  .btn-delete { background: transparent; color: var(--error); border: 1px solid var(--error); }
+  .btn-delete:hover { background: rgba(255, 107, 107, 0.1); }
+</style>

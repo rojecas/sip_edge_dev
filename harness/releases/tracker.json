@@ -9,6 +9,13 @@
       "completed_at": "2026-06-16"
     },
     {
+      "id": 14,
+      "type": "feature",
+      "name": "frontend_admin",
+      "title": "Frontend - Panel de Administracion",
+      "completed_at": "2026-06-17"
+    },
+    {
       "id": 17,
       "type": "bug",
       "name": "watchdog_sd_notify",

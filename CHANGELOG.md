@@ -2,6 +2,11 @@
 
 > All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-06-17
+
+### Added
+- Feature #14 — Frontend - Panel de Administración: SPA administrativo con dashboard central, configuración del sistema (puertos RS485, RS232, GSM con pruebas), CRUD de usuarios, CRUD de haciendas y suertes (soft-delete), y panel de backups con historial y ejecución.
+
 ## [1.0.0] - 2026-06-16
 
 ### Added

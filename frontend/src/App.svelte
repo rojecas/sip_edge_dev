@@ -13,7 +13,12 @@
   import AdminLayout from "./components/AdminLayout.svelte";
   import KioskForm from "./components/KioskForm.svelte";
   import HistoryTable from "./components/HistoryTable.svelte";
-  import AdminPlaceholder from "./components/AdminPlaceholder.svelte";
+  import AdminDashboard from "./components/AdminDashboard.svelte";
+  import AdminConfig from "./components/AdminConfig.svelte";
+  import AdminUsers from "./components/AdminUsers.svelte";
+  import AdminHaciendas from "./components/AdminHaciendas.svelte";
+  import AdminSuertes from "./components/AdminSuertes.svelte";
+  import AdminBackup from "./components/AdminBackup.svelte";
 
   // Initialize auth store for the API wrapper
   setAuthStore(authStore);
@@ -48,7 +53,21 @@
     </KioskLayout>
   {:else if authStore.isAdmin}
     <AdminLayout>
-      <AdminPlaceholder />
+      {#if currentRoute === "/admin"}
+        <AdminDashboard />
+      {:else if currentRoute === "/admin/config"}
+        <AdminConfig />
+      {:else if currentRoute === "/admin/usuarios"}
+        <AdminUsers />
+      {:else if currentRoute === "/admin/haciendas"}
+        <AdminHaciendas />
+      {:else if currentRoute === "/admin/suertes"}
+        <AdminSuertes />
+      {:else if currentRoute === "/admin/backup"}
+        <AdminBackup />
+      {:else}
+        <AdminDashboard />
+      {/if}
     </AdminLayout>
   {/if}
 {/if}

@@ -9,10 +9,21 @@ export const ENDPOINTS = {
   WEIGHINGS: "/api/weighings",
   WEIGHINGS_RESET: "/api/weighings/reset",
   HACIENDAS: "/api/haciendas",
+  HACIENDAS_BY_ID: "/api/haciendas/",
   SUERTES: "/api/suertes",
+  SUERTES_BY_ID: "/api/suertes/",
   EMERGENCY_STATUS: "/api/emergency/status",
   EMERGENCY_ADMINS: "/api/emergency/admins",
   EMERGENCY_REQUEST: "/api/emergency/request",
+  // Admin panel endpoints
+  CONFIG: "/api/config",
+  CONFIG_TEST: "/api/config/test",
+  SETUP_SESSION: "/api/setup/session",
+  SETUP_SCALE: "/api/setup/scale",
+  USERS: "/api/users",
+  USERS_BY_ID: "/api/users/",
+  BACKUP_STATUS: "/api/backup/status",
+  BACKUP_RUN: "/api/backup/run",
   WS_SCALE: "/ws/scale",
 };
 
