@@ -350,8 +350,26 @@
                                              6,
                                              8,
                                              13
-                                         ]
-                      }
-                  ]
-              }
-
+                              ]
+                       },
+                       {
+                           "id":  17,
+                           "name":  "watchdog_sd_notify",
+                           "title":  "Watchdog mal configurado — servicio reiniciado cada 30s por falta de sd_notify",
+                           "type":  "bug",
+                           "description":  "El servicio sip-edge tiene WatchdogSec=30 configurado en su unidad systemd, pero uvicorn/FastAPI no implementa sd_notify(). systemd nunca recibe la senial WATCHDOG=1 y mata el proceso cada 30s con SIGABRT, reiniciandolo ciclicamente. Esto afecta la estabilidad del sistema completo.",
+                           "reproduction":  "1. Hacer SSH a la EdgeBox: ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42\n2. Ejecutar: sudo journalctl -u sip-edge -n 50\n3. Observar: 'Watchdog timeout (limit 30s)!' seguido de 'Killing process uvicorn with signal SIGABRT'\n4. El servicio se reinicia en un ciclo infinito cada ~30s",
+                           "affected_feature_ids":  [
+                                                        6,
+                                                        7,
+                                                        8,
+                                                        9,
+                                                        10,
+                                                        11,
+                                                        12,
+                                                        13
+                                                    ],
+                           "status":  "triaged"
+                       }
+                   ]
+               }

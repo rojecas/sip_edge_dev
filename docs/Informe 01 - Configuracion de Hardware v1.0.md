@@ -7,8 +7,8 @@
 
 Se ha realizado exitosamente la migración del sistema base para habilitar la ejecución de modelos de Inteligencia Artificial (LLMs) superiores a 4GB, manteniendo intacta la integridad del hardware industrial.
 
-*   **Diagnóstico de Sistema:** Se identificó que, aunque el Kernel era `aarch64`, el sistema de usuario (`userland`) era de 32 bits, lo que limitaba el uso de los 8 GB de RAM por proceso.
-*   **Arranque Live-USB sin desarmar el chasis:** Se aprovechó el parámetro nativo `BOOT_ORDER=0xf21546` de la EEPROM para forzar el arranque desde un pendrive, evitando el complejo proceso de extraer la tarjeta CM4 a una placa portadora (*Carrier Board*).
+*   **Diagnóstico de Sistema:** Se identificó que, aunque el Kernel era `aarch64`, el sistema de usuario (`userland`) era de 32 bits, lo que limitaba el uso de modelos a máximo 4GB de los 8 GB de RAM. - Situacion suboptima -
+*   **Arranque Live-USB sin desarmar el chasis:** Se aprovechó el parámetro nativo `BOOT_ORDER=0xf21546` de la EEPROM para forzar el arranque desde un pendrive, evitando el complejo proceso de extraer la tarjeta CM4 a una placa portadora externa (*Carrier Board - fuera del EdgeBox-RPI-200*), ya que el EdgeBox no tiene modo boot/firmware/config.
 *   **Flasheo seguro de eMMC:** Se instaló **Raspberry Pi OS 64-bit (Debian 12 - Bookworm)**. Se utilizó la herramienta `rpi-clone` en lugar de `dd` para clonar el sistema de archivos formateando correctamente la eMMC (evitando corrupción por discrepancia de tamaños de disco) y reescribiendo los `PARTUUID` de arranque.
 *   **Verificación de Arquitectura:** El sistema ahora corre puramente en 64 bits (`getconf LONG_BIT` = 64), liberando los 8 GB de RAM totales.
 *   **Respaldo y Restauración Base:** Se protegieron y restauraron las reglas del udev para el módem 4G LTE (`99-quectel-ttyUSB2-blacklist.rules`) y el script de inicio de usuario (`/etc/rc.local`).

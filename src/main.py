@@ -8,6 +8,8 @@ from contextlib import asynccontextmanager
 from dataclasses import asdict
 from datetime import datetime, timezone
 
+from src.sd_notify import notify as sd_notify
+
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -210,7 +212,28 @@ async def lifespan(app: FastAPI):
     # Iniciar dispatcher de SMS entrantes
     await app.state.sms_dispatcher.start()
 
+    # --- Watchdog heartbeat para systemd sd_notify ---
+    async def _watchdog_heartbeat():
+        """Envia WATCHDOG=1 cada 25s para evitar que systemd mate el proceso."""
+        while True:
+            try:
+                await asyncio.sleep(25)
+                sd_notify()
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                logger.exception("Watchdog heartbeat error")
+
+    watchdog_task = asyncio.create_task(_watchdog_heartbeat())
+    # -------------------------------------------------
+
     yield
+
+    watchdog_task.cancel()
+    try:
+        await watchdog_task
+    except asyncio.CancelledError:
+        pass
 
     await app.state.sms_dispatcher.stop()
     await app.state.emergency_service.stop()

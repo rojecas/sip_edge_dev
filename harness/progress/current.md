@@ -4,9 +4,9 @@
 > Los cierres y bloqueos van en archivos separados: ver harness/docs/sessions.md.
 
 - **Inicio:** 2026-06-17
-- **Agente:** leader
-- **Feature en curso:** 13 — frontend_login_kiosk
-- **Estado:** in_progress
+- **Agente:** bug-fixer
+- **Bug en curso:** 17 — watchdog_sd_notify
+- **Plan:** diagnosticar causa raiz, implementar fix, anadir regression test
 
 ---
 

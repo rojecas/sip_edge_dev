@@ -28,3 +28,8 @@ Thumbs.db
 
 # Config (generated at runtime)
 config.yaml
+
+# Node
+node_modules/
+frontend/node_modules/
+
