@@ -268,3 +268,31 @@ Ejecutar tasks T1 a T35 de harness/specs/13_frontend_login_kiosk/tasks.md:
 
 (none)
 
+
+---
+
+## Sesion: 2026-06-17 — Cierre formal
+
+### Resumen de actividades
+
+| Actividad | Estado |
+|----------|--------|
+| Feature #13 — frontend_login_kiosk: commit + push, EdgeBox Nivel 4 verificacion | ✅ done |
+| Bug #17 — watchdog_sd_notify: implementacion sd_notify, tests, despliegue EdgeBox   | ✅ done |
+| Docs — Informe 01: IP, APN, watchdog corregidos (pre-entrega)                         | ✅ done |
+| Infra — IP 192.168.1.42 fijada como estatica en EdgeBox via nmcli                     | ✅ done |
+
+### Features/Bugs cerrados
+- Feature #13 (frontend_login_kiosk) — Verificada en EdgeBox. GitHub issue #14 creado/cerrado.
+- Bug #17 (watchdog_sd_notify) — sd_notify implementado, deployado, GitHub issue #13 creado/cerrado.
+
+### Lecciones
+- Uvicorn no implementa sd_notify nativamente. Se implemento en src/sd_notify.py con stdlib puro.
+- El watchdog de hardware a 30s mata el servicio si no recibe WATCHDOG=1. Heartbeat cada 25s.
+- La BD en EdgeBox tenia migraciones pendientes que causaban error 1054 al arrancar.
+
+### Pendientes para proxima sesion
+- Feature #14 (frontend_admin) — pending
+- Feature #15 (frontend_analytics) — pending
+- Feature #16 (harvest_type) — pending
+
