@@ -7,6 +7,13 @@
       "name": "frontend_login_kiosk",
       "title": "Frontend - Login, Kiosco de Pesaje y Logout",
       "completed_at": "2026-06-16"
+    },
+    {
+      "id": 17,
+      "type": "bug",
+      "name": "watchdog_sd_notify",
+      "title": "Watchdog mal configurado — servicio reiniciado cada 30s por falta de sd_notify",
+      "completed_at": "2026-06-17"
     }
   ],
   "history": [

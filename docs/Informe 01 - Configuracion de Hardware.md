@@ -1,4 +1,4 @@
-
+﻿
 ---
 
 ## Informe de Progreso 1: Configuracion de Hardware — EdgeBox-RPI-200
@@ -46,7 +46,7 @@ sudo adduser sipedge
 |-------|-------|
 | **Usuario** | `sipedge` |
 | **Contrasena** | `sipedge1234` |
-| **SSH** | `ssh sipedge@192.168.1.28` (IP inicial) |
+| **SSH** | `ssh sipedge@192.168.1.42` (IP fija) |
 
 ### 2.3 Grupos para acceso a perifericos
 
@@ -163,7 +163,7 @@ Opcional pendiente: plan de datos activo
 
 | Parametro | Valor |
 |-----------|-------|
-| **APN** | `web.colombiamovil.com.co` |
+| **APN** | `internet.tigo.com.co` |
 | **Usuario** | (vacio) |
 | **Contrasena** | (vacio) |
 | **Autenticacion** | PAP |
@@ -280,7 +280,7 @@ Se redujo el timeout de 1 minuto a 30 segundos para cumplir `[RNF-003]`.
 | Archivo | Cambio |
 |---------|--------|
 | `/boot/firmware/config.txt` | Agregado `dtparam=watchdog=on` |
-| `/etc/systemd/system.conf` | `#RuntimeWatchdogSec=off` → `RuntimeWatchdogSec=30` |
+| `/etc/systemd/system.conf` | `#RuntimeWatchdogSec=off` → `RuntimeWatchdogSec=30` (el drop-in `50-watchdog-30s.conf` tiene prioridad sobre system.conf) |
 | `/etc/systemd/system.conf.d/50-watchdog-30s.conf` | **Nuevo** — sobreescribe default RPi OS (1min → 30s) |
 | `/etc/systemd/system/sip-edge.service` | Agregado `WatchdogSec=30` en `[Service]` |
 
