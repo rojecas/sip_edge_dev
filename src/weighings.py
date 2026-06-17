@@ -1,17 +1,30 @@
 """Weighings CRUD endpoints and schemas."""
 
 import logging
+import math
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import List
+from typing import Any, Generic, List, Optional, TypeVar
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session
 
 from src.auth import check_inactivity, require_any_role
 from src.database import get_db
 from src.models import Hacienda, Suerte, Weighing
+
+T = TypeVar("T")
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    """Generic paginated response wrapper."""
+    items: list[T]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 logger = logging.getLogger(__name__)
 
@@ -181,17 +194,85 @@ def _run_anomaly_detection(record: Weighing) -> None:
         logger.exception("Error en deteccion de anomalias post-pesaje")
 
 
-@router.get("", response_model=List[WeighingResponse])
+@router.get("", response_model=PaginatedResponse[WeighingResponse])
 def list_weighings(
     current_user: dict = Depends(check_inactivity),
     _: dict = Depends(require_any_role("admin", "operator")),
     db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    start_date: Optional[str] = Query(None, description="YYYY-MM-DD"),
+    end_date: Optional[str] = Query(None, description="YYYY-MM-DD"),
+    sort_by: str = Query("fecha", description="Column to sort by"),
+    sort_order: str = Query("desc", description="asc or desc"),
 ):
-    if current_user["role"] == "admin":
-        return db.query(Weighing).all()
-    return db.query(Weighing).filter(
-        Weighing.usuario_id == current_user["user_id"]
-    ).all()
+    # Base query with role filtering
+    query = db.query(Weighing)
+    if current_user["role"] == "operator":
+        query = query.filter(Weighing.usuario_id == current_user["user_id"])
+
+    # Date range filter
+    if start_date:
+        try:
+            sd = date.fromisoformat(start_date)
+            query = query.filter(Weighing.fecha >= sd)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date format (use YYYY-MM-DD)")
+
+    if end_date:
+        try:
+            ed = date.fromisoformat(end_date)
+            query = query.filter(Weighing.fecha <= ed)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end_date format (use YYYY-MM-DD)")
+
+    # Sort
+    sort_columns: dict[str, Any] = {
+        "fecha": Weighing.fecha,
+        "hora": Weighing.hora,
+        "created_at": Weighing.created_at,
+        "id": Weighing.id,
+    }
+    sort_col = sort_columns.get(sort_by, Weighing.fecha)
+    if sort_order == "asc":
+        query = query.order_by(asc(sort_col))
+    else:
+        query = query.order_by(desc(sort_col))
+
+    # Pagination
+    total = query.count()
+    total_pages = max(1, math.ceil(total / page_size))
+    offset = (page - 1) * page_size
+    records = query.offset(offset).limit(page_size).all()
+
+    # Build response items
+    items: list[WeighingResponse] = []
+    for w in records:
+        items.append(WeighingResponse(
+            id=w.id,
+            fecha=w.fecha,
+            hora=w.hora,
+            tractomula=w.tractomula,
+            vagon=w.vagon,
+            numero_guia=w.numero_guia,
+            hacienda_id=w.hacienda_id,
+            suerte_id=w.suerte_id,
+            peso_muestra=w.peso_muestra,
+            peso_mineral=w.peso_mineral,
+            peso_vegetal_extrano=w.peso_vegetal_extrano,
+            usuario_id=w.usuario_id,
+            created_at=w.created_at,
+            enviado_pc=w.enviado_pc,
+            manual_entry=w.manual_entry,
+        ))
+
+    return PaginatedResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @router.get("/{weighing_id}", response_model=WeighingResponse)

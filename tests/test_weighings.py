@@ -207,7 +207,7 @@ class TestWeighingsList(TestWeighingsAuth):
         )
         return response.json()
 
-    # T17: GET as operator only sees own records (R10)
+    # T17: GET as operator only sees own records (R10) — paginated
     def test_list_weighings_operator_only_own(self):
         token1 = self._login("operator1", "op1pass")
         token2 = self._login("operator2", "op2pass")
@@ -219,10 +219,16 @@ class TestWeighingsList(TestWeighingsAuth):
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(len(data), 1)
-        self.assertEqual(data[0]["id"], w1["id"])
+        self.assertIn("items", data)
+        self.assertIn("total", data)
+        self.assertIn("page", data)
+        self.assertIn("page_size", data)
+        self.assertIn("total_pages", data)
+        self.assertEqual(data["total"], 1)
+        self.assertEqual(len(data["items"]), 1)
+        self.assertEqual(data["items"][0]["id"], w1["id"])
 
-    # T18: GET as admin sees all (R11)
+    # T18: GET as admin sees all (R11) — paginated
     def test_list_weighings_admin_sees_all(self):
         token1 = self._login("operator1", "op1pass")
         token2 = self._login("operator2", "op2pass")
@@ -235,7 +241,79 @@ class TestWeighingsList(TestWeighingsAuth):
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertEqual(len(data), 2)
+        self.assertEqual(data["total"], 2)
+        self.assertEqual(len(data["items"]), 2)
+
+    # Pagination: page/limit params
+    def test_list_weighings_pagination_page_size(self):
+        token = self._login("operator1", "op1pass")
+        for _ in range(5):
+            self._create_weighing(token)
+        response = self.client.get(
+            "/api/weighings?page=1&page_size=2",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["page"], 1)
+        self.assertEqual(data["page_size"], 2)
+        self.assertEqual(len(data["items"]), 2)
+        self.assertGreaterEqual(data["total_pages"], 3)
+        self.assertEqual(data["total"], 5)
+
+    # Pagination: page out of bounds returns empty items
+    def test_list_weighings_pagination_empty_page(self):
+        token = self._login("operator1", "op1pass")
+        response = self.client.get(
+            "/api/weighings?page=99&page_size=20",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data["items"]), 0)
+        self.assertEqual(data["page"], 99)
+
+    # Date filter: start_date
+    def test_list_weighings_date_filter(self):
+        token = self._login("operator1", "op1pass")
+        self._create_weighing(token)
+        response = self.client.get(
+            "/api/weighings?start_date=2099-01-01",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["total"], 0)
+
+    # Date filter: invalid format
+    def test_list_weighings_date_filter_invalid(self):
+        token = self._login("operator1", "op1pass")
+        response = self.client.get(
+            "/api/weighings?start_date=invalid",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 400)
+
+    # Sort: asc
+    def test_list_weighings_sort_order(self):
+        token = self._login("operator1", "op1pass")
+        self._create_weighing(token)
+        response = self.client.get(
+            "/api/weighings?sort_by=fecha&sort_order=asc",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertGreaterEqual(data["total"], 1)
+
+    # Page_size limited to 100
+    def test_list_weighings_page_size_max(self):
+        token = self._login("operator1", "op1pass")
+        response = self.client.get(
+            "/api/weighings?page_size=200",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 422)
 
 
 class TestWeighingsGetById(TestWeighingsAuth):
@@ -317,7 +395,7 @@ class TestWeighingsReset(TestWeighingsAuth):
 
 
 class TestHaciendasOperatorRead(TestWeighingsAuth):
-    # T25: GET /api/haciendas as operator returns list (R1)
+    # T25: GET /api/haciendas as operator returns paginated list (R1)
     def test_list_haciendas_as_operator(self):
         token = self._login("operator1", "op1pass")
         response = self.client.get(
@@ -326,7 +404,8 @@ class TestHaciendasOperatorRead(TestWeighingsAuth):
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertIsInstance(data, list)
+        self.assertIn("items", data)
+        self.assertIsInstance(data["items"], list)
 
     # T26: GET /api/suertes as operator returns list (R2)
     def test_list_suertes_as_operator(self):

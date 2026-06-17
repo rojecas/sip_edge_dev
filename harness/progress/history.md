@@ -210,3 +210,61 @@
 - **Tests:** 430 tests totales, sin regresiones. Reviewer aprobó en 3ª ronda tras correcciones de T32 y tests R1-R5.
 - **Lecciones:** gh CLI funciona correctamente desde Windows para comentar/cerrar issues. github_sync.py tiene problemas de encoding cp1252 en Windows con caracteres UTF-8 no ASCII.
 
+
+---
+
+## Sesion: 2026-06-16
+
+# Sesion actual
+
+> Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
+> Los cierres y bloqueos van en archivos separados: ver harness/docs/sessions.md.
+
+- **Inicio:** 2026-06-16
+- **Agente:** leader
+- **Feature en curso:** 13 — frontend_login_kiosk
+- **Estado:** in_progress
+
+---
+
+## Indice de features
+
+| ID | Nombre | Status |
+|----|--------|--------|
+| 1  | system_config | done |
+| 2  | auth_rbac | done |
+| 3  | user_management | done |
+| 4  | farm_lot_crud | done |
+| 5  | scale_integration | done |
+| 6  | weighing_capture | done |
+| 7  | sms_service | done |
+| 8  | ai_agent | done |
+| 9  | emergency_mode | done |
+| 10 | backup_system | done |
+| 11 | rs232_transmission | done |
+| 12 | password_reset_sms | done |
+| 13 | frontend_login_kiosk | in_progress |
+| 14 | frontend_admin | pending |
+| 15 | frontend_analytics | pending |
+
+---
+
+## Plan
+
+Ejecutar tasks T1 a T35 de harness/specs/13_frontend_login_kiosk/tasks.md:
+- Fase 1: Scaffold Svelte + integracion FastAPI
+- Fase 1b: Backend paginacion (weighings, haciendas)
+- Fase 2: Store auth + fetch wrapper + ws + router
+- Fase 3: Modales login + reset password + logout
+- Fase 4: Layouts (kiosko, admin)
+- Fase 5: Formulario de pesaje
+- Fase 6: Historial con paginacion y filtros
+- Fase 7: Emergencia banner + modal
+- Fase 8: Build, deploy, verificacion
+
+---
+
+## Bloqueos activos
+
+(none)
+

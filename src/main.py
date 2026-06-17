@@ -19,7 +19,8 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -570,6 +571,13 @@ async def get_anomaly_history(
 
 app.include_router(anomaly_router)
 
+# ------------------------------------------------------------------
+# Static files mount — serve SPA from src/static/
+# ------------------------------------------------------------------
+_static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+if os.path.isdir(_static_dir):
+    app.mount("/static", StaticFiles(directory=_static_dir), name="static")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -581,6 +589,10 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
+    """Serve SPA index.html at root, fallback to JSON if not built."""
+    index_path = os.path.join(_static_dir, "index.html")
+    if os.path.isfile(index_path):
+        return FileResponse(index_path)
     return {"status": "ok", "service": "SIP-Edge", "version": "1.0.0"}
 
 
@@ -787,3 +799,21 @@ async def test_port(
             return JSONResponse(
                 content={"status": "fail", "detail": str(e)},
             )
+
+
+# ------------------------------------------------------------------
+# Catch-all route — serve SPA index.html for non-API/WS/login/health
+# MUST be registered AFTER all other routes.
+# ------------------------------------------------------------------
+@app.api_route("/{full_path:path}", methods=["GET"])
+async def serve_spa(full_path: str):
+    """Serve the SPA for any route not matching API/WS/login/health."""
+    if full_path.startswith(("api/", "ws/", "login", "health")):
+        return JSONResponse({"detail": "Not found"}, status_code=404)
+    index_path = os.path.join(_static_dir, "index.html")
+    if os.path.isfile(index_path):
+        return FileResponse(index_path)
+    return JSONResponse(
+        {"detail": "SPA index.html not found. Run frontend build."},
+        status_code=503,
+    )

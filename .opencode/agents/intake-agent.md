@@ -1,6 +1,6 @@
 ---
 description: Guides the user through creating a new feature or documenting a bug, then writes it to feature_list.json.
-mode: subagent
+mode: all
 permission:
   edit: allow
   write: allow

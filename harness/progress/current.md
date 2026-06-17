@@ -3,10 +3,10 @@
 > Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
 > Los cierres y bloqueos van en archivos separados: ver harness/docs/sessions.md.
 
-- **Inicio:**
-- **Agente:**
-- **Feature en curso:**
-- **Estado:**
+- **Inicio:** 2026-06-17
+- **Agente:** leader
+- **Feature en curso:** 13 — frontend_login_kiosk
+- **Estado:** in_progress
 
 ---
 
@@ -26,6 +26,10 @@
 | 10 | backup_system | done |
 | 11 | rs232_transmission | done |
 | 12 | password_reset_sms | done |
+| 13 | frontend_login_kiosk | in_progress |
+| 14 | frontend_admin | pending |
+| 15 | frontend_analytics | pending |
+| 16 | harvest_type | pending |
 
 ---
 
@@ -38,3 +42,4 @@
 ## Bloqueos activos
 
 (none)
+

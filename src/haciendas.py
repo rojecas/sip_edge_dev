@@ -1,15 +1,28 @@
 """Haciendas and Suertes CRUD endpoints and schemas."""
 
+import math
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Generic, List, Optional, TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session
 
 from src.auth import check_inactivity, require_any_role, require_role
 from src.database import get_db
 from src.models import Hacienda, Suerte
+
+T = TypeVar("T")
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    """Generic paginated response."""
+    items: list[T]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
 
 
 class HaciendaCreate(BaseModel):
@@ -232,13 +245,46 @@ haciendas_router = APIRouter(prefix="/api/haciendas")
 suertes_router = APIRouter(prefix="/api/suertes")
 
 
-@haciendas_router.get("", response_model=List[HaciendaResponse])
+@haciendas_router.get("", response_model=PaginatedResponse[HaciendaResponse])
 def get_haciendas(
     _: dict = Depends(check_inactivity),
     __: dict = Depends(require_any_role("admin", "operator")),
     db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=100),
+    sort_by: str = Query("nombre", description="Column to sort by"),
+    sort_order: str = Query("asc", description="asc or desc"),
 ):
-    return list_haciendas(db)
+    query = db.query(Hacienda).filter(Hacienda.deleted_at.is_(None))
+
+    # Sort
+    sort_columns: dict[str, Any] = {
+        "nombre": Hacienda.nombre,
+        "codigo": Hacienda.codigo,
+        "created_at": Hacienda.created_at,
+        "id": Hacienda.id,
+    }
+    sort_col = sort_columns.get(sort_by, Hacienda.nombre)
+    if sort_order == "asc":
+        query = query.order_by(asc(sort_col))
+    else:
+        query = query.order_by(desc(sort_col))
+
+    # Pagination
+    total = query.count()
+    total_pages = max(1, math.ceil(total / page_size))
+    offset = (page - 1) * page_size
+    records = query.offset(offset).limit(page_size).all()
+
+    items = [_hacienda_to_response(h) for h in records]
+
+    return PaginatedResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @haciendas_router.post("", response_model=HaciendaResponse, status_code=201)

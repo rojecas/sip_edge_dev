@@ -136,7 +136,7 @@ class TestHaciendasAuth(unittest.TestCase):
         response = self.client.delete("/api/suertes/1")
         self.assertEqual(response.status_code, 401)
 
-    # R22: Non-admin -> 403 for writes, but GET is now allowed for operators
+    # R22: Non-admin -> 403 for writes, but GET is now allowed for operators — paginated
     def test_list_haciendas_as_operator(self):
         token = self._login("operator", "operatorpass")
         response = self.client.get(
@@ -144,7 +144,8 @@ class TestHaciendasAuth(unittest.TestCase):
             headers={"Authorization": f"Bearer {token}"},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIsInstance(response.json(), list)
+        data = response.json()
+        self.assertIsInstance(data["items"], list)
 
     def test_create_hacienda_as_operator(self):
         token = self._login("operator", "operatorpass")
@@ -238,7 +239,7 @@ class TestHaciendasCRUD(unittest.TestCase):
     def _auth_header(self):
         return {"Authorization": f"Bearer {self._login()}"}
 
-    # R1: List haciendas
+    # R1: List haciendas — paginated
     def test_list_haciendas(self):
         # Create two haciendas
         self.client.post(
@@ -257,8 +258,13 @@ class TestHaciendasCRUD(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertIsInstance(data, list)
-        self.assertEqual(len(data), 2)
+        self.assertIn("items", data)
+        self.assertIn("total", data)
+        self.assertIn("page", data)
+        self.assertIn("page_size", data)
+        self.assertIn("total_pages", data)
+        self.assertEqual(data["total"], 2)
+        self.assertEqual(len(data["items"]), 2)
 
     # R2: Create hacienda
     def test_create_hacienda(self):
@@ -461,7 +467,7 @@ class TestHaciendasCRUD(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 404)
 
-    # R1 + R7: List excludes deleted
+    # R1 + R7: List excludes deleted — paginated
     def test_list_haciendas_excludes_deleted(self):
         c1 = self.client.post(
             "/api/haciendas",
@@ -482,8 +488,10 @@ class TestHaciendasCRUD(unittest.TestCase):
             "/api/haciendas",
             headers=self._auth_header(),
         )
-        self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()[0]["codigo"], "H002")
+        data = response.json()
+        self.assertEqual(data["total"], 1)
+        self.assertEqual(len(data["items"]), 1)
+        self.assertEqual(data["items"][0]["codigo"], "H002")
 
     # R23: Response fields
     def test_hacienda_response_fields(self):

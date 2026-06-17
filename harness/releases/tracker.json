@@ -1,6 +1,14 @@
 {
   "project_version": "1.0.0",
-  "pending": [],
+  "pending": [
+    {
+      "id": 13,
+      "type": "feature",
+      "name": "frontend_login_kiosk",
+      "title": "Frontend - Login, Kiosco de Pesaje y Logout",
+      "completed_at": "2026-06-16"
+    }
+  ],
   "history": [
     {
       "version": "1.0.0",
