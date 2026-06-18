@@ -77,6 +77,8 @@ Reglas duras:
 - Cada requirement tiene un id estable: `R1`, `R2`, ...
 - Cada requirement DEBE ser verificable por al menos un test concreto.
 - No mezcles varios `DEBE` en un mismo requirement. Si hay más de uno, parte.
+- Si una feature tiene **mas de 20 requirements (R1-R20+), dividir** en sub-features.
+  Ejemplo: una feature de 41 requirements se divide en 14a (R1-R12), 14b (R13-R29), 14c (R30-R41).
 - No uses verbos blandos ("podría", "puede", "soporta"). Solo `DEBE` / `NO DEBE`.
 
 Ejemplo:
@@ -100,6 +102,15 @@ Captura **antes** de tocar código:
 - Que excepciones se reutilizan o se anaden.
 - Que alternativa se descarto y por que (minimo una).
 - `github_labels`: etiquetas adicionales para el issue de GitHub (opcional).
+
+### Seccion obligatoria: Contrato API
+
+Si la feature consume endpoints, `design.md` DEBE declarar la respuesta esperada:
+
+### API: GET /api/haciendas
+Respuesta: { items: Hacienda[], total: number, page: number, page_size: number, total_pages: number }
+
+Esto evita que el implementer asuma array directo cuando el backend devuelve `{items: [...]}`.
 
 NO es ingenieria desde primeros principios — apóyate en
 `docs/architecture.md` y `docs/conventions.md`. El `design.md` documenta los
@@ -160,7 +171,11 @@ Ejemplo:
 - [ ] T4 — Añadir `test_recent_invalid_limit` en `tests/test_cli.py`. Cubre: R2.
 ```
 
-El `implementer` marca `[x]` cada task al completarla. El `reviewer`
+El `implementer` marca `[x]` cada task al completarla.
+
+Reglas adicionales:
+- Cada T<n> que use funciones de framework (Svelte: `onMount`, React: `useEffect`, etc.) DEBE listar el import requerido como subtask.
+- Si la task consume un endpoint API, DEBE incluir el contrato de respuesta esperado (ver Contrato API en design.md). El `reviewer`
 rechaza si queda alguna `[ ]` sin justificación documentada.
 
 ## Trazabilidad (regla dura)
