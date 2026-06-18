@@ -26,7 +26,7 @@
   <header class="kiosk-header">
     <div class="header-left">
       <span class="user-info">
-        {authStore.$authStore.username || "Operador"}
+        {$authStore && $authStore.username ? $authStore.username : "Operador"}
         <span class="role-badge">operador</span>
       </span>
     </div>
