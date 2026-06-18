@@ -1,7 +1,7 @@
 <script>
   /**
    * KioskLayout — Layout for operator views.
-   * Header: username (left) + LogoutButton (right), EmergencyBanner (top).
+   * Header: $authStore.username (left) + LogoutButton (right), EmergencyBanner (top).
    * Slot for child content (/kiosco or /kiosco/historial).
    */
   import { authStore } from "../stores/auth.js";
@@ -26,7 +26,7 @@
   <header class="kiosk-header">
     <div class="header-left">
       <span class="user-info">
-        {$authStore.username || "Operador"}
+        {authStore.$authStore.username || "Operador"}
         <span class="role-badge">operador</span>
       </span>
     </div>

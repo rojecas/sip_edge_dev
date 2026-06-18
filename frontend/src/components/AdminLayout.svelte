@@ -43,7 +43,7 @@
       {/each}
     </nav>
     <div class="sidebar-footer">
-      <span class="sidebar-user">{$authStore.username || "Admin"}</span>
+      <span class="sidebar-user">{authStore.$authStore.username || "Admin"}</span>
       <span class="sidebar-role">admin</span>
     </div>
   </aside>
@@ -52,7 +52,7 @@
     <header class="admin-header">
       <div class="header-left">
         <span class="user-info">
-          {$authStore.username || "Admin"}
+          {authStore.$authStore.username || "Admin"}
           <span class="role-badge">admin</span>
         </span>
       </div>
