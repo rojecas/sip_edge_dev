@@ -4,7 +4,7 @@
    * Mounted when user is authenticated.
    */
   import { onMount, onDestroy } from "svelte";
-  import { authStore } from "../stores/auth.svelte.js";
+  import { authStore } from "../stores/auth.js";
   import { checkInactivity } from "../lib/inactivity.js";
   import { CONFIG } from "../lib/constants.js";
 

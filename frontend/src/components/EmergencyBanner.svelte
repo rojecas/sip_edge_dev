@@ -7,7 +7,7 @@
   import { onMount, onDestroy } from "svelte";
   import { api } from "../lib/api.js";
   import { ENDPOINTS, CONFIG } from "../lib/constants.js";
-  import { emergencyStore } from "../stores/emergency.svelte.js";
+  import { emergencyStore } from "../stores/emergency.js";
   import EmergencyModal from "./EmergencyModal.svelte";
 
   let manualMode = $state(false);

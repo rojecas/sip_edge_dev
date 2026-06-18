@@ -2,7 +2,7 @@
   /**
    * AdminDashboard — Dashboard with quick-access cards for each admin section.
    */
-  import { navigate } from "../lib/router.svelte.js";
+  import { navigate } from "../lib/router.js";
 
   const cards = [
     {

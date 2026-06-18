@@ -4,8 +4,8 @@
    * Shows weight, stability indicator, and connection status.
    */
   import { onMount, onDestroy } from "svelte";
-  import { scaleStore, connect, disconnect } from "../lib/ws.svelte.js";
-  import { authStore } from "../stores/auth.svelte.js";
+  import { scaleStore, connect, disconnect } from "../lib/ws.js";
+  import { authStore } from "../stores/auth.js";
 
   let connected = $derived(scaleStore.connected);
   let netWeight = $derived(scaleStore.net_weight);

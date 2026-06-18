@@ -7,8 +7,8 @@
   import { onMount } from "svelte";
   import { api, ApiError, buildQuery } from "../lib/api.js";
   import { ENDPOINTS, CONFIG } from "../lib/constants.js";
-  import { authStore } from "../stores/auth.svelte.js";
-  import { emergencyStore } from "../stores/emergency.svelte.js";
+  import { authStore } from "../stores/auth.js";
+  import { emergencyStore } from "../stores/emergency.js";
   import ScaleReader from "./ScaleReader.svelte";
   import WeightField from "./WeightField.svelte";
   import ConfirmModal from "./ConfirmModal.svelte";

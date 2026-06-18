@@ -4,8 +4,8 @@
    * Header: username (left) + LogoutButton (right), EmergencyBanner (top).
    * Slot for child content (/kiosco or /kiosco/historial).
    */
-  import { authStore } from "../stores/auth.svelte.js";
-  import { navigate } from "../lib/router.svelte.js";
+  import { authStore } from "../stores/auth.js";
+  import { navigate } from "../lib/router.js";
   import LogoutButton from "./LogoutButton.svelte";
   import EmergencyBanner from "./EmergencyBanner.svelte";
 
@@ -26,7 +26,7 @@
   <header class="kiosk-header">
     <div class="header-left">
       <span class="user-info">
-        {authStore.username || "Operador"}
+        {$authStore.username || "Operador"}
         <span class="role-badge">operador</span>
       </span>
     </div>

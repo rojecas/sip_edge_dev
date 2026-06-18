@@ -3,8 +3,8 @@
    * AdminLayout — Layout for admin views.
    * Sidebar navigation (left) + header with LogoutButton + content slot.
    */
-  import { authStore } from "../stores/auth.svelte.js";
-  import { navigate, getRoute } from "../lib/router.svelte.js";
+  import { authStore } from "../stores/auth.js";
+  import { navigate, getRoute } from "../lib/router.js";
   import LogoutButton from "./LogoutButton.svelte";
 
   let { children } = $props();
@@ -43,7 +43,7 @@
       {/each}
     </nav>
     <div class="sidebar-footer">
-      <span class="sidebar-user">{authStore.username || "Admin"}</span>
+      <span class="sidebar-user">{$authStore.username || "Admin"}</span>
       <span class="sidebar-role">admin</span>
     </div>
   </aside>
@@ -52,7 +52,7 @@
     <header class="admin-header">
       <div class="header-left">
         <span class="user-info">
-          {authStore.username || "Admin"}
+          {$authStore.username || "Admin"}
           <span class="role-badge">admin</span>
         </span>
       </div>

@@ -4,9 +4,9 @@
    * Handles authentication state, routing, and layout selection.
    */
   import "./app.css";
-  import { authStore } from "./stores/auth.svelte.js";
+  import { authStore } from "./stores/auth.js";
   import { setAuthStore, api } from "./lib/api.js";
-  import { isRoute } from "./lib/router.svelte.js";
+  import { isRoute } from "./lib/router.js";
   import AuthModal from "./components/AuthModal.svelte";
   import InactivityGuard from "./components/InactivityGuard.svelte";
   import KioskLayout from "./components/KioskLayout.svelte";
@@ -38,12 +38,12 @@
   });
 </script>
 
-{#if !authStore.isAuthenticated}
+{#if !$authStore.isAuthenticated}
   <AuthModal />
 {:else}
   <InactivityGuard />
 
-  {#if authStore.isOperator}
+  {#if $authStore.isOperator}
     <KioskLayout>
       {#if currentRoute === "/kiosco/historial"}
         <HistoryTable />
@@ -51,7 +51,7 @@
         <KioskForm />
       {/if}
     </KioskLayout>
-  {:else if authStore.isAdmin}
+  {:else if $authStore.isAdmin}
     <AdminLayout>
       {#if currentRoute === "/admin"}
         <AdminDashboard />
