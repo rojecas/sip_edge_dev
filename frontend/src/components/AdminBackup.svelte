@@ -25,7 +25,8 @@
     loadError = "";
     emptyMsg = "";
     try {
-      backups = await api.get(ENDPOINTS.BACKUP_STATUS);
+      const result = await api.get(ENDPOINTS.BACKUP_STATUS);
+      backups = result.items || result || [];
       if (!backups || backups.length === 0) {
         emptyMsg = "No hay registros de backup.";
         backups = [];

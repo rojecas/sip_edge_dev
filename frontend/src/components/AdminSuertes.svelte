@@ -62,7 +62,8 @@
     emptyMsg = "";
     try {
       const qs = buildQuery({ hacienda_id: selectedHaciendaId });
-      suertes = await api.get(`${ENDPOINTS.SUERTES}${qs}`);
+      const result = await api.get(`${ENDPOINTS.SUERTES}${qs}`);
+      suertes = result.items || [];
       if (!suertes || suertes.length === 0) {
         emptyMsg = "No hay suertes registradas para esta hacienda.";
         suertes = [];
@@ -149,6 +150,17 @@
       confirmShow = false;
       showResult(err instanceof ApiError ? err.message : "Error de conexión.", true);
     }
+  }
+
+  function goToPage(page) {
+    currentPage = page;
+    loadSuertes();
+  }
+
+  function changePageSize(e) {
+    pageSize = parseInt(e.target.value);
+    currentPage = 1;
+    loadSuertes();
   }
 
   function cancelDelete() {
@@ -241,6 +253,21 @@
           {/each}
         </tbody>
       </table>
+      {#if totalPages > 1}
+        <div class="pagination">
+          <button class="btn-page" disabled={currentPage <= 1} onclick={() => goToPage(currentPage - 1)}>Anterior</button>
+          <span class="page-info">
+            <select class="page-size-select" value={pageSize} onchange={changePageSize}>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            Página {currentPage} de {totalPages}
+          </span>
+          <button class="btn-page" disabled={currentPage >= totalPages} onclick={() => goToPage(currentPage + 1)}>Siguiente</button>
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

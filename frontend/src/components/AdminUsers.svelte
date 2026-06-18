@@ -39,7 +39,8 @@
     loadError = "";
     emptyMsg = "";
     try {
-      users = await api.get(ENDPOINTS.USERS);
+      const result = await api.get(ENDPOINTS.USERS);
+      users = result.items || [];
       if (!users || users.length === 0) {
         emptyMsg = "No hay usuarios registrados.";
         users = [];

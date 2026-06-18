@@ -12,6 +12,10 @@
   let loading = $state(true);
   let loadError = $state("");
   let emptyMsg = $state("");
+  let currentPage = $state(1);
+  let totalPages = $state(1);
+  let totalItems = $state(0);
+  let pageSize = $state(20);
 
   let resultMsg = $state("");
   let resultError = $state(false);
@@ -35,12 +39,15 @@
     emptyMsg = "";
     try {
       const qs = buildQuery({
-        page: 1,
-        page_size: CONFIG.DEFAULT_HACIENDAS_PAGE_SIZE,
+        page: currentPage,
+        page_size: pageSize,
         sort_by: "nombre",
         sort_order: "asc",
       });
-      haciendas = await api.get(`${ENDPOINTS.HACIENDAS}${qs}`);
+      const result = await api.get(`${ENDPOINTS.HACIENDAS}${qs}`);
+      haciendas = result.items || [];
+      totalPages = result.total_pages || 1;
+      totalItems = result.total || 0;
       if (!haciendas || haciendas.length === 0) {
         emptyMsg = "No hay haciendas registradas.";
         haciendas = [];
@@ -123,6 +130,17 @@
     }
   }
 
+  function goToPage(page) {
+    currentPage = page;
+    loadHaciendas();
+  }
+
+  function changePageSize(e) {
+    pageSize = parseInt(e.target.value);
+    currentPage = 1;
+    loadHaciendas();
+  }
+
   function cancelDelete() {
     confirmShow = false;
     confirmTarget = null;
@@ -192,6 +210,20 @@
           {/each}
         </tbody>
       </table>
+      {#if totalPages > 1}
+        <div class="pagination">
+          <button class="btn-page" disabled={currentPage <= 1} onclick={() => goToPage(currentPage - 1)}>Anterior</button>
+          <span class="page-info">
+          <select class="page-size-select" value={pageSize} onchange={changePageSize}>
+            <option value={10}>10 por página</option>
+            <option value={20}>20 por página</option>
+            <option value={50}>50 por página</option>
+            <option value={100}>100 por página</option>
+          </select>
+          Página {currentPage} de {totalPages} ({totalItems} registros)</span>
+          <button class="btn-page" disabled={currentPage >= totalPages} onclick={() => goToPage(currentPage + 1)}>Siguiente</button>
+        </div>
+      {/if}
     </div>
   {/if}
 </div>
@@ -256,4 +288,31 @@
   .btn-edit:hover { background: var(--border); }
   .btn-delete { background: transparent; color: var(--error); border: 1px solid var(--error); }
   .btn-delete:hover { background: rgba(255, 107, 107, 0.1); }
+
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 16px;
+    padding: 12px;
+  }
+  .page-info {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .btn-page {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn-page:hover:not(:disabled) { background: var(--accent); color: white; }
+  .btn-page:disabled { opacity: 0.4; cursor: not-allowed; }
+  .page-size-select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font-size: 13px; cursor: pointer; }
+
 </style>
