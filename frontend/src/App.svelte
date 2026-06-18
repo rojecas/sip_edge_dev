@@ -4,9 +4,9 @@
    * Handles authentication state, routing, and layout selection.
    */
   import "./app.css";
-  import { authStore } from "./stores/auth.js";
+  import { authStore } from "./stores/auth.svelte.js";
   import { setAuthStore, api } from "./lib/api.js";
-  import { isRoute } from "./lib/router.js";
+  import { isRoute } from "./lib/router.svelte.js";
   import AuthModal from "./components/AuthModal.svelte";
   import InactivityGuard from "./components/InactivityGuard.svelte";
   import KioskLayout from "./components/KioskLayout.svelte";

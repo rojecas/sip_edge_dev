@@ -6,8 +6,8 @@
    */
   import { api, ApiError } from "../lib/api.js";
   import { ENDPOINTS } from "../lib/constants.js";
-  import { authStore } from "../stores/auth.js";
-  import { navigate } from "../lib/router.js";
+  import { authStore } from "../stores/auth.svelte.js";
+  import { navigate } from "../lib/router.svelte.js";
   import ResetPinModal from "./ResetPinModal.svelte";
 
   let username = $state("");

@@ -4,8 +4,8 @@
    * Header: username (left) + LogoutButton (right), EmergencyBanner (top).
    * Slot for child content (/kiosco or /kiosco/historial).
    */
-  import { authStore } from "../stores/auth.js";
-  import { navigate } from "../lib/router.js";
+  import { authStore } from "../stores/auth.svelte.js";
+  import { navigate } from "../lib/router.svelte.js";
   import LogoutButton from "./LogoutButton.svelte";
   import EmergencyBanner from "./EmergencyBanner.svelte";
 

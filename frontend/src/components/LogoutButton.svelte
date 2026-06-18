@@ -3,8 +3,8 @@
    * LogoutButton — Always visible in top-right corner.
    * Shows ConfirmModal before logging out.
    */
-  import { authStore } from "../stores/auth.js";
-  import { navigate } from "../lib/router.js";
+  import { authStore } from "../stores/auth.svelte.js";
+  import { navigate } from "../lib/router.svelte.js";
   import ConfirmModal from "./ConfirmModal.svelte";
 
   let showConfirm = $state(false);

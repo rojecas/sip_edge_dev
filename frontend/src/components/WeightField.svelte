@@ -5,7 +5,7 @@
    * When disabled=true (normal mode), field is readonly — only updated via Tara/Leer.
    * When disabled=false (emergency mode), field is editable manually.
    */
-  import { scaleStore } from "../lib/ws.js";
+  import { scaleStore } from "../lib/ws.svelte.js";
 
   let {
     fieldName = "",

@@ -3,8 +3,8 @@
    * AdminLayout — Layout for admin views.
    * Sidebar navigation (left) + header with LogoutButton + content slot.
    */
-  import { authStore } from "../stores/auth.js";
-  import { navigate, getRoute } from "../lib/router.js";
+  import { authStore } from "../stores/auth.svelte.js";
+  import { navigate, getRoute } from "../lib/router.svelte.js";
   import LogoutButton from "./LogoutButton.svelte";
 
   let { children } = $props();
