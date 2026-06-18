@@ -727,7 +727,13 @@ async def get_config(
     __: dict = Depends(require_role("admin")),
 ):
     config: SystemConfig = app.state.config
-    return JSONResponse(content=asdict(config))
+    response = asdict(config)
+    # Include session and scale timeouts
+    if hasattr(app.state, "session") and app.state.session:
+        response["session_timeout_minutes"] = app.state.session.session_timeout_minutes
+    if hasattr(app.state, "scale_config") and app.state.scale_config:
+        response["scale_timeout_seconds"] = app.state.scale_config.timeout_seconds
+    return JSONResponse(content=response)
 
 
 @app.put("/api/config")
