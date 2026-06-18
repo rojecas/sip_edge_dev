@@ -296,3 +296,28 @@ Ejecutar tasks T1 a T35 de harness/specs/13_frontend_login_kiosk/tasks.md:
 - Feature #15 (frontend_analytics) — pending
 - Feature #16 (harvest_type) — pending
 
+
+---
+
+## Sesion 2026-06-17/18
+
+- **Agente:** leader (Agente Lider)
+- **Feature:** 14 — frontend_admin (Frontend - Panel de Administracion)
+- **Resultado:** done
+
+### Flujo completado:
+1. spec-author -> spec_ready
+2. Aprobacion humana
+3. implementer -> reviewer -> release-manager (register) -> done
+4. Depuracion post-cierre: main.js fix, stores, onMount imports, paginacion, API .items
+
+### Fixes principales post-cierre:
+- main.js:  → svelte/store en auth.js, router.js, ws.js, emergency.js  
+- onMount imports faltantes en 6 componentes
+- Navbar: reactividad de ruta
+- Session timeout: GET /api/config ahora incluye timeouts
+- API responses: .items extraction en CRUDs
+- Paginacion: AdminHaciendas y AdminSuertes
+
+### Datos:
+- 618 haciendas + 3821 suertes importadas desde docs/Haciendas.csv
