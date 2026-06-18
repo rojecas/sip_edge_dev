@@ -1,12 +1,12 @@
-﻿# Sesion actual
+# Sesion actual
 
 > Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
 > Los cierres y bloqueos van en archivos separados: ver harness/docs/sessions.md.
 
-- **Inicio:**
-- **Agente:**
-- **Feature en curso:**
-- **Estado:**
+- **Inicio:** 2026-06-18
+- **Agente:** Leader (Orquestador)
+- **Feature en curso:** Bug #20 — admin_suertes_response_format
+- **Estado:** Bug diagnosticado y corregido. Closure creado.
 
 ---
 
@@ -27,14 +27,18 @@
 | 11 | rs232_transmission | done |
 | 12 | password_reset_sms | done |
 | 13 | frontend_login_kiosk | done |
-| 14 | frontend_admin | done |
-| 15 | frontend_analytics | pending |
-| 16 | harvest_type | pending |
+| 14 | frontend_admin_dashboard | pending |
+| 15 | frontend_admin_operations | pending |
+| 16 | frontend_admin_masterdata | pending |
+| 17 | frontend_analytics | pending |
+| 18 | harvest_type | pending |
+| 19 | watchdog_sd_notify | done |
 
 ---
 
 ## Plan
 
+Bug fix: AdminSuertes.svelte — carga de suertes al seleccionar hacienda.
 
 ---
 

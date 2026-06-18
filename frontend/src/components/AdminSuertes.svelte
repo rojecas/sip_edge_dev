@@ -37,14 +37,31 @@
   let formError = $state("");
   let formSubmitting = $state(false);
 
+  // Pagination state
+  let currentPage = $state(1);
+  let totalPages = $state(1);
+  let totalItems = $state(0);
+  let pageSize = $state(20);
+
   // Load haciendas for dropdown on mount
   onMount(() => { loadHaciendas(); });
 
-  async function loadHaciendas() {
+  // Reactively load suertes when selectedHaciendaId changes
+  $effect(() => {
+    if (selectedHaciendaId) {
+      currentPage = 1;
+      loadSuertes();
+    } else {
+      suertes = [];
+      emptyMsg = '';
+    }
+  });
+async function loadHaciendas() {
     haciendasLoading = true;
     try {
       const qs = buildQuery({ page: 1, page_size: CONFIG.DEFAULT_HACIENDAS_PAGE_SIZE });
-      haciendas = await api.get(`${ENDPOINTS.HACIENDAS}${qs}`);
+      const result = await api.get(`${ENDPOINTS.HACIENDAS}${qs}`);
+      haciendas = result.items || [];
     } catch {
       haciendas = [];
     } finally {
@@ -63,7 +80,7 @@
     try {
       const qs = buildQuery({ hacienda_id: selectedHaciendaId });
       const result = await api.get(`${ENDPOINTS.SUERTES}${qs}`);
-      suertes = result.items || [];
+      suertes = Array.isArray(result) ? result : (result.items || []);
       if (!suertes || suertes.length === 0) {
         emptyMsg = "No hay suertes registradas para esta hacienda.";
         suertes = [];
@@ -75,11 +92,7 @@
     }
   }
 
-  function onHaciendaChange() {
-    loadSuertes();
-  }
-
-  function showResult(msg, isError = false) {
+function showResult(msg, isError = false) {
     resultMsg = msg;
     resultError = isError;
     if (!isError) setTimeout(() => { resultMsg = ""; }, 3000);
@@ -190,7 +203,7 @@
   <div class="selector-row">
     <label>
       Hacienda:
-      <select bind:value={selectedHaciendaId} onchange={onHaciendaChange}>
+      <select bind:value={selectedHaciendaId}>
         <option value={0}>-- Seleccione una hacienda --</option>
         {#each haciendas as h}
           <option value={h.id}>{h.nombre} ({h.codigo})</option>

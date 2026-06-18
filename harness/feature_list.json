@@ -1,372 +1,434 @@
-{
-  "project": "sip_edge",
-  "description": "Sistema Inteligente de Pesaje y Control de Materia ExtraÃ±a (SIP-Edge)",
-  "rules": {
-    "one_feature_at_a_time": true,
-    "require_tests_to_close": true,
-    "require_approved_spec_to_implement": true,
-    "valid_status": [
-      "pending",
-      "spec_ready",
-      "in_progress",
-      "done",
-      "blocked",
-      "untriaged",
-      "triaged"
-    ],
-    "sdd_required_when": "feature has \"sdd\": true"
-  },
-  "features": [
-    {
-      "id": 1,
-      "name": "system_config",
-      "title": "ConfiguraciÃ³n del Sistema â€” Puertos RS485/RS232 y GSM",
-      "type": "feature",
-      "description": "Interfaz Admin para configuraciÃ³n dinÃ¡mica de puertos hardware: RS485 (bÃ¡scula), RS232 (PC externo) y mÃ³dem GSM. ParÃ¡metros: ruta, baudrate, paridad, data bits, stop bits. Prueba de conectividad serial/GSM con comando AT. Persistencia en config.yaml con carga automÃ¡tica tras reinicio y sincronizaciÃ³n de reloj.",
-      "acceptance": [
-        "RF-015: Interfaz Admin para modificar rutas RS485, RS232, GSM, baudrate, paridad",
-        "RF-016: FunciÃ³n 'Test' para verificar comunicaciÃ³n serial (RS485/RS232) y GSM",
-        "RF-017: Guardado en config.yaml, carga automÃ¡tica tras reinicio, sincronizaciÃ³n de reloj"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/1"
-    },
-    {
-      "id": 2,
-      "name": "auth_rbac",
-      "title": "AutenticaciÃ³n, RBAC y Bloqueo por Inactividad",
-      "description": "Autenticacion JWT con hash bcrypt. RBAC con tres roles: admin (total), operator (solo pesaje), corresponsal (sin login, solo contacto SMS). Bloqueo por inactividad configurable en modo kiosco: si el usuario no presenta actividad dentro del timeout, el sistema fuerza re-login. Persistencia en MariaDB (tabla users completa) y config.yaml seccion session para timeout. Seed de admin inicial en primer arranque.",
-      "acceptance": [
-        "RF-001: Autenticacion por credenciales con hash bcrypt y token JWT",
-        "RF-002: Restriccion de funcionalidades segun rol (admin/operator/corresponsal)",
-        "Nuevo: Bloqueo por inactividad con timeout configurable en config.yaml",
-        "Nuevo: Login endpoint + proteccion de endpoints con dependencia JWT",
-        "Nuevo: Conexion a MariaDB via SQLAlchemy + tabla users + seed admin"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        1
-      ],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/2",
-      "type": "feature"
-    },
-    {
-      "id": 3,
-      "name": "user_management",
-      "title": "GestiÃ³n de Usuarios (CRUD)",
-      "description": "Interfaz grÃ¡fica Admin para Crear/Leer/Actualizar/Desactivar usuarios (Nombre, Documento, Rol, Estado). DesactivaciÃ³n lÃ³gica sin eliminaciÃ³n fÃ­sica.",
-      "acceptance": [
-        "RF-021: CRUD de usuarios con campos Nombre, Documento, Rol, Estado"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        1
-      ],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/3",
-      "type": "feature"
-    },
-    {
-      "id": 4,
-      "name": "farm_lot_crud",
-      "title": "GestiÃ³n de Haciendas y Suertes",
-      "description": "CRUD de Haciendas con borrado lÃ³gico si existen registros asociados. GestiÃ³n de Suertes/Lotes vinculados obligatoriamente a Hacienda padre. SelecciÃ³n en cascada dinÃ¡mica en el formulario de pesaje.",
-      "acceptance": [
-        "RF-006: CRUD de Haciendas, borrado lÃ³gico si tiene registros",
-        "RF-007: GestiÃ³n de Suertes vinculadas a Hacienda padre",
-        "RF-008: Carga dinÃ¡mica de Suertes segÃºn Hacienda seleccionada"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        1
-      ],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/4",
-      "type": "feature"
-    },
-    {
-      "id": 5,
-      "name": "scale_integration",
-      "title": "IntegraciÃ³n Serial con BÃ¡scula DINI ARGEO DFWLI-2",
-      "description": "Capa de comunicaciÃ³n serial RS485 con balanza DINI ARGEO DFWLI-2. Comando-respuesta bidireccional: el sistema puede enviar comandos (REXT, TARE, TMAN, ZERO, CLEAR) y la balanza puede enviar datos espontÃ¡neamente (botÃ³n PRINT). Timeout configurable 1-10s (default 3s). Escucha asÃ­ncrona con indicador de medida estable.",
-      "acceptance": [
-        "RF-003: EnvÃ­o de comando al puerto RS485 y recepciÃ³n de respuesta",
-        "RF-003: Timeout configurable entre 1 y 10 segundos (default 3s)",
-        "Nuevo: Escucha asÃ­ncrona de datos entrantes desde la balanza (botÃ³n PRINT)",
-        "Nuevo: Exponer ScaleService como singleton consumible por otras capas"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        1
-      ],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/5",
-      "type": "feature"
-    },
-    {
-      "id": 6,
-      "name": "weighing_capture",
-      "title": "Captura de Pesaje Multipaso con ConfirmaciÃ³n y EnvÃ­o RS232",
-      "description": "Flujo de trabajo del operador en kiosco: seleccionar Hacienda+Suerte, ingresar tractomula/vagon/guia, tarar y leer pesos en 3 pasos (muestra, mineral, vegetal) usando foco en campo activo. Botones Tara/Leer junto a cada campo o botones fÃ­sicos de la balanza. Confirmar persiste en MariaDB y envÃ­a trama RS232 al PC externo. Reset con confirmaciÃ³n en pantalla.",
-      "acceptance": [
-        "RF-004: Persistencia en MariaDB con tabla weighings (tractomula, vagon, guia, hacienda, suerte, 3 pesos, usuario)",
-        "RF-005: TransacciÃ³n atÃ³mica commit/rollback al confirmar",
-        "Nuevo: Focus management por campo activo (como entrada de teclado)",
-        "Nuevo: BotÃ³n Confirmar persiste + envÃ­a trama RS232 al PC",
-        "Nuevo: BotÃ³n Reset con confirmaciÃ³n en pantalla"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        2,
-        4,
-        5
-      ],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/6",
-      "type": "feature"
-    },
-    {
-      "id": 7,
-      "name": "sms_service",
-      "title": "Servicio de Notificaciones y Reportes SMS",
-      "description": "EnvÃ­o de SMS vÃ­a mÃ³dulo GSM con comandos AT. Reportes programados de resumen de turno (06:00, 14:00, 22:00 y horarios configurables). Alertas de seguridad inmediatas por intentos de operaciÃ³n no autorizados.",
-      "acceptance": [
-        "RF-012: EnvÃ­o de SMS a listado preconfigurado de usuarios autorizados",
-        "RF-013: Reportes programados de turno (06:00, 14:00, 22:00) con horarios configurables",
-        "RF-014: NotificaciÃ³n inmediata al administrador cuando un usuario acumule 3 o mÃ¡s intentos fallidos de inicio de sesiÃ³n consecutivos"
-      ],
-      "type": "feature",
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        1,
-        6
-      ],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/8"
-    },
-    {
-      "id": 8,
-      "name": "ai_agent",
-      "title": "Sistema Inteligente de Reporteria y Deteccion de Anomalias (TinyLLM)",
-      "description": "Sistema de tres flujos: (1) Reportes programados configurables por el administrador, con metricas seleccionables (cantidad de pesajes, peso total, promedio, min/max, desglose por hacienda/operador, composicion de materiales, conteo de anomalias, tendencia), enviados via SMS a corresponsales en horarios definidos. (2) Deteccion de anomalias en tiempo real tras cada pesaje, usando Z-Score con ventana movil configurable (default 120 registros o 4 horas) y umbral configurable (default Z > 3). Incluye filtro relacional (ratios entre materiales) y filtro temporal (tasa de cambio entre pesajes consecutivos, N rachas anomalas). Si se detecta una anomalia, se invoca el LLM (Qwen 2.5 1.5B, 3 cores dedicados via taskset) para leer contexto, generar reporte narrativo y enviar SMS a los corresponsales. (3) Consultas ad-hoc via SMS: un corresponsal envia una pregunta en lenguaje natural, el LLM la procesa con Function Calling, ejecuta herramientas SQL parametrizadas (sin alucinaciones numericas), redacta respuesta y la envia por SMS. Todo soportado por un catalogo de herramientas estadisticas: basic_stats, moving_average, trend, breakdown_by_hacienda, breakdown_by_operator, shift_summary, daily_summary, custom_period_summary, detect_anomalies, check_thresholds.",
-      "acceptance": [
-        "RF-008a: El administrador puede crear/modificar plantillas de reporte programado con metricas seleccionables (count, avg, min/max, breakdown, composition, anomaly_count, trend)",
-        "RF-008b: Los reportes programados se envian via SMS a la lista de corresponsales en los horarios configurados (por defecto 06:00, 14:00, 22:00)",
-        "RF-008c: Tras cada pesaje confirmado, el sistema ejecuta deteccion de anomalias en 3 capas: Z-Score ventana movil (configurable), ratios entre materiales, y tasa de cambio temporal",
-        "RF-008d: Si se detecta una anomalia, el sistema invoca el LLM para generar reporte narrativo y lo envia por SMS a los corresponsales",
-        "RF-008e: Un corresponsal puede enviar un SMS con una pregunta en lenguaje natural sobre los datos recopilados",
-        "RF-008f: El sistema procesa la consulta SMS mediante LLM con Function Calling, ejecuta herramientas SQL parametrizadas, y responde por SMS sin alucinaciones numericas",
-        "RF-008g: El LLM se ejecuta con taskset -c 0-2 y -t 3 (3 cores dedicados), sin interferir con el backend",
-        "RF-008h: Las herramientas estadisticas incluyen: basic_stats, percentiles, moving_average, trend, breakdown_by_hacienda, breakdown_by_operator, material_composition, shift_summary, daily_summary, detect_anomalies, check_thresholds"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        6,
-        7,
-        12
-      ],
-      "type": "feature",
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/12"
-    },
-    {
-      "id": 9,
-      "name": "emergency_mode",
-      "title": "Modo Manual de Emergencia",
-      "description": "Modo manual de emergencia con dos orígenes de activación. El analista solicita el cambio a modo manual desde el kiosco mediante un modal, seleccionando un supervisor (usuario con rol admin) de una lista e ingresando un motivo obligatorio. SIP-Edge envía un SMS al supervisor seleccionado con los datos del analista y el motivo. El supervisor autoriza respondiendo 'manual on' (default 24h) o 'manual on Xh'/'manual on Xm' para un período específico. El comando SMS es case-insensitive. El modo manual puede activarse también directamente por comando SMS 'manual on [duración]' del supervisor. El campo de peso es editable mientras el modo manual esté activo. El supervisor puede extender el tiempo con 'manual on EXT Xh/Xm', suspenderlo con 'manual off', y el sistema se desactiva automáticamente al vencer. Múltiples solicitudes pueden coexistir (un admin puede estar en campo sin cobertura). Toda acción queda registrada en BD para auditoría. El estado del modo manual persiste ante cortes de energía.",
-      "acceptance": [
-        "RF-020a: El analista puede solicitar modo manual desde el kiosco mediante un modal que muestra la lista de usuarios con rol admin y un campo de motivo obligatorio.",
-        "RF-020b: Al enviar la solicitud, SIP-Edge envía un SMS al admin seleccionado con: nombre/ID del analista, motivo y las instrucciones para autorizar.",
-        "RF-020c: El supervisor autoriza respondiendo al SMS con 'manual on' (activa por 24h por defecto) o 'manual on Xh' / 'manual on Xm' para un período específico. El comando es case-insensitive.",
-        "RF-020d: El supervisor puede activar modo manual directamente enviando un SMS 'manual on [duración]' sin necesidad de solicitud previa.",
-        "RF-020e: El campo de peso es editable mientras el modo manual esté activo.",
-        "RF-020f: El supervisor puede extender el tiempo restante enviando 'manual on EXT Xh' / 'manual on EXT Xm'. Case-insensitive.",
-        "RF-020g: El supervisor puede suspender el modo manual anticipadamente enviando 'manual off'. Case-insensitive.",
-        "RF-020h: El modo manual se desactiva automáticamente al alcanzar el tiempo autorizado.",
-        "RF-020i: El sistema permite múltiples solicitudes simultáneas a distintos admins. La primera respuesta 'manual on' recibida activa el modo.",
-        "RF-020j: Cada solicitud, autorización, extensión y suspensión queda registrada en la tabla emergency_mode_log para trazabilidad y auditoría.",
-        "RF-020k: El estado del modo manual (activo/inactivo y tiempo restante) persiste ante cortes de energía, recuperándose al reiniciar el sistema."
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        2,
-        3,
-        7
-      ],
-      "type": "feature",
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/9"
-    },
-    {
-      "id": 10,
-      "name": "backup_system",
-      "title": "Sistema de Respaldos y ExportaciÃ³n",
-      "description": "Rutina diaria de volcado (dump.sql.gz) con rotaciÃ³n FIFO de 30 dÃ­as. ExportaciÃ³n a medios externos USB/SD con verificaciÃ³n CRC32. Tabla backup_logs para trazabilidad de ejecuciones. Endpoints API para monitoreo (GET /api/backup/status) y disparo manual (POST /api/backup/run).",
-      "acceptance": [
-        "RF-018: Volcado diario dump.sql.gz con rotaciÃ³n FIFO de 30 dÃ­as",
-        "RF-019: Copia de respaldos a USB/SD con verificaciÃ³n CRC32",
-        "RF-023: Tabla backup_logs con registro de cada ejecuciÃ³n (Ã©xito/fallo, CRC32, copia USB)",
-        "RF-024: Endpoint GET /api/backup/status (admin) â€” Ãºltimos 10 registros de backup_logs",
-        "RF-025: Endpoint POST /api/backup/run (admin) â€” dispara backup en background y retorna 202"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [],
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/7",
-      "type": "feature"
-    },
-    {
-      "id": 11,
-      "name": "rs232_transmission",
-      "title": "TransmisiÃ³n de Datos a PC vÃ­a RS232",
-      "description": "Módulo de transmisión RS232 al PC externo. Consumido por feature 6 (weighing_capture) al presionar Confirmar. Formato fijo CSV con 15 campos: Id, Fecha, Hora, Vagon, Guía, Peso_muestra, 0,0,0,0,0,0,0, Peso_vegetal, Peso_mineral. Vagon es el identificador alfanumérico del vagón. Puerto RS232 configurado en system_config.",
-      "acceptance": [
-        "RF-022: Envío de trama RS232 al PC externo tras cada registro exitoso de pesaje",
-        "RF-022: Formato fijo CSV con 15 campos separados por coma: Id, Fecha, Hora, Vagon, Guía, Peso_muestra, 0,0,0,0,0,0,0, Peso_vegetal, Peso_mineral",
-        "RF-022: Vagon es el identificador alfanumérico del vagón (se envía tal cual del registro de pesaje)"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        1,
-        6
-      ],
-      "type": "feature",
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/10"
-    },
-    {
-      "id": 12,
-      "name": "password_reset_sms",
-      "title": "Restablecimiento de ContraseÃ±a vÃ­a SMS",
-      "description": "Restablecimiento remoto de contraseña vía SMS para analistas que olvidaron su contraseña o tienen el usuario bloqueado. El administrador envía un comando SMS \"reset password <username>\" (case-insensitive) al sistema. SIP-Edge genera un PIN numérico de 4 dígitos, válido por 1 hora y de un solo uso, y lo envía por SMS al teléfono registrado del analista. En la pantalla de login, el enlace \"Olvidó su contraseña\" permite ingresar usuario + PIN para acceder a un modal de cambio de contraseña. El usuario debe tener teléfono registrado; si no, el administrador debe desplazarse al sitio.",
-      "acceptance": [
-        "RF-NUEVO: Admin puede iniciar reset enviando SMS \"reset password <username>\" (case-insensitive) al número del sistema",
-        "RF-NUEVO: Sistema valida que el usuario existe y tiene teléfono registrado; si no, responde con SMS de error al admin",
-        "RF-NUEVO: Sistema genera un PIN de 4 dígitos, lo asocia al usuario con expiración de 1 hora (single-use) y lo envía por SMS al teléfono del analista",
-        "RF-NUEVO: En el login, el enlace \"Olvidó su contraseña\" abre modal con campos usuario + PIN",
-        "RF-NUEVO: Al validar PIN correcto, el sistema permite cambiar la contraseña mediante un segundo modal (nueva contraseña + confirmación)",
-        "RF-NUEVO: Columnas force_password_change (Boolean, default false), reset_pin (String, nullable), reset_pin_expires_at (TIMESTAMP, nullable) en tabla users",
-        "RF-NUEVO: Si el usuario no tiene teléfono registrado, el comando SMS es rechazado con mensaje de error al admin"
-      ],
-      "sdd": true,
-      "status": "done",
-      "depends_on": [
-        3,
-        7
-      ],
-      "type": "feature",
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/11"
-    },
-    {
-      "acceptance": [
-        "RF-F13-01: El SPA arranca en Chromium kiosco mode y muestra un modal de login si no hay JWT en localStorage",
-        "RF-F13-02: Login exitoso redirige a /kiosco (operator) o /admin (admin) segun el rol del usuario",
-        "RF-F13-03: El boton 'Cerrar sesion' esta siempre visible en la esquina superior derecha y al hacer logout vuelve al modal login",
-        "RF-F13-04: El formulario de pesaje en /kiosco tiene campos: tractomula, vagon, guia, dropdown Hacienda->Suerte, y 3 campos de peso (muestra, mineral, vegetal) con botones Tara/Leer",
-        "RF-F13-05: El peso en vivo de la bascula se actualiza via WebSocket /ws/scale con indicador de estabilidad (is_stable)",
-        "RF-F13-06: El boton Confirmar persiste el pesaje via POST /api/weighings y el boton Reset limpia via POST /api/weighings/reset con confirmacion modal",
-        "RF-F13-07: La vista /kiosco/historial muestra una tabla con los pesajes del operador actual",
-        "RF-F13-08: Un banner de emergencia consulta GET /api/emergency/status cada 5s. Si modo manual activo, los campos de peso se vuelven editables",
-        "RF-F13-09: El modal de solicitud de emergencia lista supervisores via GET /api/emergency/admins y envia POST /api/emergency/request",
-        "RF-F13-10: El flujo 'Olvido su contrasena' abre modal con usuario + PIN de 4 digitos, verifica via POST /api/auth/verify-reset-pin y completa via POST /api/auth/complete-reset"
-      ],
-      "id": 13,
-      "type": "feature",
-      "sdd": true,
-      "description": "SPA (Single Page Application) con Svelte 5 que implementa el flujo completo del kiosco industrial: modal de login con autenticacion JWT, formulario multipaso de pesaje con WebSocket de bascula en vivo, historial de pesajes del operador, indicador y solicitud de modo manual de emergencia, control de inactividad, y boton de logout. Integrado con FastAPI que sirve los assets estaticos desde el mismo puerto 8000.",
-      "name": "frontend_login_kiosk",
-      "status": "in_progress",
-      "depends_on": [
-        2,
-        5,
-        6,
-        9
-      ],
-      "title": "Frontend - Login, Kiosco de Pesaje y Logout"
-    },
-    {
-      "acceptance": [
-        "RF-F14-01: La vista /admin muestra un dashboard con cards de acceso rapido a todas las secciones administrativas",
-        "RF-F14-02: /admin/config muestra formularios para RS485 (path, baudrate, paridad, data_bits, stop_bits), RS232 (igual), y GSM modem_index, con botones Test individuales que llaman POST /api/config/test/{port}",
-        "RF-F14-03: /admin/config incluye campos para session timeout (PUT /api/setup/session) y scale timeout (PUT /api/setup/scale)",
-        "RF-F14-04: /admin/usuarios lista todos los usuarios con GET /api/users, permite crear (POST /api/users), editar (PUT /api/users/{id}) y desactivar (DELETE /api/users/{id})",
-        "RF-F14-05: /admin/haciendas lista haciendas activas con GET /api/haciendas, permite crear (POST), editar (PUT) y eliminar (DELETE) con soft-delete",
-        "RF-F14-06: /admin/suertes lista suertes filtrable por hacienda, permite crear (POST /api/suertes), editar (PUT) y eliminar (DELETE)",
-        "RF-F14-07: /admin/backup muestra tabla con ultimos 10 backups via GET /api/backup/status y boton 'Ejecutar backup' via POST /api/backup/run"
-      ],
-      "id": 14,
-      "type": "feature",
-      "sdd": true,
-      "description": "Modulo administrativo del SPA con dashboard central, configuracion del sistema (puertos RS485, RS232, GSM con botones de prueba), CRUD de usuarios, CRUD de haciendas y suertes, y panel de backups con historial y ejecucion.",
-      "name": "frontend_admin",
-      "status": "done",
-      "depends_on": [
-        13
-      ],
-      "title": "Frontend - Panel de Administracion",
-      "github_issue": "https://github.com/rojecas/sip_edge/issues/15"
-    },
-    {
-      "acceptance": [
-        "RF-F15-01: /admin/reportes lista las plantillas de reportes via GET /api/reports/templates, permite crear (POST), editar (PUT) y eliminar (DELETE)",
-        "RF-F15-02: El modal de creacion/edicion de plantilla incluye campos: nombre, schedule (lista de HH:MM), destinatarios SMS, y metrics multi-select",
-        "RF-F15-03: /admin/anomalias muestra tabla paginada con GET /api/anomalies/history, permitiendo expandir cada fila para ver el reporte LLM generado",
-        "RF-F15-04: /admin/agente muestra una interfaz tipo chat donde el admin escribe una pregunta en lenguaje natural y recibe respuesta via POST /api/agent/query",
-        "RF-F15-05: La pantalla de anomalias incluye un boton 'Detectar ahora' que ejecuta GET /api/anomalies con parametros configurables (window, threshold)"
-      ],
-      "id": 15,
-      "type": "feature",
-      "sdd": true,
-      "description": "Modulo de analiticas del SPA: CRUD de plantillas de reportes programados con metricas seleccionables, historial de anomalias detectadas por el sistema de deteccion (Z-Score, relacional, temporal) con reportes LLM expandibles, y consola de consultas en lenguaje natural al agente inteligente.",
-      "name": "frontend_analytics",
-      "status": "pending",
-      "depends_on": [
-        14
-      ],
-      "title": "Frontend - Reportes, Anomalias y Consola IA"
-    },
-    {
-      "id": 16,
-      "name": "harvest_type",
-      "title": "Campo tipo de cosecha en registro de pesaje",
-      "description": "Agregar el campo tipo_cosecha (ENUM: Cosechadora, Cosecha manual) a la tabla weighings donde se registran las lecturas de pesaje. En la vista de captura del kiosco (formulario de pesaje), se debe incluir un campo select para elegir entre las dos opciones. Ademas, el campo debe estar disponible como filtro en los analisis estadisticos del modulo de inteligencia (ej: analisis de peso de materia extraña mineral filtrado por tipo de cosecha).",
-      "acceptance": [
-        "La tabla weighings tiene una nueva columna tipo_cosecha de tipo ENUM con valores Cosechadora y Cosecha manual, no nula, con valor por defecto Cosechadora (modo maquinado es el mas frecuente).",
-        "El formulario de pesaje en el kiosco (/kiosco) muestra un select con las dos opciones antes de confirmar el registro.",
-        "El campo tipo_cosecha se persiste en MariaDB al confirmar el pesaje (POST /api/weighings).",
-        "El endpoint GET /api/anomalies acepta un filtro opcional ?tipo_cosecha=Cosechadora|Cosecha+manual para segmentar los analisis estadisticos.",
-        "El historial de pesajes muestra la columna tipo_cosecha."
-      ],
-      "sdd": true,
-      "type": "feature",
-      "status": "pending",
-      "depends_on": [
-        6,
-        8,
-        13
-      ]
-    },
-    {
-      "id": 17,
-      "name": "watchdog_sd_notify",
-      "title": "Watchdog mal configurado — servicio reiniciado cada 30s por falta de sd_notify",
-      "type": "bug",
-      "description": "El servicio sip-edge tiene WatchdogSec=30 configurado en su unidad systemd, pero uvicorn/FastAPI no implementa sd_notify(). systemd nunca recibe la senial WATCHDOG=1 y mata el proceso cada 30s con SIGABRT, reiniciandolo ciclicamente. Esto afecta la estabilidad del sistema completo.",
-      "reproduction": "1. Hacer SSH a la EdgeBox: ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42\n2. Ejecutar: sudo journalctl -u sip-edge -n 50\n3. Observar: 'Watchdog timeout (limit 30s)!' seguido de 'Killing process uvicorn with signal SIGABRT'\n4. El servicio se reinicia en un ciclo infinito cada ~30s",
-      "affected_feature_ids": [
-        6,
-        7,
-        8,
-        9,
-        10,
-        11,
-        12,
-        13
-      ],
-      "status": "triaged"
-    }
-  ]
-}
+﻿{
+    "project":  "sip_edge",
+    "description":  "Sistema Inteligente de Pesaje y Control de Materia Extraña (SIP-Edge)",
+    "rules":  {
+                  "one_feature_at_a_time":  true,
+                  "require_tests_to_close":  true,
+                  "require_approved_spec_to_implement":  true,
+                  "valid_status":  [
+                                       "pending",
+                                       "spec_ready",
+                                       "in_progress",
+                                       "done",
+                                       "blocked",
+                                       "untriaged",
+                                       "triaged"
+                                   ],
+                  "sdd_required_when":  "feature has \"sdd\": true"
+              },
+    "features":  [
+                     {
+                         "id":  1,
+                         "name":  "system_config",
+                         "title":  "Configuración del Sistema — Puertos RS485/RS232 y GSM",
+                         "type":  "feature",
+                         "description":  "Interfaz Admin para configuración dinámica de puertos hardware: RS485 (báscula), RS232 (PC externo) y módem GSM. Parámetros: ruta, baudrate, paridad, data bits, stop bits. Prueba de conectividad serial/GSM con comando AT. Persistencia en config.yaml con carga automática tras reinicio y sincronización de reloj.",
+                         "acceptance":  [
+                                            "RF-015: Interfaz Admin para modificar rutas RS485, RS232, GSM, baudrate, paridad",
+                                            "RF-016: Función \u0027Test\u0027 para verificar comunicación serial (RS485/RS232) y GSM",
+                                            "RF-017: Guardado en config.yaml, carga automática tras reinicio, sincronización de reloj"
+                                        ],
+                         "sdd":  true,
+                         "status":  "done",
+                         "depends_on":  [
+
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/1"
+                     },
+                     {
+                         "id":  2,
+                         "name":  "auth_rbac",
+                         "title":  "Autenticación, RBAC y Bloqueo por Inactividad",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Autenticacion JWT con hash bcrypt. RBAC con tres roles: admin (total), operator (solo pesaje), corresponsal (sin login, solo contacto SMS). Bloqueo por inactividad configurable en modo kiosco. Persistencia en MariaDB (tabla users completa) y config.yaml seccion session para timeout. Seed de admin inicial en primer arranque.",
+                         "acceptance":  [
+                                            "RF-001: Autenticacion por credenciales con hash bcrypt y token JWT",
+                                            "RF-002: Restriccion de funcionalidades segun rol (admin/operator/corresponsal)",
+                                            "Nuevo: Bloqueo por inactividad con timeout configurable en config.yaml",
+                                            "Nuevo: Login endpoint + proteccion de endpoints con dependencia JWT",
+                                            "Nuevo: Conexion a MariaDB via SQLAlchemy + tabla users + seed admin"
+                                        ],
+                         "status":  "done",
+                         "depends_on":  [
+                                            1
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/2"
+                     },
+                     {
+                         "id":  3,
+                         "name":  "user_management",
+                         "title":  "Gestión de Usuarios (CRUD)",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Interfaz gráfica Admin para Crear/Leer/Actualizar/Desactivar usuarios (Nombre, Documento, Rol, Estado). Desactivación lógica sin eliminación física.",
+                         "acceptance":  [
+                                            "RF-021: CRUD de usuarios con campos Nombre, Documento, Rol, Estado"
+                                        ],
+                         "status":  "done",
+                         "depends_on":  [
+                                            1
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/3"
+                     },
+                     {
+                         "id":  4,
+                         "name":  "farm_lot_crud",
+                         "title":  "Gestión de Haciendas y Suertes",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "CRUD de Haciendas con borrado lógico si existen registros asociados. Gestión de Suertes/Lotes vinculados obligatoriamente a Hacienda padre. Selección en cascada dinámica en el formulario de pesaje.",
+                         "acceptance":  [
+                                            "RF-006: CRUD de Haciendas, borrado lógico si tiene registros",
+                                            "RF-007: Gestión de Suertes vinculadas a Hacienda padre",
+                                            "RF-008: Carga dinámica de Suertes según Hacienda seleccionada"
+                                        ],
+                         "status":  "done",
+                         "depends_on":  [
+                                            1
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/4"
+                     },
+                     {
+                         "id":  5,
+                         "name":  "scale_integration",
+                         "title":  "Integración Serial con Báscula DINI ARGEO DFWLI-2",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Capa de comunicación serial RS485 con balanza DINI ARGEO DFWLI-2. Comando-respuesta bidireccional. Timeout configurable 1-10s (default 3s). Escucha asíncrona con indicador de medida estable.",
+                         "acceptance":  [
+                                            "RF-003: Envío de comando al puerto RS485 y recepción de respuesta",
+                                            "RF-003: Timeout configurable entre 1 y 10 segundos (default 3s)",
+                                            "Nuevo: Escucha asíncrona de datos entrantes desde la balanza (botón PRINT)",
+                                            "Nuevo: Exponer ScaleService como singleton consumible por otras capas"
+                                        ],
+                         "status":  "done",
+                         "depends_on":  [
+                                            1
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/5"
+                     },
+                     {
+                         "id":  6,
+                         "name":  "weighing_capture",
+                         "title":  "Captura de Pesaje Multipaso con Confirmación y Envío RS232",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Flujo de trabajo del operador en kiosco: seleccionar Hacienda+Suerte, ingresar tractomula/vagon/guia, tarar y leer pesos en 3 pasos. Confirmar persiste en MariaDB y envía trama RS232 al PC externo. Reset con confirmación en pantalla.",
+                         "acceptance":  [
+                                            "RF-004: Persistencia en MariaDB con tabla weighings (tractomula, vagon, guia, hacienda, suerte, 3 pesos, usuario)",
+                                            "RF-005: Transacción atómica commit/rollback al confirmar",
+                                            "Nuevo: Focus management por campo activo (como entrada de teclado)",
+                                            "Nuevo: Botón Confirmar persiste + envía trama RS232 al PC",
+                                            "Nuevo: Botón Reset con confirmación en pantalla"
+                                        ],
+                         "status":  "done",
+                         "depends_on":  [
+                                            2,
+                                            4,
+                                            5
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/6"
+                     },
+                     {
+                         "id":  7,
+                         "name":  "sms_service",
+                         "title":  "Servicio de Notificaciones y Reportes SMS",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Envío de SMS vía módulo GSM con comandos AT. Reportes programados de resumen de turno (06:00, 14:00, 22:00 y horarios configurables). Alertas de seguridad inmediatas por intentos de operación no autorizados.",
+                         "acceptance":  [
+                                            "RF-012: Envío de SMS a listado preconfigurado de usuarios autorizados",
+                                            "RF-013: Reportes programados de turno (06:00, 14:00, 22:00) con horarios configurables",
+                                            "RF-014: Notificación inmediata al administrador cuando un usuario acumule 3 o más intentos fallidos de inicio de sesión consecutivos"
+                                        ],
+                         "status":  "done",
+                         "depends_on":  [
+                                            1,
+                                            6
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/8"
+                     },
+                     {
+                         "id":  8,
+                         "name":  "ai_agent",
+                         "title":  "Sistema Inteligente de Reporteria y Deteccion de Anomalias (TinyLLM)",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Sistema de tres flujos: (1) Reportes programados configurables, (2) Deteccion de anomalias en tiempo real con Z-Score + LLM, (3) Consultas ad-hoc via SMS con Function Calling.",
+                         "acceptance":  [
+                                            "RF-008a: El administrador puede crear/modificar plantillas de reporte programado con metricas seleccionables",
+                                            "RF-008b: Los reportes programados se envian via SMS a la lista de corresponsales en los horarios configurados",
+                                            "RF-008c: Tras cada pesaje confirmado, el sistema ejecuta deteccion de anomalias en 3 capas",
+                                            "RF-008d: Si se detecta una anomalia, el sistema invoca el LLM para generar reporte narrativo y lo envia por SMS",
+                                            "RF-008e: Un corresponsal puede enviar un SMS con una pregunta en lenguaje natural sobre los datos recopilados",
+                                            "RF-008f: El sistema procesa la consulta SMS mediante LLM con Function Calling",
+                                            "RF-008g: El LLM se ejecuta con taskset -c 0-2 y -t 3 (3 cores dedicados)",
+                                            "RF-008h: Las herramientas estadisticas incluyen: basic_stats, percentiles, moving_average, trend, breakdown_by_hacienda, breakdown_by_operator, material_composition, shift_summary, daily_summary, detect_anomalies, check_thresholds"
+                                        ],
+                         "status":  "done",
+                         "depends_on":  [
+                                            6,
+                                            7,
+                                            12
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/12"
+                     },
+                     {
+                         "id":  9,
+                         "name":  "emergency_mode",
+                         "title":  "Modo Manual de Emergencia",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Modo manual de emergencia con dos orígenes de activación. El analista solicita desde el kiosco, el supervisor autoriza por SMS. Peso editable durante modo manual. Persistencia ante cortes de energía.",
+                         "acceptance":  [
+                                            "RF-020a: El analista puede solicitar modo manual desde el kiosco mediante un modal",
+                                            "RF-020b: Al enviar la solicitud, SIP-Edge envía un SMS al admin seleccionado",
+                                            "RF-020c: El supervisor autoriza respondiendo al SMS con \u0027manual on\u0027",
+                                            "RF-020d: El supervisor puede activar modo manual directamente por SMS",
+                                            "RF-020e: El campo de peso es editable mientras el modo manual esté activo",
+                                            "RF-020f: El supervisor puede extender el tiempo restante",
+                                            "RF-020g: El supervisor puede suspender el modo manual anticipadamente",
+                                            "RF-020h: El modo manual se desactiva automáticamente al alcanzar el tiempo autorizado",
+                                            "RF-020i: El sistema permite múltiples solicitudes simultáneas",
+                                            "RF-020j: Cada acción queda registrada en emergency_mode_log",
+                                            "RF-020k: El estado del modo manual persiste ante cortes de energía"
+                                        ],
+                         "status":  "done",
+                         "depends_on":  [
+                                            2,
+                                            3,
+                                            7
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/9"
+                     },
+                     {
+                         "id":  10,
+                         "name":  "backup_system",
+                         "title":  "Sistema de Respaldos y Exportación",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Rutina diaria de volcado (dump.sql.gz) con rotación FIFO de 30 días. Exportación a medios externos USB/SD con verificación CRC32. Tabla backup_logs. Endpoints API para monitoreo y disparo manual.",
+                         "acceptance":  [
+                                            "RF-018: Volcado diario dump.sql.gz con rotación FIFO de 30 días",
+                                            "RF-019: Copia de respaldos a USB/SD con verificación CRC32",
+                                            "RF-023: Tabla backup_logs con registro de cada ejecución",
+                                            "RF-024: Endpoint GET /api/backup/status (admin)",
+                                            "RF-025: Endpoint POST /api/backup/run (admin)"
+                                        ],
+                         "status":  "done",
+                         "depends_on":  [
+
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/7"
+                     },
+                     {
+                         "id":  11,
+                         "name":  "rs232_transmission",
+                         "title":  "Transmisión de Datos a PC vía RS232",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Módulo de transmisión RS232 al PC externo. Consumido por weighing_capture al presionar Confirmar. Formato fijo CSV con 15 campos.",
+                         "acceptance":  [
+                                            "RF-022: Envío de trama RS232 al PC externo tras cada registro exitoso de pesaje",
+                                            "RF-022: Formato fijo CSV con 15 campos separados por coma",
+                                            "RF-022: Vagon es el identificador alfanumérico del vagón"
+                                        ],
+                         "status":  "done",
+                         "depends_on":  [
+                                            1,
+                                            6
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/10"
+                     },
+                     {
+                         "id":  12,
+                         "name":  "password_reset_sms",
+                         "title":  "Restablecimiento de Contraseña vía SMS",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Restablecimiento remoto de contraseña vía SMS. El admin envía \u0027reset password \u003cusername\u003e\u0027. PIN de 4 dígitos válido por 1 hora. Modal de cambio en login.",
+                         "acceptance":  [
+                                            "RF-NUEVO: Admin puede iniciar reset enviando SMS \u0027reset password \u003cusername\u003e\u0027",
+                                            "RF-NUEVO: Sistema valida que el usuario existe y tiene teléfono registrado",
+                                            "RF-NUEVO: Sistema genera un PIN de 4 dígitos con expiración de 1 hora",
+                                            "RF-NUEVO: En el login, enlace \u0027Olvidó su contraseña\u0027 abre modal con usuario + PIN",
+                                            "RF-NUEVO: Al validar PIN correcto, permite cambiar la contraseña",
+                                            "RF-NUEVO: Columnas force_password_change, reset_pin, reset_pin_expires_at en users"
+                                        ],
+                         "status":  "done",
+                         "depends_on":  [
+                                            3,
+                                            7
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/11"
+                     },
+                     {
+                         "id":  13,
+                         "name":  "frontend_login_kiosk",
+                         "title":  "Frontend - Login, Kiosco de Pesaje y Logout",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "SPA con Svelte 5 que implementa el flujo completo del kiosco industrial: modal de login JWT, formulario multipaso de pesaje con WebSocket de báscula en vivo, historial de pesajes, emergencia, y logout.",
+                         "acceptance":  [
+                                            "RF-F13-01: El SPA arranca en Chromium kiosco mode y muestra un modal de login si no hay JWT",
+                                            "RF-F13-02: Login exitoso redirige a /kiosco (operator) o /admin (admin)",
+                                            "RF-F13-03: Botón \u0027Cerrar sesión\u0027 siempre visible, logout vuelve al modal login",
+                                            "RF-F13-04: Formulario de pesaje con campos tractomula, vagon, guia, Hacienda-\u003eSuerte, 3 pesos",
+                                            "RF-F13-05: Peso en vivo vía WebSocket /ws/scale con indicador de estabilidad",
+                                            "RF-F13-06: Confirmar persiste via POST /api/weighings, Reset via POST /api/weighings/reset",
+                                            "RF-F13-07: /kiosco/historial muestra tabla con pesajes del operador",
+                                            "RF-F13-08: Banner de emergencia consulta GET /api/emergency/status cada 5s",
+                                            "RF-F13-09: Modal solicitud emergencia lista supervisores y envía POST /api/emergency/request",
+                                            "RF-F13-10: Flujo \u0027Olvidó su contraseña\u0027 con PIN de 4 dígitos"
+                                        ],
+                          "status":  "done",
+                          "depends_on":  [
+                                             2,
+                                             5,
+                                             6,
+                                             9
+                                         ],
+                          "github_issue":  "https://github.com/rojecas/sip_edge/issues/13"
+                     },
+                     {
+                         "id":  14,
+                         "name":  "frontend_admin_dashboard",
+                         "title":  "Frontend Admin — Dashboard y Navegación (14a)",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Fundación del módulo administrativo: dashboard con cards de acceso rápido, sidebar de navegación lateral con sección activa, enrutamiento RBAC, navegación directa por URL, e interceptor 401. Corresponde a la subdivisión 14a de la feature 14 original.",
+                         "acceptance":  [
+                                            "RF-F14-01a: Dashboard con 5 cards (Config, Usuarios, Haciendas, Suertes, Backup) con iconos y enlaces",
+                                            "RF-F14-01b: Sidebar de navegación lateral visible en todas las rutas /admin/*",
+                                            "RF-F14-01c: Sidebar resalta la sección activa visualmente",
+                                            "RF-F14-01d: Solo usuarios con rol admin pueden acceder a rutas /admin/*",
+                                            "RF-F14-01e: Navegación directa por hash a cada sub-ruta admin funciona",
+                                            "RF-F14-01f: HTTP 401 redirige al login con mensaje \u0027Sesión expirada o no autorizada\u0027 en todas las vistas admin"
+                                        ],
+                         "status":  "spec_ready",
+                         "depends_on":  [
+                                            13
+                                        ]
+                     },
+                     {
+                         "id":  15,
+                         "name":  "frontend_admin_operations",
+                         "title":  "Frontend Admin — Configuración y Backup (14b)",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Panel de configuración del sistema (RS485, RS232, GSM, timeouts) con botones de prueba, y panel de backups con historial y ejecución. Corresponde a la subdivisión 14b de la feature 14 original.",
+                         "acceptance":  [
+                                            "RF-F14-02a: /admin/config muestra formularios RS485, RS232, GSM con selects de valores predefinidos",
+                                            "RF-F14-02b: /admin/config carga GET /api/config al montar y pre-puebla campos",
+                                            "RF-F14-02c: Guardar configuración envía PUT /api/config con manejo de éxito/error",
+                                            "RF-F14-02d: Botones Test llaman POST /api/config/test/{port} con resultado inline",
+                                            "RF-F14-02e: Session timeout (PUT /api/setup/session) y scale timeout (PUT /api/setup/scale)",
+                                            "RF-F14-02f: /admin/backup muestra historial de últimos 10 backups via GET /api/backup/status",
+                                            "RF-F14-02g: Botón \u0027Ejecutar Backup\u0027 envía POST /api/backup/run con deshabilitado 30s en éxito",
+                                            "RF-F14-02h: Botón \u0027Refrescar\u0027 recarga la tabla de backups"
+                                        ],
+                         "status":  "pending",
+                         "depends_on":  [
+                                            14
+                                        ]
+                     },
+                     {
+                         "id":  16,
+                         "name":  "frontend_admin_masterdata",
+                         "title":  "Frontend Admin — CRUD de Datos Maestros (14c)",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "CRUD completo de datos maestros: usuarios (crear, editar, desactivar), haciendas (soft-delete con paginación), suertes (filtrable por hacienda). Incluye auto-recarga tras CRUD, manejo de errores de red y soft-delete. Corresponde a la subdivisión 14c de la feature 14 original.",
+                         "acceptance":  [
+                                            "RF-F14-03a: /admin/usuarios lista usuarios via GET /api/users en tabla paginada",
+                                            "RF-F14-03b: Modal crear usuario con campos Usuario, Contraseña, Nombre, Documento, Rol",
+                                            "RF-F14-03c: Modal editar usuario con campos pre-poblados + Activo checkbox",
+                                            "RF-F14-03d: Desactivar usuario con confirmación modal + DELETE /api/users/{id}",
+                                            "RF-F14-03e: /admin/haciendas lista haciendas activas paginadas via GET /api/haciendas",
+                                            "RF-F14-03f: CRUD haciendas con soft-delete y confirmación",
+                                            "RF-F14-03g: /admin/suertes con dropdown de hacienda y tabla filtrada",
+                                            "RF-F14-03h: CRUD suertes con validación (código max 4 chars)",
+                                            "RF-F14-03i: Auto-recarga de tabla tras cada operación CRUD exitosa",
+                                            "RF-F14-03j: Error de red muestra mensaje + botón Reintentar",
+                                            "RF-F14-03k: Soft-delete manejado por backend, frontend envía DELETE"
+                                        ],
+                         "status":  "pending",
+                         "depends_on":  [
+                                            15
+                                        ]
+                     },
+                     {
+                         "id":  17,
+                         "name":  "frontend_analytics",
+                         "title":  "Frontend - Reportes, Anomalías y Consola IA",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Módulo de analíticas del SPA: CRUD de plantillas de reportes programados con métricas seleccionables, historial de anomalías, y consola de consultas al agente inteligente.",
+                         "acceptance":  [
+                                            "RF-F15-01: /admin/reportes lista las plantillas de reportes via GET /api/reports/templates",
+                                            "RF-F15-02: Modal de creación/edición de plantilla con nombre, schedule, SMS, metrics",
+                                            "RF-F15-03: /admin/anomalias muestra tabla paginada con GET /api/anomalies/history",
+                                            "RF-F15-04: /admin/agente muestra interfaz tipo chat con POST /api/agent/query",
+                                            "RF-F15-05: Botón \u0027Detectar ahora\u0027 con parámetros configurables"
+                                        ],
+                         "status":  "pending",
+                         "depends_on":  [
+                                            16
+                                        ]
+                     },
+                     {
+                         "id":  18,
+                         "name":  "harvest_type",
+                         "title":  "Campo tipo de cosecha en registro de pesaje",
+                         "type":  "feature",
+                         "sdd":  true,
+                         "description":  "Agregar campo tipo_cosecha (ENUM: Cosechadora, Cosecha manual) a tabla weighings. Select en formulario de kiosco. Filtro en análisis estadísticos.",
+                         "acceptance":  [
+                                            "La tabla weighings tiene columna tipo_cosecha ENUM, no nula, default Cosechadora",
+                                            "El formulario de pesaje en /kiosco muestra un select con las dos opciones",
+                                            "El campo tipo_cosecha se persiste en MariaDB al confirmar el pesaje",
+                                            "GET /api/anomalies acepta filtro ?tipo_cosecha=",
+                                            "El historial de pesajes muestra la columna tipo_cosecha"
+                                        ],
+                         "status":  "pending",
+                         "depends_on":  [
+                                            6,
+                                            8,
+                                            13
+                                        ]
+                     },
+                      {
+                          "id":  19,
+                          "name":  "watchdog_sd_notify",
+                          "title":  "Watchdog mal configurado — servicio reiniciado cada 30s por falta de sd_notify",
+                          "type":  "bug",
+                          "description":  "El servicio sip-edge tiene WatchdogSec=30 configurado en su unidad systemd, pero uvicorn/FastAPI no implementa sd_notify(). systemd nunca recibe la señal WATCHDOG=1 y mata el proceso cada 30s con SIGABRT.",
+                          "reproduction":  "1. ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42\n2. sudo journalctl -u sip-edge -n 50\n3. Observar: \u0027Watchdog timeout (limit 30s)!\u0027 seguido de \u0027Killing process uvicorn with signal SIGABRT\u0027\n4. El servicio se reinicia en ciclo infinito cada ~30s",
+                          "affected_feature_ids":  [
+                                                       6,
+                                                       7,
+                                                       8,
+                                                       9,
+                                                       10,
+                                                       11,
+                                                       12,
+                                                       13
+                                                   ],
+                          "status":  "done"
+                      },
+                      {
+                          "id":  20,
+                          "name":  "admin_suertes_response_format",
+                          "title":  "AdminSuertes.svelte no carga las suertes al seleccionar una hacienda",
+                          "type":  "bug",
+                          "description":  "El componente AdminSuertes.svelte asume que el endpoint GET /api/suertes retorna {items: [...]} (formato paginado), pero el backend retorna un array plano List[SuerteResponse]. Esto causa que result.items sea undefined y se muestre el mensaje 'No hay suertes registradas para esta hacienda.' aunque existan suertes en la BD.",
+                          "reproduction":  "1. Abrir /admin/suertes en el frontend\n2. Seleccionar una hacienda que tenga suertes (ej. id=483)\n3. Observar que se muestra el mensaje 'No hay suertes registradas para esta hacienda.'\n4. Verificar con curl GET /api/suertes?hacienda_id=483 que la API devuelve suertes correctamente",
+                          "affected_feature_ids":  [
+                                                       4,
+                                                       16
+                                                   ],
+                          "status":  "done"
+                      }
+                  ]
+              }
