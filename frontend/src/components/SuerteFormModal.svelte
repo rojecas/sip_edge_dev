@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from "svelte";
   /**
    * SuerteFormModal — Modal for creating and editing suertes.
    * Props: show, mode ("create"|"edit"), suerte (only edit), haciendaId,

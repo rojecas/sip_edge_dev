@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from "svelte";
   /**
    * HaciendaFormModal — Modal for creating and editing haciendas.
    * Props: show, mode ("create"|"edit"), hacienda (only edit), error, onClose, onSave.

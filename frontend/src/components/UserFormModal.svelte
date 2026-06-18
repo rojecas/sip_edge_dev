@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from "svelte";
   /**
    * UserFormModal — Modal for creating and editing users.
    * Props: show, mode ("create"|"edit"), user (only edit), error, onClose, onSave.

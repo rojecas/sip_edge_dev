@@ -4,12 +4,13 @@
    * Sidebar navigation (left) + header with LogoutButton + content slot.
    */
   import { authStore } from "../stores/auth.js";
-  import { navigate, getRoute } from "../lib/router.js";
+  import { navigate } from "../lib/router.js";
+  import { router } from "../lib/router.js";
   import LogoutButton from "./LogoutButton.svelte";
 
   let { children } = $props();
 
-  let currentRoute = $derived(getRoute());
+  let currentRoute = $derived($router);
 
   const links = [
     { route: "/admin", label: "Dashboard", icon: "📊" },

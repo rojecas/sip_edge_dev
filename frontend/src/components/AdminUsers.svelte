@@ -3,6 +3,7 @@
    * AdminUsers — User management: list, create, edit, deactivate.
    */
   import { api, ApiError } from "../lib/api.js";
+  import { onMount } from "svelte";
   import { ENDPOINTS } from "../lib/constants.js";
   import ConfirmModal from "./ConfirmModal.svelte";
   import UserFormModal from "./UserFormModal.svelte";

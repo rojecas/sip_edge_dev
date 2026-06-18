@@ -3,6 +3,7 @@
    * AdminSuertes — Suerte management: filter by hacienda, list, create, edit, delete.
    */
   import { api, ApiError, buildQuery } from "../lib/api.js";
+  import { onMount } from "svelte";
   import { ENDPOINTS, CONFIG } from "../lib/constants.js";
   import ConfirmModal from "./ConfirmModal.svelte";
   import SuerteFormModal from "./SuerteFormModal.svelte";
