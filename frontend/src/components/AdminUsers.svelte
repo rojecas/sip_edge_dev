@@ -29,7 +29,7 @@
   let formSubmitting = $state(false);
 
   // Load users on mount
-  $effect(() => {
+  onMount(() => {
     loadUsers();
   });
 

@@ -16,7 +16,7 @@
   let validationError = $state("");
   let submitting = $state(false);
 
-  $effect(() => {
+  onMount(() => {
     if (show) {
       validationError = "";
       submitting = false;

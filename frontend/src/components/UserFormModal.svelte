@@ -30,7 +30,7 @@
   let submitting = $state(false);
 
   // Reset form when modal opens or mode/user changes
-  $effect(() => {
+  onMount(() => {
     if (show) {
       validationError = "";
       submitting = false;

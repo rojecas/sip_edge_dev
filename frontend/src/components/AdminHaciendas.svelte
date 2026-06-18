@@ -26,7 +26,7 @@
   let formError = $state("");
   let formSubmitting = $state(false);
 
-  $effect(() => { loadHaciendas(); });
+  onMount(() => { loadHaciendas(); });
 
   async function loadHaciendas() {
     loading = true;

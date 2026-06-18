@@ -2,6 +2,7 @@
   /**
    * AdminConfig — System configuration form for RS485, RS232, GSM, and timeouts.
    */
+  import { onMount } from "svelte";
   import { api, ApiError } from "../lib/api.js";
   import { ENDPOINTS } from "../lib/constants.js";
 
@@ -42,7 +43,7 @@
   let testError = $state({ rs485: "", rs232: "", gsm: "" });
 
   // Load config on mount
-  $effect(() => {
+  onMount(() => {
     loadConfig();
   });
 

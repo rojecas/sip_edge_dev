@@ -37,7 +37,7 @@
   let formSubmitting = $state(false);
 
   // Load haciendas for dropdown on mount
-  $effect(() => { loadHaciendas(); });
+  onMount(() => { loadHaciendas(); });
 
   async function loadHaciendas() {
     haciendasLoading = true;

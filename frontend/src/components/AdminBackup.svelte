@@ -2,6 +2,7 @@
   /**
    * AdminBackup — Backup panel: history table, run backup, refresh.
    */
+  import { onMount } from "svelte";
   import { api, ApiError } from "../lib/api.js";
   import { ENDPOINTS } from "../lib/constants.js";
 
@@ -17,7 +18,7 @@
   let runDisabled = $state(false);
   let runCountdown = $state(0);
 
-  $effect(() => { loadBackups(); });
+  onMount(() => { loadBackups(); });
 
   async function loadBackups() {
     loading = true;
