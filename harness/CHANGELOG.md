@@ -1,4 +1,20 @@
-﻿## [1.10.0] - 2026-06-15
+﻿
+## [1.11.0] - 2026-06-18
+
+### Added
+- .opencode/skills/svelte5/SKILL.md — Nuevo skill de Svelte 5 con reglas duras:
+  runes (/ solo en .svelte.js), mount() vs new App(),
+  patron storeName para svelte/store, onMount imports, checklist del implementer.
+- harness/docs/specs.md — Nueva regla: maximo 20 requirements por feature.
+  Si se excede, dividir en sub-features (ej: 14a, 14b, 14c).
+- harness/docs/specs.md — Nueva seccion obligatoria en design.md: Contrato API.
+  El implementer debe saber si la respuesta es array directo o {items: [...]}.
+- harness/docs/specs.md — Nueva regla en tasks.md: cada task que use funciones
+  de framework (onMount, useEffect, etc.) DEBE listar el import requerido.
+
+### Changed
+- harness/VERSION — bump a 1.11.0
+## [1.10.0] - 2026-06-15
 
 ### Added
 - harness/docs/verification.md — Nuevo Nivel 4 de verificación en EdgeBox (hardware real).
