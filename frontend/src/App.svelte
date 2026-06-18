@@ -52,22 +52,20 @@
       {/if}
     </KioskLayout>
   {:else if $authStore.isAdmin}
-    <AdminLayout>
-      {#if currentRoute === "/admin"}
-        <AdminDashboard />
-      {:else if currentRoute === "/admin/config"}
-        <AdminConfig />
-      {:else if currentRoute === "/admin/usuarios"}
-        <AdminUsers />
-      {:else if currentRoute === "/admin/haciendas"}
-        <AdminHaciendas />
-      {:else if currentRoute === "/admin/suertes"}
-        <AdminSuertes />
-      {:else if currentRoute === "/admin/backup"}
-        <AdminBackup />
-      {:else}
-        <AdminDashboard />
-      {/if}
-    </AdminLayout>
+    {#if currentRoute === "/admin"}
+      <AdminLayout><AdminDashboard /></AdminLayout>
+    {:else if currentRoute === "/admin/config"}
+      <AdminLayout><AdminConfig /></AdminLayout>
+    {:else if currentRoute === "/admin/usuarios"}
+      <AdminLayout><AdminUsers /></AdminLayout>
+    {:else if currentRoute === "/admin/haciendas"}
+      <AdminLayout><AdminHaciendas /></AdminLayout>
+    {:else if currentRoute === "/admin/suertes"}
+      <AdminLayout><AdminSuertes /></AdminLayout>
+    {:else if currentRoute === "/admin/backup"}
+      <AdminLayout><AdminBackup /></AdminLayout>
+    {:else}
+      <AdminLayout><AdminDashboard /></AdminLayout>
+    {/if}
   {/if}
 {/if}
