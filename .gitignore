@@ -26,6 +26,9 @@ Thumbs.db
 # Docker
 *.log
 
+# Session lifecycle (runtime flag)
+harness/.session
+
 # Config (generated at runtime)
 config.yaml
 
