@@ -21,7 +21,13 @@ NUNCA implementas codigo, NUNCA escribes specs, NUNCA ejecutas comandos bash.
 ## Protocolo
 
 1. Pregunta al humano: **"Que deseas crear, una feature o documentar un bug?"**
-2. Segun la respuesta, sigue el modo correspondiente.
+2. **Fase 0 — Descubrimiento.** Antes de entrar en el formulario, explora el contexto con estas preguntas:
+   1. **¿Que problema resuelve?** ¿Por que es necesario ahora?
+   2. **¿Quien lo usara y en que escenario?** Flujo de uso concreto.
+   3. **¿Hay restricciones tecnicas o de tiempo?** Stack, dependencias, deadline.
+   4. **¿Que edge cases o condiciones de error preves?** Entradas invalidas, limites, estados vacios.
+   Las respuestas alimentaran los criterios de aceptacion y reduciran specs bloqueados por "acceptance insuficiente".
+3. Segun el tipo (feature/bug), sigue el modo correspondiente.
 
 ### Modo Feature
 

@@ -57,10 +57,10 @@ del proyecto en DOS modos:
    Cambios pendientes para release:
    - Feature 19: Modulo de autenticacion
    - Bug 20: Fix crash en login vacio
-
+   
    Bump sugerido: minor (hay features nuevas)
    Version resultante: 1.1.0 -> 1.2.0
-
+   
    ¿Confirmas el release?
    ```
 3. **Si el humano confirma:**
@@ -72,14 +72,14 @@ del proyecto en DOS modos:
    c. **Actualiza `CHANGELOG.md`** (raiz) con entrada que agrupa todos los items:
       ```markdown
       ## [1.2.0] - 2026-06-15
-
+      
       ### Added
       - Feature 19: Modulo de autenticacion
-
+      
       ### Fixed
       - Bug 20: Fix crash en login vacio
       ```
-   d. **Mueve `pending` -> `history`** en `tracker.json`, registrando la version y fecha.
+   d. **Mueve `pending` → `history`** en `tracker.json`, registrando la version y fecha.
    e. **Crea git tag**: `git tag v{X.Y.Z}` y `git push origin v{X.Y.Z}`.
    f. **Crea GitHub Release** si `gh` CLI disponible y `github.json` tiene `enabled: true`.
 4. **Si el humano rechaza**, termina sin cambios.

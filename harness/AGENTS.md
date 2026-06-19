@@ -41,6 +41,9 @@
 | `harness/docs/database.md`             | Convencion de capa de persistencia (generico)                               | Antes de tocar BD |
 | `harness/docs/environment.md`          | Template con placeholders para describir el entorno                         | Al adaptar a un proyecto |
 | `harness/docs/sessions.md`             | Estandar de documentacion: planes, cierres y bloqueos                       | Antes de crear o cerrar cualquier artefacto de progreso |
+| `harness/docs/deployment.md`           | Guia de despliegue: entornos, pasos, troubleshooting (template)             | Antes de modificar configuracion de entorno o deployar |
+| `harness/docs/security.md`             | Postura de seguridad: hallazgos, estado, roadmap (template)                 | Antes de tocar auth, BD o datos sensibles |
+| `harness/docs/index.md`                | Indice navegable de toda la documentacion (template)                        | Para ubicar documentacion por tema |
 | `harness/CHECKPOINTS.md`               | Criterios objetivos de "estado final correcto"                              | Para auto-evaluarte |
 | `harness/.opencode/agents/`            | Definiciones de subagentes (`leader`, `spec-author`, `implementer`, `reviewer`, `bug-fixer`, `intake-agent`, `release-manager`) | Si orquestas trabajo |
 | `harness/.opencode/templates/`         | Templates por stack (python, typescript, rust, go, cpp-iot, php-laravel)   | Al hacer scaffold |
