@@ -148,13 +148,13 @@
           {#each backups as b}
             <tr>
               <td>{b.id}</td>
-              <td class="col-file" title={b.archivo || ""}>{b.archivo || "—"}</td>
-              <td>{formatBytes(b.tamano)}</td>
-              <td class="col-checksum" title={b.checksum_local || ""}>{b.checksum_local || "—"}</td>
-              <td>{b.copia_usb ? "Sí" : "No"}</td>
-              <td class="col-checksum" title={b.checksum_usb || ""}>{b.checksum_usb || "—"}</td>
-              <td class="col-error">{b.error || "—"}</td>
-              <td>{formatDate(b.fecha)}</td>
+              <td class="col-file" title={b.filename || ""}>{b.filename || "—"}</td>
+              <td>{formatBytes(b.file_size)}</td>
+              <td class="col-checksum" title={b.local_checksum || ""}>{b.local_checksum || "—"}</td>
+              <td>{b.usb_copied ? "Sí" : "No"}</td>
+              <td class="col-checksum" title={b.usb_checksum || ""}>{b.usb_checksum || "—"}</td>
+              <td class="col-error">{b.error_message || "—"}</td>
+              <td>{formatDate(b.created_at)}</td>
             </tr>
           {/each}
         </tbody>

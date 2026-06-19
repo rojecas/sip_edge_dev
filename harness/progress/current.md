@@ -1,4 +1,4 @@
-# Sesion actual
+﻿# Sesion actual
 
 > Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
 > Los cierres y bloqueos van en archivos separados: ver harness/docs/sessions.md.
@@ -28,7 +28,7 @@
 | 12 | password_reset_sms | done |
 | 13 | frontend_login_kiosk | done |
 | 14 | frontend_admin_dashboard | done |
-| 15 | frontend_admin_operations | pending |
+| 15 | frontend_admin_operations | done |
 | 16 | frontend_admin_masterdata | pending |
 | 17 | frontend_analytics | pending |
 | 18 | harvest_type | pending |

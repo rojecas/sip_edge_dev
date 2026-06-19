@@ -29,7 +29,7 @@ App.svelte
 
 | Archivo                             | Posible correccion                            |
 |-------------------------------------|-----------------------------------------------|
-| `frontend/src/components/AdminBackup.svelte` | Problema conocido: extraer `.items` de respuesta API |
+| `frontend/src/components/AdminBackup.svelte` | Field name mismatch: backend ingles vs frontend español (ver seccion 7) |
 | `frontend/src/lib/constants.js`     | Endpoints de config y backup (verificar)      |
 
 ## 4. Backend: NO se modifican archivos en `src/` ni `tests/`
@@ -61,19 +61,93 @@ Tabla con historial de backups + botones:
 - Boton "Ejecutar Backup" → POST /api/backup/run con deshabilitado 30s
 - Boton "Refrescar" → recarga GET /api/backup/status
 - Manejo de errores: 4xx/5xx no deshabilita boton
-- Problema conocido: verificar que se extrae `.items` correctamente de la respuesta
+- Problema conocido: field name mismatch (español vs ingles) entre frontend y backend
+  — ver seccion 7 para detalle
 
-## 6. Estado actual del codigo
+## 6. Contrato API
 
-El codigo existe y compila. Problemas conocidos del closure de feature 14:
-- AdminBackup puede no extraer `.items` correctamente de la respuesta API
+Todos los endpoints ya existen en el backend. La respuesta esperada se documenta
+para que el implementer verifique el mapeo correcto en el frontend.
+
+### GET /api/config
+```
+Respuesta: {
+  rs485:     { path: string, baudrate: int, parity: string, data_bits: int, stop_bits: float },
+  rs232:     { path: string, baudrate: int, parity: string, data_bits: int, stop_bits: float },
+  gsm:       { modem_index: int },
+  last_updated: string (ISO 8601),
+  session_timeout_minutes?: int,
+  scale_timeout_seconds?: int
+}
+```
+
+### PUT /api/config
+```
+Request:  { rs485: {...}, rs232: {...}, gsm: {...} }
+Respuesta 200: mismo schema que GET /api/config
+Respuesta 422: { detail: string }
+```
+
+### POST /api/config/test/{port}
+```
+port ∈ { rs485, rs232, gsm }
+Respuesta ok:    { status: "ok" }
+Respuesta fail:  { status: "fail", detail: string }
+Respuesta 404:   { detail: string } (port invalido)
+```
+
+### PUT /api/setup/session
+```
+Request:  { session_timeout_minutes: int (gt: 0) }
+Respuesta 200: { session_timeout_minutes: int }
+```
+
+### PUT /api/setup/scale
+```
+Request:  { timeout_seconds: int (ge: 1, le: 10) }
+Respuesta 200: { timeout_seconds: int }
+```
+
+### GET /api/backup/status
+```
+Respuesta: BackupLog[] (array directo, NO `{items: [...]}`)
+BackupLog: {
+  id: int,
+  filename: string,
+  file_size: int | null,
+  local_checksum: string | null,
+  usb_copied: bool,
+  usb_checksum: string | null,
+  error_message: string | null,
+  created_at: string (ISO 8601)
+}
+NOTA: El backend retorna array directo, no objeto paginado.
+El AdminBackup.svelte usa `result.items || result || []` para cubrir ambos formatos.
+```
+
+### POST /api/backup/run
+```
+Respuesta 202: { status: "accepted", message: "Backup started" }
+```
+
+## 7. Estado actual del codigo
+
+El codigo existe y compila. Problemas conocidos del desarrollo de feature 14:
+
+- **AdminBackup — field name mismatch (CRITICO):** El componente AdminBackup.svelte
+  espera campos en español (`archivo`, `tamano`, `checksum_local`, `copia_usb`,
+  `checksum_usb`, `error`, `fecha`) pero el backend retorna campos en ingles
+  (`filename`, `file_size`, `local_checksum`, `usb_copied`, `usb_checksum`,
+  `error_message`, `created_at`). Esto causa que todas las columnas de la tabla
+  muestren "—" aunque existan registros de backup.
 - Verificar que el manejo de errores HTTP 422 preserva los cambios del formulario
+  en AdminConfig.svelte.
 
-## 7. Persistencia
+## 8. Persistencia
 
 Esta feature NO modifica la base de datos.
 
-## 8. github_labels
+## 9. github_labels
 
 ```
 frontend, svelte, admin, config, backup, serial

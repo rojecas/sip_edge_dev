@@ -435,3 +435,23 @@ Feature 15 — frontend_admin_operations (Configuración y Backup, 14b)
 - **Verificacion:** init.ps1 secciones 1-5 [OK]. Agentes identicos (7/7 SHA256 match).
 - **Pendiente:** la sesion se cerro sin ejecutar close.ps1 (flag .session quedo en open).
 
+
+## 2026-06-19 — Feature 15 completada + despliegue EdgeBox
+
+- **Agente:** leader → spec-author → implementer → reviewer → release-manager
+- **Feature:** frontend_admin_operations (Configuración y Backup, 14b)
+- **Cambios:**
+  - AdminBackup.svelte — corregidos 7 field names (inglés ↔ español)
+  - AdminConfig.svelte — verificado, ya funcionaba al 100%
+  - Tests frontend: Vitest + @testing-library/svelte (33 tests, 2 componentes)
+  - frontend/vitest.config.js, src/setupTest.js — infraestructura de tests frontend
+  - frontend/package.json — script "test": "vitest run"
+- **Despliegue EdgeBox:**
+  - Usuario bkmngr creado (uid=1002), grupo backupers
+  - /home/bkmngr/backups/ con permisos 775 (sipedge + bkmngr via grupo backupers)
+  - config.yaml corregido: local_dir → /home/bkmngr/backups
+  - Frontend build copiado a src/static/
+  - Servicio sip-edge reiniciado OK
+- **Resultado:** 33/33 tests frontend, 443 tests backend, init.ps1 OK. Feature cerrada.
+- **Pendiente:** Feature 19 (backup_ux_enhancements) acordada para otra sesión.
+- **Despliegue confirmado:** Health check OK en EdgeBox.

@@ -28,6 +28,14 @@
       "name": "admin_suertes_response_format",
       "title": "AdminSuertes.svelte no carga las suertes al seleccionar una hacienda",
       "completed_at": "2026-06-18"
+    },
+    {
+      "id": 15,
+      "type": "feature",
+      "name": "frontend_admin_operations",
+      "title": "Frontend Admin — Configuración y Backup (14b)",
+      "completed_at": "2026-06-19",
+      "notes": "Reabierta para tests frontend (33 tests, Vitest) — cerrada definitivamente"
     }
   ],
   "history": [
