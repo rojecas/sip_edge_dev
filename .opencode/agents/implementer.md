@@ -24,18 +24,20 @@ Eres un implementador. Tu trabajo es ejecutar **una sola** feature de harness/fe
 
 ## Protocolo (SDD)
 
-1. **Lee** harness/AGENTS.md, harness/docs/architecture.md, harness/docs/conventions.md, harness/docs/specs.md.
+1. **Carga y lee** los skills relevantes al stack del proyecto (ver lista en el prompt del leader). Si hay skill para el stack (ej: svelte5), aplica sus reglas por encima de cualquier codigo existente.
+2. **Lee** harness/AGENTS.md, harness/docs/architecture.md, harness/docs/conventions.md, harness/docs/specs.md.
+3. **Lee** harness/feature_list.json - identifica que features depends_on la tuya y que features comparten archivos con tu implementacion. Si vas a modificar archivos creados por features anteriores, anotalo en harness/progress/impl_<name>.md bajo 'Impacto en features existentes'.
 2. **Lee el spec completo** en `harness/specs/<name>/`. Cada `T<n>` de `tasks.md` es lo que vas a hacer; cada `R<n>` de `requirements.md` es lo que debe quedar verdadero al final.
-3. **Anota** en harness/progress/current.md:
+5. **Anota** en harness/progress/current.md:
    - `Feature en curso: <id> — <name>`
    - `Plan: las tasks T1..Tn de harness/specs/<name>/tasks.md`
-4. **Para cada task `T<n>` en orden**:
+6. **Para cada task `T<n>` en orden**:
    a. Implementa el cambio que indica la task.
    b. Si la task incluye un test, escribelo.
    c. Marca `[x] T<n>` en `tasks.md`.
-5. **Verifica** ejecutando `./init.ps1`. Si falla -> vuelve al paso 4.
-6. **Trazabilidad**: confirma que cada `R<n>` esta cubierto por al menos un test concreto. Anotalo en `harness/progress/impl_<name>.md` (mapa `R<n> -> test`).
-7. **No marques `done` tu mismo.** Espera al reviewer. El release-manager se encargara del GitHub sync y changelog.
+7. **Verifica** ejecutando `./init.ps1`. Si falla -> vuelve al paso 4.
+8. **Trazabilidad**: confirma que cada `R<n>` esta cubierto por al menos un test concreto. Anotalo en `harness/progress/impl_<name>.md` (mapa `R<n> -> test`).
+9. **No marques `done` tu mismo.** Espera al reviewer. El release-manager se encargara del GitHub sync y changelog.
 
 ## Protocolo (no-SDD / legacy)
 

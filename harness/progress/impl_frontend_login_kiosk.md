@@ -115,3 +115,79 @@ Feature implementada: SPA Svelte 5 + Vite con modal de login JWT, formulario de 
 - Svelte 5 en runes mode no permite `export let` — se reemplazo con `$props()` y store compartido (`emergency.js`) para estado entre componentes.
 - Svelte 5 no soporta short-circuit evaluation `{cond && <elem/>}` en templates — se uso `{#if cond}...{/if}`.
 - El orden de rutas en FastAPI es critico: rutas API/WS/login/health deben registrarse ANTES de la catch-all, y la raiz `/` debe servir el SPA.
+
+---
+
+## Correccion de regresiones (2026-06-18)
+
+### Contexto
+Durante la implementacion de Feature 14 (frontend_admin_dashboard), los stores compartidos
+fueron retrofiteados de Svelte 5 runes a `svelte/store`. El re-review de Feature 13 encontro
+2 regresiones CRITICAS de reactividad. Esta sesion las corrige.
+
+### Regression 1: ws.js — scaleStore sin subscribe (CRITICAL)
+
+**Archivo:** `frontend/src/lib/ws.js`
+**R afectados:** R17, R35, R18
+
+**Problema:** `scaleStore` se exportaba como objeto plano con getters usando `get()`.
+No tenia metodo `subscribe`, por lo que `$derived(scaleStore.connected)` en
+`ScaleReader.svelte` y `disabled={!scaleStore.connected}` en `WeightField.svelte`
+nunca se actualizaban. El peso quedaba congelado y el boton "Leer" siempre aparecia
+deshabilitado.
+
+**Fix aplicado:**
+- `ws.js`: Importado `derived` de `svelte/store`. Convertido `scaleStore` de objeto
+  plano a `derived([_net_weight, _is_stable, _unit, _connected], ...)` que SI tiene `subscribe`.
+  El store derivado emite `{ net_weight, is_stable, unit, connected }`.
+- `ScaleReader.svelte`: Eliminados `$derived(scaleStore.connected)` etc (4 lineas).
+  Template actualizado a usar `$scaleStore.connected`, `$scaleStore.net_weight`,
+  `$scaleStore.is_stable`, `$scaleStore.unit` directamente (prefijo `$` auto-subscribe).
+- `WeightField.svelte`: Importado `get` de `svelte/store`. `handleLeer()` usa
+  `get(scaleStore)` (snapshot en callback). Template `disabled={!scaleStore.connected}`
+  corregido a `disabled={!$scaleStore.connected}` (reactivo).
+
+### Regression 2: KioskForm.svelte — $derived(emergencyStore.isEmergencyMode) (CRITICAL)
+
+**Archivo:** `frontend/src/components/KioskForm.svelte`
+**R afectados:** R24, R25
+
+**Problema:** `let isEmergencyMode = $derived(emergencyStore.isEmergencyMode)` donde
+`isEmergencyMode` es un getter que llama a `get(_isEmergencyMode)`. `$derived` no puede
+trackear `get()` como dependencia reactiva, por lo que el estado de modo manual nunca
+se propagaba a los WeightField. Los campos de peso no se volvian editables en modo
+emergencia.
+
+**Fix aplicado:**
+- Eliminada la linea `let isEmergencyMode = $derived(emergencyStore.isEmergencyMode)`.
+- Importado `get` de `svelte/store`.
+- `handleConfirm()` usa `get(emergencyStore)` para `manual_entry` (snapshot en callback).
+- Template `disabled={!isEmergencyMode}` corregido a `disabled={!$emergencyStore}`
+  (prefijo `$` auto-subscribe al store de emergencia, que YA tiene `subscribe`).
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `frontend/src/lib/ws.js` | scaleStore: objeto plano → `derived()` con subscribe |
+| `frontend/src/components/ScaleReader.svelte` | $derived eliminados, template usa $scaleStore |
+| `frontend/src/components/WeightField.svelte` | get(scaleStore) en callback, $scaleStore en template |
+| `frontend/src/components/KioskForm.svelte` | $derived eliminado, get() en callback, $emergencyStore en template |
+
+### Archivos NO modificados (intactos)
+
+| Archivo | Razon |
+|---------|-------|
+| `stores/auth.js` | Ya usa writable/derived correctamente con subscribe |
+| `stores/emergency.js` | Ya expone subscribe via _isEmergencyMode.subscribe |
+| `lib/router.js` | Ya usa writable con subscribe |
+| Todos los demas .svelte | Sin cambios necesarios |
+
+### Verificacion
+
+- [x] `npm run build` en `frontend/`: 150 modules transformed, 0 errores, build exitoso
+  (JS 105.21 kB, gzip 33.48 kB; CSS 44.98 kB, gzip 5.80 kB)
+- [x] `./init.ps1` secciones 1-5: todos [OK]
+- [x] Skill svelte5 respetado: stores `.js` usan `derived`, templates `.svelte` usan `$storeName`
+- [x] No se usaron `$state`/`$derived` en archivos `.js`
+- [x] `get()` solo se usa en callbacks/event handlers (snapshot), nunca para tracking reactivo

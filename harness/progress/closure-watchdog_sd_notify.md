@@ -1,4 +1,4 @@
-# Closure — Bug #17: watchdog_sd_notify
+# Closure — Bug #19: watchdog_sd_notify
 
 ## Sintoma
 El servicio sip-edge se reinicia en un ciclo infinito cada ~30s. En los logs

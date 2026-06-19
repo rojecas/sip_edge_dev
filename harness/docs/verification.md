@@ -72,3 +72,4 @@ la incompatibilidad con el hardware real.
 Combinación con Nivel 3: `./init.ps1` se ejecuta siempre en local (Docker).
 Nivel 4 se ejecuta después del despliegue en EdgeBox. Ambos DEBEN pasar
 antes de declarar `done`.
+

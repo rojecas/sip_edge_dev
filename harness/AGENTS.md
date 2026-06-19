@@ -1,4 +1,4 @@
-# AGENTS.md — Mapa de navegacion para agentes de IA
+﻿# AGENTS.md â€” Mapa de navegacion para agentes de IA
 
 > Este archivo es el **punto de entrada** para cualquier agente que trabaje en este
 > repositorio. NO es una biblia de reglas: es un **mapa**. Lee solo lo que
@@ -18,7 +18,7 @@
    El script `./scripts/close.ps1` lo pondra en `closed` al finalizar.
 4. Lee `harness/progress/current.md` para entender en que estado quedo la ultima sesion.
 5. Lee `harness/feature_list.json`. Toda feature nueva (`"sdd": true`) pasa por
-   **Spec Driven Development** — ver `harness/docs/specs.md` y S4 de este archivo.
+   **Spec Driven Development** â€” ver `harness/docs/specs.md` y S4 de este archivo.
 6. Lee `harness/docs/specs.md` antes de tocar cualquier spec o feature `sdd: true`.
 7. Lee `harness/docs/sessions.md` para conocer el estandar de documentacion
    (planes, cierres, bloqueos).
@@ -92,6 +92,12 @@
   el issue al transicionar a `in_progress` y el implementer DEBE cerrarlo al marcar `done`. Si gh falla, la feature se bloquea.
 - **Cada item en `feature_list.json` DEBE tener campo `type`** con valores `"feature"` o `"bug"`.
 - **El release-manager es el unico que toca version, changelog y GitHub sync.**
+- **Gobierno de archivos compartidos.** Si una implementacion modifica archivos que fueron creados por features anteriores (src/, stores/, lib/, components/ compartidos, etc.), el implementer DEBE:
+  1. Identificar que features consumen esos archivos (revisar depends_on en eature_list.json, rastrear imports en el codigo fuente).
+  2. Re-ejecutar los tests de las features afectadas.
+  3. Documentar el impacto en harness/progress/impl_<name>.md bajo la seccion 'Impacto en features existentes'.
+  El reviewer DEBE verificar que este analisis existe y que no hay regresiones en features dependientes.
+- **Consulta de skills obligatoria.** Antes de implementar un cambio, el agente DEBE cargar y leer los skills relevantes al stack del proyecto (ej: svelte5, eact18, laravel). Si el skill contiene reglas que contradicen el codigo existente, el agente DEBE priorizar el skill y documentar la desviacion en harness/progress/impl_<name>.md. El reviewer DEBE verificar que los skills relevantes fueron consultados.
 
 ## 4. Flujo de trabajo (SDD)
 
@@ -128,7 +134,7 @@ untriaged -> HUMANO -> triaged -> [bug-fixer -> reviewer -> release-manager] -> 
 
 Antes de terminar:
 
-1. Ejecuta `./init.ps1` — todo verde.
+1. Ejecuta `./init.ps1` â€” todo verde.
 2. Si la tarea esta acabada: crea harness/progress/closure-<name>.md` siguiendo
    `harness/docs/sessions.md` A2. Marca `status: "done"` en `harness/feature_list.json`.
 3. Mueve el resumen de `harness/progress/current.md` al final de `harness/progress/history.md`.
@@ -154,9 +160,9 @@ registrado con un bump de version y una entrada en `harness/CHANGELOG.md`.
 
 | Bump | Cuando usarlo | Ejemplo |
 |------|--------------|---------|
-| **MAJOR** (X.0.0) | Cambio incompatible: reestructuracion de carpetas, nuevo formato de `feature_list.json`, cambio de motor de BD | `1.1.0` → `2.0.0` |
-| **MINOR** (0.X.0) | Nuevas features del harness: nuevo doc, nueva regla, nuevo template, nuevo script | `1.1.0` → `1.2.0` |
-| **PATCH** (0.0.X) | Correcciones: typos, bugs en scripts, ajustes menores sin nuevo comportamiento | `1.1.0` → `1.1.1` |
+| **MAJOR** (X.0.0) | Cambio incompatible: reestructuracion de carpetas, nuevo formato de `feature_list.json`, cambio de motor de BD | `1.1.0` â†’ `2.0.0` |
+| **MINOR** (0.X.0) | Nuevas features del harness: nuevo doc, nueva regla, nuevo template, nuevo script | `1.1.0` â†’ `1.2.0` |
+| **PATCH** (0.0.X) | Correcciones: typos, bugs en scripts, ajustes menores sin nuevo comportamiento | `1.1.0` â†’ `1.1.1` |
 
 ### Procedimiento
 
@@ -174,24 +180,24 @@ registrado con un bump de version y una entrada en `harness/CHANGELOG.md`.
 
 ```
 <proyecto>/
-├── opencode.json             # config de opencode (instrucciones, comandos, agentes, skills)
-├── .opencode/                # agentes y skills (copia de harness/.opencode/agents/ y skills/)
-│   ├── agents/               # leader, spec-author, implementer, reviewer, bug-fixer, intake-agent, release-manager
-│   └── skills/               # sdd-workflow
-├── src/                      # codigo fuente del proyecto
-├── tests/                    # tests del proyecto
-├── scripts/                  # setup_wizard.ps1
-└── harness/                  # la fabrica autocontenida
-    ├── init.ps1              # verificacion de entorno
-    ├── feature_list.json     # features del proyecto (NO en raiz)
-    ├── AGENTS.md, VERSION, CHANGELOG.md, CHECKPOINTS.md, github.json
-    ├── .opencode/            # agentes, scripts, skills, templates
-    ├── docs/                 # architecture, conventions, specs, sessions, etc.
-    ├── specs/                # specs SDD (requirements, design, tasks)
-    ├── progress/             # current.md, history.md, closure-*, blocked-*
-    ├── scripts/              # close.ps1, github_sync.py, validate_features.py, schema_dump.py
-    ├── releases/             # tracker.json
-    └── database/             # .schema_dump.json, migrations/, backups/, seeds/
+â”œâ”€â”€ opencode.json             # config de opencode (instrucciones, comandos, agentes, skills)
+â”œâ”€â”€ .opencode/                # agentes y skills (copia de harness/.opencode/agents/ y skills/)
+â”‚   â”œâ”€â”€ agents/               # leader, spec-author, implementer, reviewer, bug-fixer, intake-agent, release-manager
+â”‚   â””â”€â”€ skills/               # sdd-workflow
+â”œâ”€â”€ src/                      # codigo fuente del proyecto
+â”œâ”€â”€ tests/                    # tests del proyecto
+â”œâ”€â”€ scripts/                  # setup_wizard.ps1
+â””â”€â”€ harness/                  # la fabrica autocontenida
+    â”œâ”€â”€ init.ps1              # verificacion de entorno
+    â”œâ”€â”€ feature_list.json     # features del proyecto (NO en raiz)
+    â”œâ”€â”€ AGENTS.md, VERSION, CHANGELOG.md, CHECKPOINTS.md, github.json
+    â”œâ”€â”€ .opencode/            # agentes, scripts, skills, templates
+    â”œâ”€â”€ docs/                 # architecture, conventions, specs, sessions, etc.
+    â”œâ”€â”€ specs/                # specs SDD (requirements, design, tasks)
+    â”œâ”€â”€ progress/             # current.md, history.md, closure-*, blocked-*
+    â”œâ”€â”€ scripts/              # close.ps1, github_sync.py, validate_features.py, schema_dump.py
+    â”œâ”€â”€ releases/             # tracker.json
+    â””â”€â”€ database/             # .schema_dump.json, migrations/, backups/, seeds/
 ```
 
 ### Reglas al ejecutar el scaffold
@@ -235,7 +241,7 @@ mejoras del harness:
 
 1. Leer `harness/VERSION` del proyecto (ej. `1.1.0`).
 2. Leer `harness/CHANGELOG.md` de la fabrica desde la version del proyecto
-   hasta la version actual de la fabrica (ej. `1.1.0` → `1.2.0`).
+   hasta la version actual de la fabrica (ej. `1.1.0` â†’ `1.2.0`).
 3. **El delta entre versiones es la lista exacta de cambios a aplicar.**
 4. Para cada entrada del delta:
    - Leer los archivos modificados listados en el changelog.
@@ -244,5 +250,6 @@ mejoras del harness:
 5. Actualizar `harness/VERSION` del proyecto a la version de la fabrica.
 6. Actualizar `harness/CHANGELOG.md` del proyecto con una entrada que
    liste los cambios aplicados y los saltados.
-7. Ejecutar `./harness/init.ps1` en el proyecto — todo verde.
+7. Ejecutar `./harness/init.ps1` en el proyecto â€” todo verde.
 8. Registrar la sesion de actualizacion en `harness/progress/history.md`.
+

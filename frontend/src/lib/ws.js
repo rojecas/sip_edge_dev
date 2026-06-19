@@ -2,7 +2,7 @@
  * WebSocket manager for /ws/scale.
  * Reactive store using svelte/store.
  */
-import { writable, get } from "svelte/store";
+import { writable, get, derived } from "svelte/store";
 import { CONFIG, ENDPOINTS } from "./constants.js";
 
 function buildWsUrl(token) {
@@ -95,11 +95,12 @@ export function disconnect() {
   _is_stable.set(false);
 }
 
-export const scaleStore = {
-  get net_weight() { return get(_net_weight); },
-  set net_weight(v) { _net_weight.set(v); },
-  get is_stable() { return get(_is_stable); },
-  set is_stable(v) { _is_stable.set(v); },
-  get unit() { return get(_unit); },
-  get connected() { return get(_connected); },
-};
+export const scaleStore = derived(
+  [_net_weight, _is_stable, _unit, _connected],
+  ([$w, $s, $u, $c]) => ({
+    net_weight: $w,
+    is_stable: $s,
+    unit: $u,
+    connected: $c
+  })
+);

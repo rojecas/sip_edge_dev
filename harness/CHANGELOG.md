@@ -1,4 +1,29 @@
-﻿
+﻿## [1.12.0] - 2026-06-18
+
+### Added
+- harness/AGENTS.md — Nueva regla dura: "Gobierno de archivos compartidos".
+  Si una implementacion modifica archivos creados por features anteriores, el
+  implementer DEBE identificar features dependientes, re-ejecutar sus tests,
+  y documentar el impacto. El reviewer DEBE verificar.
+- harness/AGENTS.md — Nueva regla dura: "Consulta de skills obligatoria".
+  Antes de implementar, el agente DEBE cargar y leer los skills relevantes
+  al stack del proyecto. Si el skill contradice el codigo existente, el
+  agente DEBE priorizar el skill y documentar la desviacion.
+- .opencode/agents/implementer.md — Paso 1 del protocolo SDD ahora exige
+  cargar skills del stack. Paso 3 exige identificar features dependientes
+  al modificar archivos compartidos. Nuevas reglas duras sobre shared files
+  y skills.
+- .opencode/agents/reviewer.md — Nuevo paso 6: verificar que el implementer
+documento los skills consultados. Nuevo paso 7: verificar impacto en
+features existentes. Nuevas reglas duras correspondientes.
+- harness/docs/verification.md — Nuevo Nivel 5: verificacion manual de UI para SPA frontend.
+  Estandariza la verificacion en local (Docker) y remoto (EdgeBox) con tabla de escenarios.
+  documento los skills consultados. Nuevo paso 7: verificar impacto en
+  features existentes. Nuevas reglas duras correspondientes.
+
+### Changed
+- harness/VERSION — bump a 1.12.0
+
 ## [1.11.0] - 2026-06-18
 
 ### Added
@@ -356,4 +381,6 @@ detection fix) se preservan como historico y continuan aplicados.
 - `validate_features.py` â€” validador de `feature_list.json`
 - `CHECKPOINTS.md` (C1-C6) â€” criterios de evaluacion
 - Demo `notes-cli` con 7 features completadas y 27 tests
+
+
 

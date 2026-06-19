@@ -1,4 +1,4 @@
-﻿{
+{
     "project":  "sip_edge",
     "description":  "Sistema Inteligente de Pesaje y Control de Materia Extraña (SIP-Edge)",
     "rules":  {
@@ -20,7 +20,7 @@
                      {
                          "id":  1,
                          "name":  "system_config",
-                         "title":  "Configuración del Sistema — Puertos RS485/RS232 y GSM",
+                         "title":  "Configuración del Sistema  Puertos RS485/RS232 y GSM",
                          "type":  "feature",
                          "description":  "Interfaz Admin para configuración dinámica de puertos hardware: RS485 (báscula), RS232 (PC externo) y módem GSM. Parámetros: ruta, baudrate, paridad, data bits, stop bits. Prueba de conectividad serial/GSM con comando AT. Persistencia en config.yaml con carga automática tras reinicio y sincronización de reloj.",
                          "acceptance":  [
@@ -282,39 +282,40 @@
                                             "RF-F13-09: Modal solicitud emergencia lista supervisores y envía POST /api/emergency/request",
                                             "RF-F13-10: Flujo \u0027Olvidó su contraseña\u0027 con PIN de 4 dígitos"
                                         ],
-                          "status":  "done",
-                          "depends_on":  [
-                                             2,
-                                             5,
-                                             6,
-                                             9
-                                         ],
-                          "github_issue":  "https://github.com/rojecas/sip_edge/issues/13"
-                     },
-                     {
-                         "id":  14,
-                         "name":  "frontend_admin_dashboard",
-                         "title":  "Frontend Admin — Dashboard y Navegación (14a)",
-                         "type":  "feature",
-                         "sdd":  true,
-                         "description":  "Fundación del módulo administrativo: dashboard con cards de acceso rápido, sidebar de navegación lateral con sección activa, enrutamiento RBAC, navegación directa por URL, e interceptor 401. Corresponde a la subdivisión 14a de la feature 14 original.",
-                         "acceptance":  [
-                                            "RF-F14-01a: Dashboard con 5 cards (Config, Usuarios, Haciendas, Suertes, Backup) con iconos y enlaces",
-                                            "RF-F14-01b: Sidebar de navegación lateral visible en todas las rutas /admin/*",
-                                            "RF-F14-01c: Sidebar resalta la sección activa visualmente",
-                                            "RF-F14-01d: Solo usuarios con rol admin pueden acceder a rutas /admin/*",
-                                            "RF-F14-01e: Navegación directa por hash a cada sub-ruta admin funciona",
-                                            "RF-F14-01f: HTTP 401 redirige al login con mensaje \u0027Sesión expirada o no autorizada\u0027 en todas las vistas admin"
+                         "status":  "done",
+                         "depends_on":  [
+                                            2,
+                                            5,
+                                            6,
+                                            9
                                         ],
-                         "status":  "spec_ready",
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/13"
+                     },
+{
+                          "id":  14,
+                          "name":  "frontend_admin_dashboard",
+                          "title":  "Frontend Admin  Dashboard y Navegación (14a)",
+                          "type":  "feature",
+                          "sdd":  true,
+                          "description":  "Fundación del módulo administrativo: dashboard con cards de acceso rápido, sidebar de navegación lateral con sección activa, enrutamiento RBAC, navegación directa por URL, e interceptor 401. Corresponde a la subdivisión 14a de la feature 14 original.",
+                          "acceptance":  [
+                                             "RF-F14-01a: Dashboard con 5 cards (Config, Usuarios, Haciendas, Suertes, Backup) con iconos y enlaces",
+                                             "RF-F14-01b: Sidebar de navegación lateral visible en todas las rutas /admin/*",
+                                             "RF-F14-01c: Sidebar resalta la sección activa visualmente",
+                                             "RF-F14-01d: Solo usuarios con rol admin pueden acceder a rutas /admin/*",
+                                             "RF-F14-01e: Navegación directa por hash a cada sub-ruta admin funciona",
+                                             "RF-F14-01f: HTTP 401 redirige al login con mensaje \u0027Sesión expirada o no autorizada\u0027 en todas las vistas admin"
+                                         ],
+                          "status":  "done",
                          "depends_on":  [
                                             13
-                                        ]
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/16"
                      },
                      {
                          "id":  15,
                          "name":  "frontend_admin_operations",
-                         "title":  "Frontend Admin — Configuración y Backup (14b)",
+                         "title":  "Frontend Admin  Configuración y Backup (14b)",
                          "type":  "feature",
                          "sdd":  true,
                          "description":  "Panel de configuración del sistema (RS485, RS232, GSM, timeouts) con botones de prueba, y panel de backups con historial y ejecución. Corresponde a la subdivisión 14b de la feature 14 original.",
@@ -336,7 +337,7 @@
                      {
                          "id":  16,
                          "name":  "frontend_admin_masterdata",
-                         "title":  "Frontend Admin — CRUD de Datos Maestros (14c)",
+                         "title":  "Frontend Admin  CRUD de Datos Maestros (14c)",
                          "type":  "feature",
                          "sdd":  true,
                          "description":  "CRUD completo de datos maestros: usuarios (crear, editar, desactivar), haciendas (soft-delete con paginación), suertes (filtrable por hacienda). Incluye auto-recarga tras CRUD, manejo de errores de red y soft-delete. Corresponde a la subdivisión 14c de la feature 14 original.",
@@ -398,37 +399,37 @@
                                             13
                                         ]
                      },
-                      {
-                          "id":  19,
-                          "name":  "watchdog_sd_notify",
-                          "title":  "Watchdog mal configurado — servicio reiniciado cada 30s por falta de sd_notify",
-                          "type":  "bug",
-                          "description":  "El servicio sip-edge tiene WatchdogSec=30 configurado en su unidad systemd, pero uvicorn/FastAPI no implementa sd_notify(). systemd nunca recibe la señal WATCHDOG=1 y mata el proceso cada 30s con SIGABRT.",
-                          "reproduction":  "1. ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42\n2. sudo journalctl -u sip-edge -n 50\n3. Observar: \u0027Watchdog timeout (limit 30s)!\u0027 seguido de \u0027Killing process uvicorn with signal SIGABRT\u0027\n4. El servicio se reinicia en ciclo infinito cada ~30s",
-                          "affected_feature_ids":  [
-                                                       6,
-                                                       7,
-                                                       8,
-                                                       9,
-                                                       10,
-                                                       11,
-                                                       12,
-                                                       13
-                                                   ],
-                          "status":  "done"
-                      },
-                      {
-                          "id":  20,
-                          "name":  "admin_suertes_response_format",
-                          "title":  "AdminSuertes.svelte no carga las suertes al seleccionar una hacienda",
-                          "type":  "bug",
-                          "description":  "El componente AdminSuertes.svelte asume que el endpoint GET /api/suertes retorna {items: [...]} (formato paginado), pero el backend retorna un array plano List[SuerteResponse]. Esto causa que result.items sea undefined y se muestre el mensaje 'No hay suertes registradas para esta hacienda.' aunque existan suertes en la BD.",
-                          "reproduction":  "1. Abrir /admin/suertes en el frontend\n2. Seleccionar una hacienda que tenga suertes (ej. id=483)\n3. Observar que se muestra el mensaje 'No hay suertes registradas para esta hacienda.'\n4. Verificar con curl GET /api/suertes?hacienda_id=483 que la API devuelve suertes correctamente",
-                          "affected_feature_ids":  [
-                                                       4,
-                                                       16
-                                                   ],
-                          "status":  "done"
-                      }
-                  ]
-              }
+                     {
+                         "id":  19,
+                         "name":  "watchdog_sd_notify",
+                         "title":  "Watchdog mal configurado  servicio reiniciado cada 30s por falta de sd_notify",
+                         "type":  "bug",
+                         "description":  "El servicio sip-edge tiene WatchdogSec=30 configurado en su unidad systemd, pero uvicorn/FastAPI no implementa sd_notify(). systemd nunca recibe la señal WATCHDOG=1 y mata el proceso cada 30s con SIGABRT.",
+                         "reproduction":  "1. ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42\n2. sudo journalctl -u sip-edge -n 50\n3. Observar: \u0027Watchdog timeout (limit 30s)!\u0027 seguido de \u0027Killing process uvicorn with signal SIGABRT\u0027\n4. El servicio se reinicia en ciclo infinito cada ~30s",
+                         "affected_feature_ids":  [
+                                                      6,
+                                                      7,
+                                                      8,
+                                                      9,
+                                                      10,
+                                                      11,
+                                                      12,
+                                                      13
+                                                  ],
+                         "status":  "done"
+                     },
+                     {
+                         "id":  20,
+                         "name":  "admin_suertes_response_format",
+                         "title":  "AdminSuertes.svelte no carga las suertes al seleccionar una hacienda",
+                         "type":  "bug",
+                         "description":  "El componente AdminSuertes.svelte asume que el endpoint GET /api/suertes retorna {items: [...]} (formato paginado), pero el backend retorna un array plano List[SuerteResponse]. Esto causa que result.items sea undefined y se muestre el mensaje \u0027No hay suertes registradas para esta hacienda.\u0027 aunque existan suertes en la BD.",
+                         "reproduction":  "1. Abrir /admin/suertes en el frontend\n2. Seleccionar una hacienda que tenga suertes (ej. id=483)\n3. Observar que se muestra el mensaje \u0027No hay suertes registradas para esta hacienda.\u0027\n4. Verificar con curl GET /api/suertes?hacienda_id=483 que la API devuelve suertes correctamente",
+                         "affected_feature_ids":  [
+                                                      4,
+                                                      16
+                                                  ],
+                         "status":  "done"
+                     }
+                 ]
+}

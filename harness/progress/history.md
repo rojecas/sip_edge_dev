@@ -321,3 +321,99 @@ Ejecutar tasks T1 a T35 de harness/specs/13_frontend_login_kiosk/tasks.md:
 
 ### Datos:
 - 618 haciendas + 3821 suertes importadas desde docs/Haciendas.csv
+
+
+---
+
+## Sesion 2026-06-18 — Harness v1.12.0: shared file governance + skills mandatory
+
+- **Agente:** leader
+- **Version bump:** 1.11.0 -> 1.12.0
+- **Cambios:**
+  - harness/AGENTS.md — 2 nuevas reglas duras: "Gobierno de archivos compartidos"
+    y "Consulta de skills obligatoria"
+  - .opencode/agents/implementer.md — Paso 1: cargar skills. Paso 3: identificar
+    features dependientes al modificar archivos compartidos. Nuevas hard rules.
+  - .opencode/agents/reviewer.md — Paso 6: verificar skills consultados.
+    Paso 7: verificar impacto en features existentes. Nuevas hard rules.
+- **Feature 13:** Re-review completada. CHANGES_REQUESTED por 2 regresiones
+  de reactividad en stores (scaleStore sin subscribe, get() dentro de ()).
+  Pendiente de correccion por implementer.
+- **Bug 19:** Marcado como done (ya implementado, revisado y cerrado en sesiones anteriores).
+- **feature_list.json:** Bug 19 status -> done. Renumeracion de features 14-19.
+- **Lecciones:**
+  - El retrofit de stores de runes a svelte/store fue correcto (segun skill svelte5),
+    pero incompleto: faltaron subscribe en scaleStore y uso correcto de .
+  - Cambiar archivos compartidos requiere re-verificar features dependientes.
+  - El harness no tenia una regla que obligara a identificar features aguas abajo.
+
+
+---
+
+## Sesion 2026-06-18 — Feature 13 completada + Bug 19 + Harness v1.12.0
+
+- **Agente:** leader -> reviewer -> implementer -> reviewer -> release-manager
+- **Feature 13 (frontend_login_kiosk):** in_progress -> done
+  - Re-review encontro 2 regresiones de reactividad (scaleStore sin subscribe, get() dentro de ())
+  - Implementer corrigio ambas siguiendo skill svelte5
+  - Reviewer re-verifico: APPROVED
+  - Release-manager registro en tracker
+- **Bug 19 (watchdog_sd_notify):** triaged -> done
+  - Ya estaba implementado de sesiones anteriores. Solo se actualizo status y tracker.
+- **Harness v1.12.0:** Nuevas reglas duras:
+  - "Gobierno de archivos compartidos" — al modificar archivos de features anteriores, identificar dependientes
+  - "Consulta de skills obligatoria" — cargar skill del stack antes de implementar
+  - Actualizados implementer.md y reviewer.md con checklist correspondiente
+
+
+---
+
+## Sesion 2026-06-18 — Auditoria Feature 13 + Bug 19 + Harness v1.12.0
+
+- **Agente:** leader → reviewer → implementer → reviewer → release-manager
+- **Feature 13 (frontend_login_kiosk):** done ✅
+  - Re-review encontró 2 regresiones de reactividad (scaleStore sin subscribe, get() dentro de ())
+  - Implementer corrigió siguiendo skill svelte5
+  - Reviewer re-verificó: APPROVED
+  - Release-manager registró en tracker
+  - Tests manuales: API (8 local + 9 remoto) + navegador (local + EdgeBox)
+  - Bugs corregidos: page size select, boton emergencia, encoding acentos, layout pesos, ancho cards
+- **Bug 19 (watchdog_sd_notify):** done ✅
+  - Ya implementado de sesiones anteriores. Solo se actualizó status y tracker.
+- **Harness v1.12.0:** Nuevas reglas:
+  - "Gobierno de archivos compartidos" — al modificar archivos de features anteriores, identificar dependientes
+  - "Consulta de skills obligatoria" — cargar skill del stack antes de implementar
+  - Nivel 5 en verification.md — verificacion manual de UI (SPA frontend)
+  - Actualizados implementer.md y reviewer.md con checklist
+- **Feature 14 dividida:** 14a (dashboard), 14b (config+backup), 14c (CRUD maestros) con specs creados
+- **BD remota (EdgeBox):** migrada + poblada con 25 pesajes de prueba
+
+---
+## Sesion: Auditoria y correcciones Feature #14
+**Fecha:** 2026-06-18
+**Agente:** Leader (Orquestador)
+
+# Sesion actual
+
+**Ultima sesion completada:** 14 â€” frontend_admin_dashboard
+**Registro:** Release-manager registrÃ³ Feature 14 y Bug 20 como completados.
+**Fecha:** 2026-06-18
+
+## Estado: Sesion cerrada
+- [x] Feature 14 (frontend_admin_dashboard) â€” marcada `done`
+- [x] Bug 20 (admin_suertes_response_format) â€” ya estaba `done`, registrado en tracker
+- [x] GitHub issue #16 cerrado
+- [x] Closure creado: `harness/progress/closure-frontend_admin_dashboard.md`
+- [x] Tracker actualizado: 2 items registrados en pending
+
+## Items pendientes para release
+- Feature 13 â€” frontend_login_kiosk
+- Bug 19 â€” watchdog_sd_notify
+- Feature 14 â€” frontend_admin_dashboard (reciÃ©n registrado)
+- Bug 20 â€” admin_suertes_response_format (reciÃ©n registrado)
+
+## Proxima feature sugerida
+Feature 15 â€” frontend_admin_operations (ConfiguraciÃ³n y Backup, 14b)
+- Depende de: Feature 14
+- SDD: true
+

@@ -1,4 +1,4 @@
-{
+﻿{
   "project_version": "1.0.0",
   "pending": [
     {
@@ -9,18 +9,25 @@
       "completed_at": "2026-06-16"
     },
     {
-      "id": 14,
-      "type": "feature",
-      "name": "frontend_admin",
-      "title": "Frontend - Panel de Administracion",
+      "id": 19,
+      "type": "bug",
+      "name": "watchdog_sd_notify",
+      "title": "Watchdog mal configurado - servicio reiniciado cada 30s por falta de sd_notify",
       "completed_at": "2026-06-17"
     },
     {
-      "id": 17,
+      "id": 14,
+      "type": "feature",
+      "name": "frontend_admin_dashboard",
+      "title": "Frontend Admin - Dashboard y Navegaci\u00f3n (14a)",
+      "completed_at": "2026-06-18"
+    },
+    {
+      "id": 20,
       "type": "bug",
-      "name": "watchdog_sd_notify",
-      "title": "Watchdog mal configurado — servicio reiniciado cada 30s por falta de sd_notify",
-      "completed_at": "2026-06-17"
+      "name": "admin_suertes_response_format",
+      "title": "AdminSuertes.svelte no carga las suertes al seleccionar una hacienda",
+      "completed_at": "2026-06-18"
     }
   ],
   "history": [

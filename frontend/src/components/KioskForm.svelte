@@ -12,6 +12,7 @@
   import ScaleReader from "./ScaleReader.svelte";
   import WeightField from "./WeightField.svelte";
   import ConfirmModal from "./ConfirmModal.svelte";
+import EmergencyModal from "./EmergencyModal.svelte";
 
   // Vehicle fields
   let tractomula = $state("");
@@ -40,6 +41,7 @@
   let successMessage = $state("");
   let errorMessage = $state("");
   let showResetConfirm = $state(false);
+  let showEmergencyModal = $state(false);
 
   // Load haciendas on mount
   onMount(() => {
@@ -131,6 +133,9 @@
     }
     resetForm();
   }
+
+  function openEmergencyModal() { showEmergencyModal = true; }
+  function closeEmergencyModal() { showEmergencyModal = false; }
 
   function cancelReset() {
     showResetConfirm = false;
@@ -315,6 +320,16 @@
   </div>
 </div>
 
+  {#if showEmergencyModal}
+    <EmergencyModal onclose={closeEmergencyModal} />
+  {/if}
+
+  <div class="emergency-section">
+    <button class="btn-emergency" onclick={openEmergencyModal}>
+      Solicitar Modo Manual
+    </button>
+  </div>
+
 {#if showResetConfirm}
   <ConfirmModal
     show={showResetConfirm}
@@ -329,7 +344,7 @@
 
 <style>
   .kiosk-form {
-    max-width: 960px;
+    max-width: 1280px;
     margin: 0 auto;
   }
 
@@ -470,5 +485,29 @@
   .btn-confirm:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .emergency-section {
+    display: flex;
+    justify-content: center;
+    padding: 12px 0;
+    margin-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn-emergency {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    background: #cc0000;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn-emergency:hover {
+    background: #990000;
   }
 </style>

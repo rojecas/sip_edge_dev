@@ -70,7 +70,7 @@
   .field-label {
     display: block;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-secondary);
     margin-bottom: 6px;
   }
@@ -82,14 +82,14 @@
   }
 
   .weight-input {
-    flex: 1;
+    width: 160px;
     padding: 10px 14px;
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--bg-input);
     color: var(--text-primary);
-    font-size: 20px;
-    font-weight: 600;
+    font-size: 32px;
+    font-weight: 700;
     text-align: right;
     font-family: "Courier New", monospace;
     outline: none;
@@ -117,7 +117,7 @@
     background: var(--bg-secondary);
     color: var(--warning);
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: background 0.2s;
     white-space: nowrap;
@@ -134,7 +134,7 @@
     background: var(--accent);
     color: white;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     transition: background 0.2s;
     white-space: nowrap;

@@ -7,11 +7,6 @@
   import { scaleStore, connect, disconnect } from "../lib/ws.js";
   import { authStore } from "../stores/auth.js";
 
-  let connected = $derived(scaleStore.connected);
-  let netWeight = $derived(scaleStore.net_weight);
-  let isStable = $derived(scaleStore.is_stable);
-  let unit = $derived(scaleStore.unit);
-
   onMount(() => {
     if (authStore.token) {
       connect(authStore.token);
@@ -28,16 +23,16 @@
   }
 </script>
 
-<div class="scale-reader" class:disconnected={!connected}>
+<div class="scale-reader" class:disconnected={!$scaleStore.connected}>
   <div class="weight-display">
-    <span class="weight-value">{formatWeight(netWeight)}</span>
-    <span class="weight-unit">{unit}</span>
+    <span class="weight-value">{formatWeight($scaleStore.net_weight)}</span>
+    <span class="weight-unit">{$scaleStore.unit}</span>
   </div>
 
   <div class="status-row">
-    {#if !connected}
+    {#if !$scaleStore.connected}
       <span class="status disconnected">Báscula desconectada</span>
-    {:else if isStable}
+    {:else if $scaleStore.is_stable}
       <span class="status stable">Estable</span>
     {:else}
       <span class="status unstable">Inestable</span>

@@ -12,7 +12,7 @@
   let items = $state([]);
   let total = $state(0);
   let page = $state(1);
-  let pageSize = $state(20);
+  let pageSize = $state("20");
   let totalPages = $state(1);
 
   // Filters
@@ -50,7 +50,7 @@
       items = data.items || [];
       total = data.total || 0;
       page = data.page || page;
-      pageSize = data.page_size || pageSize;
+      // pageSize kept from user interaction
       totalPages = data.total_pages || 1;
 
       if (total === 0 && (startDate || endDate)) {
@@ -82,7 +82,7 @@
   }
 
   function onPageSizeChange(e) {
-    pageSize = parseInt(e.target.value);
+    pageSize = e.target.value;
     page = 1;
     loadData();
   }
@@ -200,7 +200,7 @@
           disabled={page <= 1}
         >Anterior</button>
 
-        <select value={pageSize} onchange={onPageSizeChange} class="page-size-select">
+        <select bind:value={pageSize} onchange={onPageSizeChange} class="page-size-select">
           <option value="10">10 por página</option>
           <option value="20">20 por página</option>
           <option value="50">50 por página</option>
