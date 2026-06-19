@@ -413,7 +413,25 @@ Ejecutar tasks T1 a T35 de harness/specs/13_frontend_login_kiosk/tasks.md:
 - Bug 20 â€” admin_suertes_response_format (reciÃ©n registrado)
 
 ## Proxima feature sugerida
-Feature 15 â€” frontend_admin_operations (ConfiguraciÃ³n y Backup, 14b)
+Feature 15 — frontend_admin_operations (Configuración y Backup, 14b)
 - Depende de: Feature 14
 - SDD: true
+
+---
+
+## Sesion 2026-06-18 — Actualizacion del harness v1.12.0 → v1.13.0
+
+- **Agente:** deepseek-v4-pro
+- **Cambios:**
+  - `harness/docs/index.md` — nuevo (indice navegable de documentacion)
+  - `harness/docs/security.md` — nuevo (postura de seguridad, template)
+  - `harness/docs/deployment.md` — nuevo (guia de despliegue, template)
+  - `harness/AGENTS.md` — anadidas 3 entradas en mapa de navegacion (deployment, security, index)
+  - `harness/VERSION` → 1.13.0
+  - `harness/CHANGELOG.md` — entrada [1.13.0]
+  - `harness/.opencode/agents/` — 7 agentes actualizados (SHA256 match con fabrica)
+  - `docs/database.md` — regenerado por schema_dump.py
+  - `harness/progress/closure-admin_suertes_response_format.md` — creado (bug 20)
+- **Verificacion:** init.ps1 secciones 1-5 [OK]. Agentes identicos (7/7 SHA256 match).
+- **Pendiente:** la sesion se cerro sin ejecutar close.ps1 (flag .session quedo en open).
 

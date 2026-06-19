@@ -3,10 +3,10 @@
 > Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
 > Los cierres y bloqueos van en archivos separados: ver harness/docs/sessions.md.
 
-- **Inicio:** 2026-06-18
-- **Agente:** deepseek-v4-pro
-- **Feature en curso:** actualizacion del harness
-- **Estado:** in_progress
+- **Inicio:** (pendiente)
+- **Agente:** (pendiente)
+- **Feature en curso:** (ninguna)
+- **Estado:** (ninguno)
 
 ---
 
@@ -39,16 +39,7 @@
 
 ## Plan
 
-1. Actualizar harness de v1.12.0 a v1.13.0 (delta Harness-SDD)
-   - [x] Copiar `harness/docs/index.md` (nuevo)
-   - [x] Copiar `harness/docs/security.md` (nuevo)
-   - [x] Copiar `harness/docs/deployment.md` (nuevo)
-   - [x] Actualizar `harness/AGENTS.md` — anadir 3 entradas en mapa
-   - [x] Actualizar `harness/VERSION` → 1.13.0
-   - [x] Actualizar `harness/CHANGELOG.md` — entrada [1.13.0]
-   - [x] Verificar agentes identicos (7/7 SHA256 match)
-   - [x] init.ps1: secciones 1-5 [OK]
-
+(pendiente)
 
 ---
 
