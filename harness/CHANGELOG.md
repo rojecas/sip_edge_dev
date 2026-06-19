@@ -32,6 +32,17 @@
 
 ---
 
+## [1.13.1] - 2026-06-19
+
+### Recibido desde fabrica Harness-SDD
+
+### Fixed
+- `harness/scripts/close.ps1` — Heuristica de `current.md` refinada: ahora filtra filas de tabla, headers de tabla, y placeholders de plantilla.
+- `harness/scripts/close.ps1` — Git: chequeo de working tree limpio antes de pull. Comandos git con `EAP=Continue` local (PS 5.1).
+- `harness/scripts/close.ps1` — Path de `init.ps1` corregido: `../../init.ps1` → `../init.ps1`.
+- `.gitignore` — Anadido `harness/.session` (flag de runtime).
+- `harness/.session` — `git rm --cached` (fuera del tracking).
+
 ## [1.13.0] - 2026-06-18
 
 ### Added
