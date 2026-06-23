@@ -22,6 +22,11 @@
 6. Lee `harness/docs/specs.md` antes de tocar cualquier spec o feature `sdd: true`.
 7. Lee `harness/docs/sessions.md` para conocer el estandar de documentacion
    (planes, cierres, bloqueos).
+8. **Session reminder:** Revisa si hay contenido entre las marcas
+   <!-- SESSION_REMINDER_START --> y <!-- SESSION_REMINDER_END --> al final
+   de este archivo. Si hay contenido, presentalo al usuario y luego BORRA todo
+   el contenido entre esas marcas (pero deja las marcas vacias).
+   Si no hay contenido, continua normalmente.
 
 ## 2. Mapa del repositorio
 
@@ -100,7 +105,8 @@
   2. Re-ejecutar los tests de las features afectadas.
   3. Documentar el impacto en harness/progress/impl_<name>.md bajo la seccion 'Impacto en features existentes'.
   El reviewer DEBE verificar que este analisis existe y que no hay regresiones en features dependientes.
-- **Consulta de skills obligatoria.** Antes de implementar un cambio, el agente DEBE cargar y leer los skills relevantes al stack del proyecto (ej: svelte5, eact18, laravel). Si el skill contiene reglas que contradicen el codigo existente, el agente DEBE priorizar el skill y documentar la desviacion en harness/progress/impl_<name>.md. El reviewer DEBE verificar que los skills relevantes fueron consultados.
+- **Consulta de skills obligatoria.** Antes de implementar un cambio, el agente DEBE cargar y leer los skills relevantes al stack del proyecto (ej: svelte5, 
+eact18, laravel). Si el skill contiene reglas que contradicen el codigo existente, el agente DEBE priorizar el skill y documentar la desviacion en harness/progress/impl_<name>.md. El reviewer DEBE verificar que los skills relevantes fueron consultados.
 
 ## 4. Flujo de trabajo (SDD)
 
@@ -256,3 +262,5 @@ mejoras del harness:
 7. Ejecutar `./harness/init.ps1` en el proyecto â€” todo verde.
 8. Registrar la sesion de actualizacion en `harness/progress/history.md`.
 
+<!-- SESSION_REMINDER_START -->
+<!-- SESSION_REMINDER_END -->

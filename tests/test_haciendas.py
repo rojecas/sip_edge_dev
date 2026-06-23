@@ -313,7 +313,7 @@ class TestHaciendasCRUD(unittest.TestCase):
         self.assertEqual(response.status_code, 409)
         self.assertEqual(
             response.json()["detail"],
-            "Hacienda with this codigo already exists",
+            "Ya existe una hacienda con este codigo. Cambielo para poder guardarla.",
         )
 
     # R3: Get hacienda by id
@@ -776,7 +776,7 @@ class TestSuertesCRUD(unittest.TestCase):
         self.assertEqual(response.status_code, 409)
         self.assertEqual(
             response.json()["detail"],
-            "Suerte with this codigo already exists in this hacienda",
+            "Ya existe una suerte con este codigo en esta hacienda. Cambielo para poder guardarla.",
         )
 
     def test_create_suerte_same_codigo_different_hacienda(self):

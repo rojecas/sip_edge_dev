@@ -36,6 +36,13 @@
       "title": "Frontend Admin — Configuración y Backup (14b)",
       "completed_at": "2026-06-19",
       "notes": "Reabierta para tests frontend (33 tests, Vitest) — cerrada definitivamente"
+    },
+    {
+      "id": 16,
+      "type": "feature",
+      "name": "frontend_admin_masterdata",
+      "title": "Frontend Admin — CRUD de Datos Maestros (14c)",
+      "completed_at": "2026-06-19"
     }
   ],
   "history": [

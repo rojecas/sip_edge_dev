@@ -107,7 +107,7 @@ def create_hacienda(db: Session, data: HaciendaCreate) -> HaciendaResponse:
         Hacienda.codigo == data.codigo, Hacienda.deleted_at.is_(None)
     ).first()
     if existing is not None:
-        raise HTTPException(status_code=409, detail="Hacienda with this codigo already exists")
+        raise HTTPException(status_code=409, detail="Ya existe una hacienda con este codigo. Cambielo para poder guardarla.")
     h = Hacienda(codigo=data.codigo, nombre=data.nombre)
     db.add(h)
     db.commit()
@@ -130,7 +130,7 @@ def update_hacienda(db: Session, hacienda_id: int, data: HaciendaUpdate) -> Haci
             Hacienda.deleted_at.is_(None),
         ).first()
         if conflict is not None:
-            raise HTTPException(status_code=409, detail="Hacienda with this codigo already exists")
+            raise HTTPException(status_code=409, detail="Ya existe una hacienda con este codigo. Cambielo para poder guardarla.")
         update_fields["codigo"] = data.codigo
     if data.nombre is not None:
         update_fields["nombre"] = data.nombre
@@ -189,7 +189,7 @@ def create_suerte(db: Session, data: SuerteCreate) -> SuerteResponse:
     if existing is not None:
         raise HTTPException(
             status_code=409,
-            detail="Suerte with this codigo already exists in this hacienda",
+            detail="Ya existe una suerte con este codigo en esta hacienda. Cambielo para poder guardarla.",
         )
     s = Suerte(hacienda_id=data.hacienda_id, codigo_suerte=data.codigo_suerte)
     db.add(s)
@@ -216,7 +216,7 @@ def update_suerte(db: Session, suerte_id: int, data: SuerteUpdate) -> SuerteResp
         if conflict is not None:
             raise HTTPException(
                 status_code=409,
-                detail="Suerte with this codigo already exists in this hacienda",
+                detail="Ya existe una suerte con este codigo en esta hacienda. Cambielo para poder guardarla.",
             )
         update_fields["codigo_suerte"] = data.codigo_suerte
     if update_fields:

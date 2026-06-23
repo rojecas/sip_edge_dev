@@ -40,7 +40,11 @@
     emptyMsg = "";
     try {
       const result = await api.get(ENDPOINTS.USERS);
-      users = result.items || [];
+      if (Array.isArray(result)) {
+        users = result;
+      } else {
+        users = result.items || [];
+      }
       if (!users || users.length === 0) {
         emptyMsg = "No hay usuarios registrados.";
         users = [];

@@ -73,7 +73,7 @@ def get_user(db: Session, user_id: int) -> UserResponse:
 def create_user(db: Session, data: UserCreate) -> UserResponse:
     existing = db.query(User).filter(User.username == data.username).first()
     if existing is not None:
-        raise HTTPException(status_code=409, detail="Username already exists")
+        raise HTTPException(status_code=409, detail="Ya existe un usuario con este nombre. Elija otro nombre para poder guardarlo.")
     user = User(
         username=data.username,
         password_hash=hash_password(data.password),

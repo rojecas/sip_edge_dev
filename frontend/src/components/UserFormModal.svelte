@@ -30,8 +30,8 @@
   let validationError = $state("");
   let submitting = $state(false);
 
-  // Reset form when modal opens or mode/user changes
-  onMount(() => {
+  // Reset form when modal opens (reactive to show)
+  $effect(() => {
     if (show) {
       validationError = "";
       submitting = false;
@@ -68,7 +68,7 @@
     return "";
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const vErr = validate();
     if (vErr) {
       validationError = vErr;
@@ -91,8 +91,8 @@
           is_active: form.is_active,
           ...(form.new_password.trim() ? { password: form.new_password } : {}),
         };
-    // Parent handles API call via onSave; resets submitting on completion
-    onSave(payload);
+    await onSave(payload);
+    submitting = false;
   }
 
   function handleOverlayClick(e) {
@@ -124,6 +124,11 @@
             Contraseña
             <input type="password" bind:value={form.password} placeholder="Contraseña" />
           </label>
+        {:else}
+          <div class="info-field">
+            <span class="info-label">Usuario:</span>
+            <span class="info-value">{user?.username || "—"}</span>
+          </div>
         {/if}
 
         <label>
@@ -249,6 +254,26 @@
     width: 16px;
     height: 16px;
     accent-color: var(--accent);
+  }
+
+  .info-field {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-input);
+    display: flex;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  .info-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .info-value {
+    color: var(--text-primary);
+    font-weight: 600;
   }
 
   .modal-body input,

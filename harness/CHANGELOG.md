@@ -43,6 +43,17 @@
 - `.gitignore` — Anadido `harness/.session` (flag de runtime).
 - `harness/.session` — `git rm --cached` (fuera del tracking).
 
+## [1.14.0] - 2026-06-19
+
+### Added
+- harness/AGENTS.md — Seccion 1 paso 8: instruccion para leer y autodestruir recordatorios de sesion entre marcas \<!-- SESSION_REMINDER_START -->\ y \<!-- SESSION_REMINDER_END -->\.
+- harness/AGENTS.md — Marcas \SESSION_REMINDER_*\ al final del archivo para recordatorios auto-limpiantes.
+- harness/progress/next_session_reminder.md — Recordatorio para pruebas en EdgeBox (Features 14, 15, 16) y modo manual SMS.
+
+### Changed
+- harness/VERSION: 1.13.1 → 1.14.0 (minor)
+
+
 ## [1.13.0] - 2026-06-18
 
 ### Added

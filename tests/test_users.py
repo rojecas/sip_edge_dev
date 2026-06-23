@@ -239,7 +239,7 @@ class TestUserManagement(unittest.TestCase):
             headers={"Authorization": f"Bearer {token}"},
         )
         self.assertEqual(response.status_code, 409)
-        self.assertEqual(response.json()["detail"], "Username already exists")
+        self.assertEqual(response.json()["detail"], "Ya existe un usuario con este nombre. Elija otro nombre para poder guardarlo.")
 
     def test_create_user_invalid_role(self):
         token = self._login()

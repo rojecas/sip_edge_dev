@@ -17,7 +17,7 @@
   let validationError = $state("");
   let submitting = $state(false);
 
-  onMount(() => {
+  $effect(() => {
     if (show) {
       validationError = "";
       submitting = false;
@@ -40,7 +40,7 @@
     return "";
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const vErr = validate();
     if (vErr) {
       validationError = vErr;
@@ -48,10 +48,11 @@
     }
     validationError = "";
     submitting = true;
-    onSave({
+    await onSave({
       codigo: form.codigo.trim(),
       nombre: form.nombre.trim(),
     });
+    submitting = false;
   }
 
   function handleOverlayClick(e) {

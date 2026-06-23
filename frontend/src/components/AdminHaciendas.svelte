@@ -98,7 +98,12 @@
       }
     } catch (err) {
       if (err instanceof ApiError) {
-        formError = err.message;
+        if (err.status === 409) {
+          formError = err.message;
+          // Modal stays open to let the user correct the duplicate code
+        } else {
+          formError = err.message;
+        }
       } else {
         formError = "Error de conexión.";
       }

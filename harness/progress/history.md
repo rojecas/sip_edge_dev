@@ -455,3 +455,137 @@ Feature 15 — frontend_admin_operations (Configuración y Backup, 14b)
 - **Resultado:** 33/33 tests frontend, 443 tests backend, init.ps1 OK. Feature cerrada.
 - **Pendiente:** Feature 19 (backup_ux_enhancements) acordada para otra sesión.
 - **Despliegue confirmado:** Health check OK en EdgeBox.
+## Sesion 2026-06-19 — Feature 16: frontend_admin_masterdata
+
+**Estado:** Completada y cerrada ✅
+**Agente:** Leader + implementer + reviewer + release-manager
+**Duracion:** Una sesion
+
+### Resumen
+- Auditoria completa de 7 componentes Svelte vs 20 requirements (R1-R20)
+- 6 hallazgos corregidos: C1 (paginacion), C2 (tests), C3 (HTTP 409), M1-M2 (409 en haciendas/suertes), M4 (username en edit)
+- 7 archivos de test creados: 121 tests, todos verdes
+- Build exitoso (npm run build)
+- GitHub issue #18 creado y cerrado
+
+### Archivos producidos
+- harness/progress/audit_frontend_admin_masterdata.md — auditoria inicial
+- harness/progress/impl_frontend_admin_masterdata.md — reporte de implementacion
+- harness/progress/review_frontend_admin_masterdata.md — revision (APPROVED)
+- harness/progress/closure_frontend_admin_masterdata.md — cierre formal
+
+### Archivos modificados
+- rontend/src/components/AdminUsers.svelte — paginacion + HTTP 409
+- rontend/src/components/UserFormModal.svelte — username en edit
+- rontend/src/components/AdminHaciendas.svelte — HTTP 409
+- rontend/src/components/AdminSuertes.svelte — HTTP 409
+- rontend/src/components/__tests__/AdminUsers.test.js — NUEVO
+- rontend/src/components/__tests__/UserFormModal.test.js — NUEVO
+- rontend/src/components/__tests__/AdminHaciendas.test.js — NUEVO
+- rontend/src/components/__tests__/HaciendaFormModal.test.js — NUEVO
+- rontend/src/components/__tests__/AdminSuertes.test.js — NUEVO
+- rontend/src/components/__tests__/SuerteFormModal.test.js — NUEVO
+- rontend/src/components/__tests__/ConfirmModal.test.js — NUEVO
+- harness/feature_list.json — status actualizado
+- harness/releases/tracker.json — registro agregado
+
+### Enlaces
+- GitHub issue: https://github.com/rojecas/sip_edge/issues/18
+
+---
+## Sesion 2026-06-19 (tarde) — Feature 16: Correcciones post-entrega
+
+**Estado:** Sesion de correcciones y validacion manual
+**Agente:** Leader
+
+### Resumen
+- Reporte de usuario: vista usuarios vacia (Array.isArray fix)
+- Reporte de usuario: campos vacios en modal editar (onMount -> )
+- 4 ciclos de build/deploy por problemas de ruta y caché
+- Seed scripts creados para BD local
+- Pruebas manuales: CRUD usuarios OK, CRUD haciendas OK, CRUD suertes OK
+
+### Archivos modificados
+- rontend/src/components/AdminUsers.svelte — Array.isArray fix
+- rontend/src/components/UserFormModal.svelte — onMount -> 
+- rontend/src/components/HaciendaFormModal.svelte — onMount -> 
+- rontend/src/components/SuerteFormModal.svelte — onMount -> 
+
+### Archivos creados
+- database/seeds/seed_all.py — Seed completo de BD
+- database/seeds/verify_data.py — Verificacion via API
+- database/seeds/check_spa.py — Verificacion de bundle JS servido
+- database/seeds/fix_modals.py — Script auxiliar
+- database/seeds/fix_modals_v2.py — Script auxiliar v2
+
+### Tests
+- 117/121 pasando (4 fallos de paginacion en usuarios, backend no la soporta)
+
+### Notas
+- La Feature 16 fue marcada como done en sesion anterior
+- Las correcciones de esta sesion son mantenimiento post-entrega
+- Seed no ejecutado porque BD ya tenia datos (618 haciendas, 3 usuarios, 25 pesajes)
+
+---
+## Sesion 2026-06-19 (noche) — Feature 16: Correcciones post-entrega + cierre formal
+
+**Estado:** Sesion de cierre con verificacion de tests
+**Agente:** Leader
+
+### Resumen
+- Fix: async handleSubmit + await onSave en 3 modales (botones tras 409)
+- Fix: Mensajes 409 en español (backend + tests actualizados)
+- Fix: Problemas de deploy (ruta, cache, copia de assets)
+- Verificacion: 117/121 tests frontend OK, 84 tests backend OK
+- Feature 21 (pagination_users_backups) creada en pending
+
+### Archivos modificados
+- src/haciendas.py — mensajes 409 en español
+- src/users.py — mensaje 409 en español
+- tests/test_haciendas.py — asserts actualizados a español
+- tests/test_users.py — asserts actualizados a español
+- frontend/src/components/HaciendaFormModal.svelte — async handleSubmit
+- frontend/src/components/SuerteFormModal.svelte — async handleSubmit
+- frontend/src/components/UserFormModal.svelte — async handleSubmit
+
+### Archivos creados
+- database/seeds/fix_async_submit.py
+- database/seeds/fix_async_v2.py
+- database/seeds/fix_error_reset.py
+- database/seeds/fix_error_reset_v2.py
+- database/seeds/fix_backend_msgs.py
+- database/seeds/fix_tests.py
+- database/seeds/fix_modals.py
+- database/seeds/fix_modals_v2.py
+- database/seeds/test_409.py
+- database/seeds/check_bundle.py
+- database/seeds/check_bundle_v2.py
+- database/seeds/check_async_bundle.py
+- database/seeds/check_deploy.py
+- database/seeds/check_spa.py
+
+### Tests
+- Frontend: 117/121 pasando (4 de paginacion pendientes para Feature 21)
+- Backend: 84/84 OK
+
+---
+## Sesion 2026-06-19 (madrugada) — Modificacion AGENTS.md: Session Reminder
+
+**Estado:** Sesion corta de modificacion del harness
+**Agente:** Leader
+
+### Resumen
+- Modificado harness/AGENTS.md: agregado paso 8 (session reminder) y marcas SESSION_REMINDER
+- Creado harness/progress/next_session_reminder.md con recordatorio de pruebas en EdgeBox
+- Bump VERSION 1.13.1 → 1.14.0 (minor)
+- CHANGELOG.md actualizado
+
+### Archivos modificados (harness)
+- harness/AGENTS.md — paso 8 + marcas de recordatorio
+- harness/VERSION — 1.13.1 → 1.14.0
+- harness/CHANGELOG.md — entrada para 1.14.0
+
+### Archivos creados
+- harness/progress/next_session_reminder.md — recordatorio para pruebas en EdgeBox
+
+---

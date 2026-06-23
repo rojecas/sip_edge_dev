@@ -1,4 +1,4 @@
-{
+﻿{
     "project": "sip_edge",
     "description": "Sistema Inteligente de Pesaje y Control de Materia Extra\u00c3\u00b1a (SIP-Edge)",
     "rules": {
@@ -351,10 +351,11 @@
                 "RF-F14-03j: Error de red muestra mensaje + bot\u00c3\u00b3n Reintentar",
                 "RF-F14-03k: Soft-delete manejado por backend, frontend env\u00c3\u00ada DELETE"
             ],
-            "status": "pending",
+            "status": "done",
             "depends_on": [
                 15
-            ]
+            ],
+            "github_issue": "https://github.com/rojecas/sip_edge/issues/18"
         },
         {
             "id": 17,
@@ -370,7 +371,7 @@
                 "RF-F15-04: /admin/agente muestra interfaz tipo chat con POST /api/agent/query",
                 "RF-F15-05: Bot\u00c3\u00b3n 'Detectar ahora' con par\u00c3\u00a1metros configurables"
             ],
-            "status": "pending",
+            "status": "in_progress",
             "depends_on": [
                 16
             ]
@@ -389,7 +390,7 @@
                 "GET /api/anomalies acepta filtro ?tipo_cosecha=",
                 "El historial de pesajes muestra la columna tipo_cosecha"
             ],
-            "status": "pending",
+            "status": "in_progress",
             "depends_on": [
                 6,
                 8,
@@ -427,6 +428,25 @@
                 16
             ],
             "status": "done"
+        },
+        {
+            "id": 21,
+            "name": "pagination_users_backups",
+            "title": "Paginacion en endpoints y tablas de Usuarios y Backups",
+            "type": "feature",
+            "sdd": true,
+            "description": "Agregar soporte de paginacion a dos endpoints y sus tablas correspondientes. (1) Usuarios: GET /api/users con response paginado {items, total, page, page_size, total_pages} y reactivar UI de paginacion en AdminUsers.svelte. Justificacion: 3 turnos × multiples operadores + admins + corresponsales SMS = 20-50+ usuarios, tabla plana inmanejable. (2) Backups: GET /api/backup/status con response paginado y UI de paginacion en AdminBackup.svelte. Justificacion: rotacion FIFO de 30 dias genera al menos 30 backups + backups manuales iniciados por el admin = 40+ registros. Ambos endpoints se estandarizan con el mismo formato paginado que ya usan haciendas, suertes y pesajes.",
+            "acceptance": [
+                "GET /api/users?page=1&page_size=20 devuelve {items: [...], total: N, page: 1, page_size: 20, total_pages: M}",
+                "GET /api/users sin parametros usa defaults (page=1, page_size=20)",
+                "AdminUsers.svelte muestra controles de paginacion: botones Anterior/Siguiente, selector de page size (10/20/50/100)",
+                "GET /api/backup/status?page=1&page_size=10 devuelve response paginado",
+                "AdminBackup.svelte muestra controles de paginacion funcionales",
+                "Test backend: test_users.py y test_backup.py incluyen tests de paginacion",
+                "Test frontend: AdminUsers.test.js y AdminBackup.test.js verifican paginacion UI"
+            ],
+            "status": "pending",
+            "depends_on": [16, 10]
         }
     ]
 }
