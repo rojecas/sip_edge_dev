@@ -567,3 +567,4 @@ class TestDetermineUsbPath(unittest.TestCase):
             self.assertIsNone(result)
             mock_find.assert_called_once()
 
+
