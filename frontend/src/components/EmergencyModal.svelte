@@ -44,8 +44,8 @@
 
     try {
       await api.post(ENDPOINTS.EMERGENCY_REQUEST, {
-        admin_id: selectedAdminId,
-        reason: reason.trim(),
+        supervisor_id: selectedAdminId,
+        motivo: reason.trim(),
       });
       successMessage = "Solicitud enviada. Espere respuesta del supervisor.";
       setTimeout(() => {

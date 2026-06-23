@@ -75,7 +75,9 @@ async function request(url, options = {}) {
   }
 
   if (!response.ok) {
-    const detail = data?.detail || `Error del servidor (${response.status})`;
+    const detail = Array.isArray(data?.detail)
+        ? data.detail.map(d => d.msg).join(". ")
+        : (data?.detail || `Error del servidor (${response.status})`);
     throw new ApiError(detail, response.status, data);
   }
 
