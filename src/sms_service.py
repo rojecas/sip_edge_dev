@@ -67,12 +67,12 @@ class SMSService:
 
     def _send_via_mmcli(self, phone: str, message: str) -> bool:
         """Envia un SMS usando mmcli. Retorna True si exitoso, False si falla."""
-        mmcli_path = "mmcli"
+        mmcli_path = "sudo"
         modem_arg = str(self._modem_index)
 
         # Paso 1: crear el SMS
         create_args = [
-            mmcli_path, "-m", modem_arg,
+            mmcli_path, "-n", "mmcli", "-m", modem_arg,
             "--messaging-create-sms",
             f"number={phone},text={message.replace(chr(44), chr(92) + chr(44))}",
         ]
@@ -107,7 +107,7 @@ class SMSService:
         sms_index = match.group(1)
 
         # Paso 2: enviar el SMS
-        send_args = [mmcli_path, "-s", sms_index, "--send"]
+        send_args = ["sudo", "-n", "mmcli", "-s", sms_index, "--send"]
         try:
             result = subprocess.run(
                 send_args,
