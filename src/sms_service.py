@@ -74,7 +74,7 @@ class SMSService:
         create_args = [
             mmcli_path, "-m", modem_arg,
             "--messaging-create-sms",
-            f"number={phone},text={message}",
+            f"number={phone},text={message.replace(chr(44), chr(92) + chr(44))}",
         ]
         try:
             result = subprocess.run(
