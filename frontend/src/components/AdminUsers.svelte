@@ -186,7 +186,8 @@
             <th>ID</th>
             <th>Usuario</th>
             <th>Nombre Completo</th>
-            <th>Documento</th>
+            <th>Código Empresa</th>
+            <th>Teléfono</th>
             <th>Rol</th>
             <th>Activo</th>
             <th>Creado</th>
@@ -200,7 +201,8 @@
               <td>{u.id}</td>
               <td>{u.username || "—"}</td>
               <td>{u.full_name || "—"}</td>
-              <td>{u.document || "—"}</td>
+              <td>{u.employee_code || "—"}</td>
+              <td>{u.phone || "—"}</td>
               <td><span class="role-tag">{u.role || "—"}</span></td>
               <td>{u.is_active ? "Sí" : "No"}</td>
               <td>{formatDate(u.created_at)}</td>

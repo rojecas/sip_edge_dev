@@ -1,4 +1,4 @@
-"""Tests for backup system: config, mysqldump, rotation, CRC32, run_backup, and API endpoints."""
+﻿"""Tests for backup system: config, mysqldump, rotation, CRC32, run_backup, and API endpoints."""
 
 import os
 import subprocess
@@ -453,3 +453,117 @@ class TestBackupEndpoints(unittest.TestCase):
             "/api/backup/run", headers={"Authorization": f"Bearer {token}"},
         )
         self.assertEqual(response.status_code, 403)
+# Test additions for find_removable_media and _determine_usb_path
+import tempfile, unittest
+from unittest import mock
+
+
+class TestFindRemovableMedia(unittest.TestCase):
+    """Tests para find_removable_media() y _determine_usb_path()."""
+
+    def _make_mounts_file(self, tmpdir, lines):
+        path = os.path.join(tmpdir, "mounts")
+        with open(path, "w") as f:
+            f.writelines(lines)
+        return path
+
+    def test_detects_first_usb_under_media(self):
+        from src.backup import find_removable_media
+        with tempfile.TemporaryDirectory() as d:
+            mp = "/media/sipedge/GENIUS"
+            mounts = self._make_mounts_file(d, [
+                "/dev/sda1 /boot vfat rw 0 0\n",
+                "/dev/sdb1 /media/sipedge/GENIUS vfat rw,nosuid 0 0\n",
+                "devpts /dev/pts devpts rw 0 0\n",
+            ])
+            with mock.patch("os.path.ismount", return_value=True):
+                with mock.patch("os.access", return_value=True):
+                    result = find_removable_media(mounts)
+                    self.assertEqual(result, mp)
+
+    def test_skips_non_media_mounts(self):
+        from src.backup import find_removable_media
+        with tempfile.TemporaryDirectory() as d:
+            mounts = self._make_mounts_file(d, [
+                "/dev/sda1 /boot ext4 rw 0 0\n",
+                "/dev/sdb1 /mnt/usb vfat rw 0 0\n",
+            ])
+            with mock.patch("os.path.ismount", return_value=True):
+                with mock.patch("os.access", return_value=True):
+                    result = find_removable_media(mounts)
+                    self.assertIsNone(result)
+
+    def test_skips_non_writable(self):
+        from src.backup import find_removable_media
+        with tempfile.TemporaryDirectory() as d:
+            mp = "/media/sipedge/RO"
+            mounts = self._make_mounts_file(d, [
+                "/dev/sdc1 /media/sipedge/RO vfat ro 0 0\n",
+            ])
+            with mock.patch("os.path.ismount", return_value=True):
+                with mock.patch("os.access", return_value=False):
+                    result = find_removable_media(mounts)
+                    self.assertIsNone(result)
+
+    def test_detects_mmcblk_sd_cards(self):
+        from src.backup import find_removable_media
+        with tempfile.TemporaryDirectory() as d:
+            mp = "/media/sipedge/SDCARD"
+            mounts = self._make_mounts_file(d, [
+                "/dev/mmcblk0p1 /media/sipedge/SDCARD vfat rw 0 0\n",
+            ])
+            with mock.patch("os.path.ismount", return_value=True):
+                with mock.patch("os.access", return_value=True):
+                    result = find_removable_media(mounts)
+                    self.assertEqual(result, mp)
+
+    def test_returns_none_when_no_mounts_file(self):
+        from src.backup import find_removable_media
+        with tempfile.TemporaryDirectory() as d:
+            fake = os.path.join(d, "nonexistent")
+            result = find_removable_media(fake)
+            self.assertIsNone(result)
+
+    def test_detects_run_media(self):
+        from src.backup import find_removable_media
+        with tempfile.TemporaryDirectory() as d:
+            mp = "/run/media/sipedge/DISK"
+            mounts = self._make_mounts_file(d, [
+                "/dev/sdd1 /run/media/sipedge/DISK vfat rw 0 0\n",
+            ])
+            with mock.patch("os.path.ismount", return_value=True):
+                with mock.patch("os.access", return_value=True):
+                    result = find_removable_media(mounts)
+                    self.assertEqual(result, mp)
+
+
+class TestDetermineUsbPath(unittest.TestCase):
+    """Tests para _determine_usb_path(): configurada vs autodetectada."""
+
+    def test_configured_path_takes_priority(self):
+        from src.backup import _determine_usb_path
+        with tempfile.TemporaryDirectory() as d:
+            configured = os.path.join(d, "configured_usb")
+            os.makedirs(configured)
+            with mock.patch("src.backup.find_removable_media") as mock_find:
+                mock_find.return_value = "/media/sipedge/GENIUS"
+                result = _determine_usb_path(configured)
+                self.assertEqual(result, configured)
+                mock_find.assert_not_called()
+
+    def test_configured_path_not_found_falls_back(self):
+        from src.backup import _determine_usb_path
+        with mock.patch("src.backup.find_removable_media") as mock_find:
+            mock_find.return_value = "/media/sipedge/GENIUS"
+            result = _determine_usb_path("/nonexistent/path")
+            self.assertEqual(result, "/media/sipedge/GENIUS")
+            mock_find.assert_called_once()
+
+    def test_none_available_returns_none(self):
+        from src.backup import _determine_usb_path
+        with mock.patch("src.backup.find_removable_media") as mock_find:
+            mock_find.return_value = None
+            result = _determine_usb_path("/nonexistent/path")
+            self.assertIsNone(result)
+            mock_find.assert_called_once()
+

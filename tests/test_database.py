@@ -49,7 +49,7 @@ class TestUserModel(unittest.TestCase):
         self.db.commit()
         fetched = self.db.query(User).filter(User.username == "admin").first()
         self.assertEqual(fetched.full_name, "")
-        self.assertEqual(fetched.document, "")
+        self.assertEqual(fetched.employee_code, "")
         self.assertTrue(fetched.is_active)
         self.assertIsNotNone(fetched.created_at)
         self.assertIsNotNone(fetched.updated_at)

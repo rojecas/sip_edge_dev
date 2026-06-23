@@ -1,4 +1,4 @@
-"""Logica de backup: mysqldump, gzip, rotacion FIFO, copia USB y CRC32."""
+﻿"""Logica de backup: mysqldump, gzip, rotacion FIFO, copia USB dinamica y CRC32."""
 
 import gzip
 import logging
@@ -10,6 +10,45 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 
 BACKUP_FILENAME_FORMAT = "backup_%Y%m%d_%H%M%S.sql.gz"
+
+
+def find_removable_media(mounts_file: str = "/proc/mounts") -> str | None:
+    """Busca el primer volumen removible montado.
+
+    Escanea /proc/mounts en busca de dispositivos de bloque (sd*, mmcblk*)
+    montados bajo /media/. Retorna el primer punto de montaje encontrado,
+    o None si no hay ninguno.
+
+    Args:
+        mounts_file: Ruta al archivo de montajes (útil para tests).
+
+    Returns:
+        str con el punto de montaje, o None si no se encontró.
+    """
+    try:
+        with open(mounts_file, "r") as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) < 2:
+                    continue
+                device, mountpoint = parts[0], parts[1]
+                # Dispositivos removibles: sd* (USB) o mmcblk* (SD)
+                dev_name = os.path.basename(device)
+                if not (dev_name.startswith("sd") or dev_name.startswith("mmcblk")):
+                    continue
+                # Solo montajes bajo /media/ o /run/media/
+                if not (mountpoint.startswith("/media/") or mountpoint.startswith("/run/media/")):
+                    continue
+                # Verificar que sea un punto de montaje real y escribible
+                if os.path.ismount(mountpoint) and os.access(mountpoint, os.W_OK):
+                    logger.info("Removable media detected: %s at %s", device, mountpoint)
+                    return mountpoint
+    except FileNotFoundError:
+        # /proc/mounts no existe (Windows, contenedor sin proc)
+        logger.debug("Mounts file not found: %s", mounts_file)
+    except PermissionError:
+        logger.warning("Permission denied reading: %s", mounts_file)
+    return None
 
 
 def _compute_crc32(filepath: str) -> str:
@@ -71,6 +110,27 @@ def _rotate_backups(local_dir: str, keep_days: int) -> None:
         logger.info("Rotated old backup: %s", removed)
 
 
+def _determine_usb_path(configured_path: str) -> str | None:
+    """Determina la ruta USB a usar: configurada (si existe) o autodetectada.
+
+    Args:
+        configured_path: Ruta configurada en config.yaml (usb_mount_path).
+
+    Returns:
+        Ruta del punto de montaje USB a usar, o None si no hay disponible.
+    """
+    if os.path.isdir(configured_path):
+        logger.info("Using configured USB path: %s", configured_path)
+        return configured_path
+    # Fallback: autodeteccion
+    detected = find_removable_media()
+    if detected:
+        logger.info("Configured USB path not found. Auto-detected: %s", detected)
+        return detected
+    logger.info("No USB mount point available.")
+    return None
+
+
 def run_backup(usb_mount_path: str, local_dir: str, keep_days: int) -> None:
     """Ejecuta el ciclo completo de backup: dump, rotacion, copia USB y registro
     en BD. Crea su propia sesion de BD para insertar el BackupLog."""
@@ -99,8 +159,10 @@ def run_backup(usb_mount_path: str, local_dir: str, keep_days: int) -> None:
 
         _rotate_backups(local_dir, keep_days)
 
-        if os.path.isdir(usb_mount_path):
-            usb_path = os.path.join(usb_mount_path, filename)
+        # Copia a medio extraible: configurado o autodetectado
+        usb_target = _determine_usb_path(usb_mount_path)
+        if usb_target:
+            usb_path = os.path.join(usb_target, filename)
             with open(local_path, "rb") as src, open(usb_path, "wb") as dst:
                 dst.write(src.read())
             usb_checksum = _compute_crc32(usb_path)
@@ -113,7 +175,7 @@ def run_backup(usb_mount_path: str, local_dir: str, keep_days: int) -> None:
                 )
                 logger.error(error_message)
         else:
-            logger.info("USB mount path not found: %s", usb_mount_path)
+            logger.info("No USB mount point found. Backup saved locally only.")
 
     except Exception as e:
         error_message = str(e)

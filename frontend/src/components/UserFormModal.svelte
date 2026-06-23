@@ -1,7 +1,7 @@
-<script>
+﻿<script>
   import { onMount } from "svelte";
   /**
-   * UserFormModal — Modal for creating and editing users.
+   * UserFormModal â€” Modal for creating and editing users.
    * Props: show, mode ("create"|"edit"), user (only edit), error, onClose, onSave.
    * onSave receives the payload object. Parent should handle API call and
    * pass back errors via the `error` prop.
@@ -21,7 +21,8 @@
     username: "",
     password: "",
     full_name: "",
-    document: "",
+    employee_code: "",
+    phone: "",
     role: "operator",
     is_active: true,
     new_password: "",
@@ -40,7 +41,8 @@
           username: user.username || "",
           password: "",
           full_name: user.full_name || "",
-          document: user.document || "",
+          employee_code: user.employee_code || "",
+          phone: user.phone || "",
           role: user.role || "operator",
           is_active: user.is_active !== undefined ? user.is_active : true,
           new_password: "",
@@ -50,7 +52,8 @@
           username: "",
           password: "",
           full_name: "",
-          document: "",
+          employee_code: "",
+          phone: "",
           role: "operator",
           is_active: true,
           new_password: "",
@@ -81,12 +84,14 @@
           username: form.username.trim(),
           password: form.password,
           full_name: form.full_name.trim(),
-          document: form.document.trim() || null,
+          employee_code: form.employee_code.trim(),
+          phone: form.phone.trim() || null,
           role: form.role,
         }
       : {
           full_name: form.full_name.trim(),
-          document: form.document.trim() || null,
+          employee_code: form.employee_code.trim(),
+          phone: form.phone.trim() || null,
           role: form.role,
           is_active: form.is_active,
           ...(form.new_password.trim() ? { password: form.new_password } : {}),
@@ -127,7 +132,7 @@
         {:else}
           <div class="info-field">
             <span class="info-label">Usuario:</span>
-            <span class="info-value">{user?.username || "—"}</span>
+            <span class="info-value">{user?.username || "â€”"}</span>
           </div>
         {/if}
 
@@ -137,8 +142,13 @@
         </label>
 
         <label>
-          Documento
-          <input type="text" bind:value={form.document} placeholder="Documento (opcional)" />
+          Código Empresa
+          <input type="text" bind:value={form.employee_code} placeholder="Código de empleado " />
+        </label>
+
+        <label>
+          Teléfono
+          <input type="tel" bind:value={form.phone} placeholder="Teléfono " />
         </label>
 
         <label>
@@ -157,7 +167,7 @@
           </label>
 
           <label>
-            Nueva Contraseña (opcional)
+            Nueva Contraseña 
             <input type="password" bind:value={form.new_password} placeholder="Dejar vacío para no cambiar" />
           </label>
         {/if}
@@ -335,3 +345,4 @@
     cursor: not-allowed;
   }
 </style>
+

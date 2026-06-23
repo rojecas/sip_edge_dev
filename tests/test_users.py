@@ -179,6 +179,8 @@ class TestUserManagement(unittest.TestCase):
         self.assertIn("inactive", usernames)
         for user in data:
             self.assertNotIn("password_hash", user)
+            self.assertIn("employee_code", user)
+            self.assertIn("phone", user)
 
     # --- R2: Get user by ID ---
     def test_get_user_by_id(self):
@@ -191,6 +193,8 @@ class TestUserManagement(unittest.TestCase):
         data = response.json()
         self.assertEqual(data["id"], 1)
         self.assertEqual(data["username"], "admin")
+        self.assertIn("employee_code", data)
+        self.assertIn("phone", data)
         self.assertNotIn("password_hash", data)
 
     def test_get_user_not_found(self):
@@ -211,7 +215,8 @@ class TestUserManagement(unittest.TestCase):
                 "username": "newuser",
                 "password": "secret123",
                 "full_name": "Nuevo Usuario",
-                "document": "12345678",
+                "employee_code": "EMP001",
+                "phone": "573001234567",
                 "role": "operator",
             },
             headers={"Authorization": f"Bearer {token}"},
@@ -220,7 +225,8 @@ class TestUserManagement(unittest.TestCase):
         data = response.json()
         self.assertEqual(data["username"], "newuser")
         self.assertEqual(data["full_name"], "Nuevo Usuario")
-        self.assertEqual(data["document"], "12345678")
+        self.assertEqual(data["employee_code"], "EMP001")
+        self.assertEqual(data["phone"], "573001234567")
         self.assertEqual(data["role"], "operator")
         self.assertTrue(data["is_active"])
         self.assertNotIn("password_hash", data)
@@ -234,6 +240,8 @@ class TestUserManagement(unittest.TestCase):
                 "username": "admin",
                 "password": "pass",
                 "full_name": "Duplicado",
+                "employee_code": "EMP999",
+                "phone": "573009999999",
                 "role": "operator",
             },
             headers={"Authorization": f"Bearer {token}"},
@@ -305,6 +313,8 @@ class TestUserManagement(unittest.TestCase):
                 "username": "checkhash",
                 "password": "plaintext",
                 "full_name": "Hash Check",
+                "employee_code": "EMP999",
+                "phone": "573009999999",
                 "role": "operator",
             },
             headers={"Authorization": f"Bearer {token}"},
@@ -330,14 +340,16 @@ class TestUserManagement(unittest.TestCase):
             "/api/users/2",
             json={
                 "full_name": "Operador Modificado",
-                "document": "87654321",
+                "employee_code": "EMP002",
+                "phone": "573009876543",
             },
             headers={"Authorization": f"Bearer {token}"},
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["full_name"], "Operador Modificado")
-        self.assertEqual(data["document"], "87654321")
+        self.assertEqual(data["employee_code"], "EMP002")
+        self.assertEqual(data["phone"], "573009876543")
         self.assertNotIn("password_hash", data)
 
     def test_update_user_password(self):

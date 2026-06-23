@@ -1,7 +1,7 @@
-# Spec Driven Development (SDD)
+﻿# Spec Driven Development (SDD)
 
-> Este proyecto sigue un flujo Kiro-style: requirements → design → tasks → code.
-> El código no se escribe hasta que el spec está aprobado por un humano.
+> Este proyecto sigue un flujo Kiro-style: requirements â†’ design â†’ tasks â†’ code.
+> El cÃ³digo no se escribe hasta que el spec estÃ¡ aprobado por un humano.
 
 ## Estructura
 
@@ -10,9 +10,9 @@ dedicada en cuanto deja `pending`:
 
 ```
 specs/{NN}_{name}/
-├── requirements.md   # QUÉ se necesita (EARS notation)
-├── design.md         # CÓMO se construirá (decisiones técnicas)
-└── tasks.md          # PASOS concretos a implementar
+â”œâ”€â”€ requirements.md   # QUÃ‰ se necesita (EARS notation)
+â”œâ”€â”€ design.md         # CÃ“MO se construirÃ¡ (decisiones tÃ©cnicas)
+â””â”€â”€ tasks.md          # PASOS concretos a implementar
 ```
 
 La carpeta se nombra `{NN}_{name}` donde `NN` es el `id` zero-padded a 2 digitos
@@ -26,9 +26,9 @@ y `name` coincide con el campo `name` de `feature_list.json`. Ejemplos:
 
 Cada entrada en `feature_list.json` DEBE tener un campo `"type"`:
 
-- **`"feature"`** — funcionalidad nueva. Usa `acceptance` (criterios de
-  verificación) y opcionalmente `"sdd": true` (spec requerido).
-- **`"bug"`** — error documentado. Requiere `reproduction` (pasos para
+- **`"feature"`** â€” funcionalidad nueva. Usa `acceptance` (criterios de
+  verificaciÃ³n) y opcionalmente `"sdd": true` (spec requerido).
+- **`"bug"`** â€” error documentado. Requiere `reproduction` (pasos para
   reproducir) y `affected_feature_ids` (IDs de features que impacta).
 
 Los bugs NO pasan por SDD. Su flujo es independiente:
@@ -39,47 +39,47 @@ Los bugs NO pasan por SDD. Su flujo es independiente:
 | Estado         | Significado                                                    |
 |----------------|----------------------------------------------------------------|
 | `pending`      | Sin spec. El `spec_author` es el primero en actuar.            |
-| `spec_ready`   | Spec drafted. Esperando aprobación humana. NO se toca código.  |
+| `spec_ready`   | Spec drafted. Esperando aprobaciÃ³n humana. NO se toca cÃ³digo.  |
 | `in_progress`  | Spec aprobado. `implementer` trabajando.                       |
-| `done`         | Código verde, `reviewer` aprobó, sesión cerrada.               |
-| `blocked`      | Atascado. Razón en `progress/current.md`.                      |
+| `done`         | CÃ³digo verde, `reviewer` aprobÃ³, sesiÃ³n cerrada.               |
+| `blocked`      | Atascado. RazÃ³n en `progress/current.md`.                      |
 
-## La puerta de aprobación humana
+## La puerta de aprobaciÃ³n humana
 
-El flujo automático se detiene **una vez**: cuando el `spec_author` termina
+El flujo automÃ¡tico se detiene **una vez**: cuando el `spec_author` termina
 sus tres archivos, marca la feature como `spec_ready` y para. El humano
 lee `specs/<feature>/` y dice "aprobado" (o pide cambios).
 
-Solo entonces el `leader` transiciona `spec_ready → in_progress` y lanza
+Solo entonces el `leader` transiciona `spec_ready â†’ in_progress` y lanza
 el `implementer`.
 
 ```
-intake-agent → [spec_author] → spec_ready → ⏸ HUMANO → in_progress →
-  [implementer → reviewer → release-manager (register)] → done
+intake-agent â†’ [spec_author] â†’ spec_ready â†’ â¸ HUMANO â†’ in_progress â†’
+  [implementer â†’ reviewer â†’ release-manager (register)] â†’ done
 ```
 
-## requirements.md — EARS estricto
+## requirements.md â€” EARS estricto
 
 Las requirements se redactan en **EARS** (Easy Approach to Requirements
-Syntax). Cada requirement es un párrafo numerado con uno de estos cinco
+Syntax). Cada requirement es un pÃ¡rrafo numerado con uno de estos cinco
 patrones:
 
-| Patrón         | Plantilla                                                   |
+| PatrÃ³n         | Plantilla                                                   |
 |----------------|-------------------------------------------------------------|
-| **Ubicuo**     | `El sistema DEBE <acción>.`                                 |
-| **Evento**     | `CUANDO <disparador>, el sistema DEBE <acción>.`            |
-| **Estado**     | `MIENTRAS <estado>, el sistema DEBE <acción>.`              |
-| **Opcional**   | `DONDE <feature opcional>, el sistema DEBE <acción>.`       |
-| **No deseado** | `SI <evento no deseado> ENTONCES el sistema DEBE <acción>.` |
+| **Ubicuo**     | `El sistema DEBE <acciÃ³n>.`                                 |
+| **Evento**     | `CUANDO <disparador>, el sistema DEBE <acciÃ³n>.`            |
+| **Estado**     | `MIENTRAS <estado>, el sistema DEBE <acciÃ³n>.`              |
+| **Opcional**   | `DONDE <feature opcional>, el sistema DEBE <acciÃ³n>.`       |
+| **No deseado** | `SI <evento no deseado> ENTONCES el sistema DEBE <acciÃ³n>.` |
 
 Reglas duras:
 
 - Cada requirement tiene un id estable: `R1`, `R2`, ...
 - Cada requirement DEBE ser verificable por al menos un test concreto.
-- No mezcles varios `DEBE` en un mismo requirement. Si hay más de uno, parte.
+- No mezcles varios `DEBE` en un mismo requirement. Si hay mÃ¡s de uno, parte.
 - Si una feature tiene **mas de 20 requirements (R1-R20+), dividir** en sub-features.
   Ejemplo: una feature de 41 requirements se divide en 14a (R1-R12), 14b (R13-R29), 14c (R30-R41).
-- No uses verbos blandos ("podría", "puede", "soporta"). Solo `DEBE` / `NO DEBE`.
+- No uses verbos blandos ("podrÃ­a", "puede", "soporta"). Solo `DEBE` / `NO DEBE`.
 
 Ejemplo:
 
@@ -90,15 +90,15 @@ imprimir hasta 5 notas ordenadas por `created_at` descendente.
 
 ## R2
 SI el flag `--limit` recibe un valor <= 0 ENTONCES el sistema DEBE
-imprimir un mensaje de error en stderr y salir con código != 0.
+imprimir un mensaje de error en stderr y salir con cÃ³digo != 0.
 ```
 
-## design.md — decisiones técnicas
+## design.md â€” decisiones tÃ©cnicas
 
-Captura **antes** de tocar código:
+Captura **antes** de tocar cÃ³digo:
 
-- Qué archivos se crean / modifican.
-- Qué firmas nuevas aparecen (funciones, clases, comandos).
+- QuÃ© archivos se crean / modifican.
+- QuÃ© firmas nuevas aparecen (funciones, clases, comandos).
 - Que excepciones se reutilizan o se anaden.
 - Que alternativa se descarto y por que (minimo una).
 - `github_labels`: etiquetas adicionales para el issue de GitHub (opcional).
@@ -112,20 +112,20 @@ Respuesta: { items: Hacienda[], total: number, page: number, page_size: number, 
 
 Esto evita que el implementer asuma array directo cuando el backend devuelve `{items: [...]}`.
 
-NO es ingenieria desde primeros principios — apóyate en
+NO es ingenieria desde primeros principios â€” apÃ³yate en
 `docs/architecture.md` y `docs/conventions.md`. El `design.md` documenta los
 puntos donde tu feature roza la frontera de esas reglas.
 
-### Sección obligatoria: Persistencia
+### SecciÃ³n obligatoria: Persistencia
 
-Si la feature toca la base de datos (nueva tabla, nueva columna, nuevo índice,
-nueva migración), `design.md` DEBE incluir una sección `## Persistencia` que
+Si la feature toca la base de datos (nueva tabla, nueva columna, nuevo Ã­ndice,
+nueva migraciÃ³n), `design.md` DEBE incluir una secciÃ³n `## Persistencia` que
 declare exactamente:
 
-- **Tablas nuevas:** nombre, columnas (con tipo y constraints), índices, FK.
-- **Tablas modificadas:** columnas añadidas/eliminadas/alteradas, nuevos índices.
+- **Tablas nuevas:** nombre, columnas (con tipo y constraints), Ã­ndices, FK.
+- **Tablas modificadas:** columnas aÃ±adidas/eliminadas/alteradas, nuevos Ã­ndices.
 - **Migraciones:** archivo(s) a crear y su orden.
-- **Datos semilla:** si la feature requiere datos iniciales, declararlos aquí.
+- **Datos semilla:** si la feature requiere datos iniciales, declararlos aquÃ­.
 
 Formato de ejemplo:
 
@@ -136,28 +136,57 @@ Formato de ejemplo:
 | Columna      | Tipo             | Nullable | Default        | Notas               |
 |------------- |----------------- |--------- |--------------- |-------------------- |
 | id           | BIGINT UNSIGNED  | NO       | AUTO_INCREMENT | PK                  |
-| user_id      | BIGINT UNSIGNED  | NO       |                | FK → users.id       |
+| user_id      | BIGINT UNSIGNED  | NO       |                | FK â†’ users.id       |
 | name         | VARCHAR(255)     | NO       |                |                     |
 | created_at   | TIMESTAMP        | YES      | NULL           |                     |
 | updated_at   | TIMESTAMP        | YES      | NULL           |                     |
 
-Índices: `(user_id, created_at DESC)`
+Ãndices: `(user_id, created_at DESC)`
 
 ### Migraciones
 1. `database/migrations/2026_01_01_000000_create_task_lists_table.php`
 
 ### Tabla modificada: `tasks`
-Nueva columna: `task_list_id` BIGINT UNSIGNED NULL FK → task_lists.id
+Nueva columna: `task_list_id` BIGINT UNSIGNED NULL FK â†’ task_lists.id
 
 ### Migraciones
 2. `database/migrations/2026_01_01_000001_add_task_list_id_to_tasks.php`
 ```
 
-El `implementer` escribe la migración **copiando exactamente lo declarado en el spec**.
+El `implementer` escribe la migraciÃ³n **copiando exactamente lo declarado en el spec**.
 El `reviewer` verifica que `docs/database.md` refleja los cambios tras ejecutar
-la migración y el dump. Si hay discrepancias, rechaza.
+la migraciÃ³n y el dump. Si hay discrepancias, rechaza.
 
-## tasks.md — checklist ejecutable
+### Sección obligatoria: Impacto en APIs existentes
+
+SI la feature agrega, modifica o renombra una columna en una tabla existente,
+el design.md DEBE incluir una sección ## Impacto en APIs existentes que declare:
+
+- **Columnas nuevas:** si la columna debe exponerse en los schemas de API de features previas.
+- **Schemas a modificar:** nombres exactos de los schemas Pydantic (*Create, *Update, *Response) que necesitan la nueva columna.
+- **Endpoints afectados:** endpoints de features previas que deben actualizarse (ej. POST /api/users, PUT /api/users/{id}, GET /api/users).
+- **Frontend:** componentes de UI que deben agregar la columna (formularios, tablas).
+- **Justificación:** si una columna NO se expone en la API, documentar por qué (ej. "columna interna de sistema, no editable por usuario").
+
+El implementer DEBE modificar los archivos listados. El eviewer DEBE verificar que todos los puntos de impacto fueron implementados y rechazar si falta alguno sin justificación documentada.
+
+Ejemplo de impacto de feature 9 (emergency_mode) sobre feature 3 (user_management):
+
+`markdown
+## Impacto en APIs existentes
+
+### Feature 3 — user_management
+| Item | Archivo | Cambio requerido |
+|------|---------|-----------------|
+| Schema UserCreate | src/users.py | Agregar campo phone: str | None = None |
+| Schema UserUpdate | src/users.py | Agregar campo phone: str | None = None |
+| Schema UserResponse | src/users.py | Agregar campo phone: str | None |
+| Endpoint POST /api/users | src/users.py | Incluir phone en _user_to_response() |
+| Componente UserFormModal | frontend/... | Agregar input "Teléfono" en create + edit |
+| Componente AdminUsers | frontend/... | Agregar columna "Teléfono" |
+`
+
+## tasks.md â€” checklist ejecutable
 
 Pasos discretos en orden, cada uno con checkbox. Cada task referencia al
 menos un `R<n>` que cubre.
@@ -165,10 +194,10 @@ menos un `R<n>` que cubre.
 Ejemplo:
 
 ```markdown
-- [ ] T1 — Añadir `cmd_recent` en `src/cli.py`. Cubre: R1, R3.
-- [ ] T2 — Registrar subparser `recent` con flag `--limit`. Cubre: R1, R2.
-- [ ] T3 — Añadir `test_recent_default_limit` en `tests/test_cli.py`. Cubre: R1.
-- [ ] T4 — Añadir `test_recent_invalid_limit` en `tests/test_cli.py`. Cubre: R2.
+- [ ] T1 â€” AÃ±adir `cmd_recent` en `src/cli.py`. Cubre: R1, R3.
+- [ ] T2 â€” Registrar subparser `recent` con flag `--limit`. Cubre: R1, R2.
+- [ ] T3 â€” AÃ±adir `test_recent_default_limit` en `tests/test_cli.py`. Cubre: R1.
+- [ ] T4 â€” AÃ±adir `test_recent_invalid_limit` en `tests/test_cli.py`. Cubre: R2.
 ```
 
 El `implementer` marca `[x]` cada task al completarla.
@@ -176,25 +205,26 @@ El `implementer` marca `[x]` cada task al completarla.
 Reglas adicionales:
 - Cada T<n> que use funciones de framework (Svelte: `onMount`, React: `useEffect`, etc.) DEBE listar el import requerido como subtask.
 - Si la task consume un endpoint API, DEBE incluir el contrato de respuesta esperado (ver Contrato API en design.md). El `reviewer`
-rechaza si queda alguna `[ ]` sin justificación documentada.
+rechaza si queda alguna `[ ]` sin justificaciÃ³n documentada.
 
 ## Trazabilidad (regla dura)
 
 - Cada test en `tests/` debe poder mapearse a un `R<n>` de su spec.
 - Cada `R<n>` debe tener al menos un test concreto.
-- El `reviewer` comprueba esta correspondencia explícitamente y rechaza
+- El `reviewer` comprueba esta correspondencia explÃ­citamente y rechaza
   si falta.
 
 El `implementer` documenta el mapa en `progress/impl_<name>.md`:
 
 ```markdown
 ## Trazabilidad
-- R1 → `test_recent_default_limit`
-- R2 → `test_recent_invalid_limit`
-- R3 → `test_recent_custom_limit`
+- R1 â†’ `test_recent_default_limit`
+- R2 â†’ `test_recent_invalid_limit`
+- R3 â†’ `test_recent_custom_limit`
 ```
 
-## Cuándo NO aplica SDD
+## CuÃ¡ndo NO aplica SDD
 
-Las features con `"sdd": false` o sin el campo `sdd` (las legacy 1–6) NO
+Las features con `"sdd": false` o sin el campo `sdd` (las legacy 1â€“6) NO
 tienen spec. SDD solo se aplica hacia adelante.
+

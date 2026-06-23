@@ -15,7 +15,7 @@ class User(Base):
     username = Column(String(64), nullable=False, unique=True)
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False, default="")
-    document = Column(String(32), nullable=False, default="")
+    employee_code = Column(String(32), nullable=False, default="")
     role = Column(Enum("admin", "operator", "corresponsal"), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
     phone = Column(String(32), nullable=True, default=None)

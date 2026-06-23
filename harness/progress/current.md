@@ -3,10 +3,10 @@
 > Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
 > Los cierres y bloqueos van en archivos separados: ver harness/docs/sessions.md.
 
-- **Inicio:** (pendiente)
-- **Agente:** (pendiente)
-- **Feature en curso:** (ninguna)
-- **Estado:** (ninguno)
+- **Inicio:** 2026-06-23
+- **Agente:** bug-fixer
+- **Bug en curso:** 22 — user_phone_not_exposed
+- **Estado:** done — fix implementado y verificado
 
 ---
 

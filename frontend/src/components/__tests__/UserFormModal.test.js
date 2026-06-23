@@ -12,14 +12,15 @@ afterEach(() => {
 });
 
 describe("UserFormModal — Create mode (R2)", () => {
-  it("muestra campos: Usuario, Contrasena, Nombre Completo, Documento, Rol", () => {
+  it("muestra campos: Usuario, Contrasena, Nombre Completo, Codigo Empresa, Telefono, Rol", () => {
     render(UserFormModal, {
       props: { show: true, mode: "create" },
     });
     expect(screen.getByPlaceholderText("Nombre de usuario")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Contraseña")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Nombre completo")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Documento (opcional)")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Código de empleado (opcional)")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Teléfono (opcional)")).toBeInTheDocument();
     // Rol select está presente
     expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
@@ -94,7 +95,8 @@ describe("UserFormModal — Create mode (R2)", () => {
         password: "pass123",
         full_name: "Juan Perez",
         role: "operator",
-        document: null,
+        employee_code: "",
+        phone: null,
       })
     );
   });
@@ -121,7 +123,8 @@ describe("UserFormModal — Edit mode (R4)", () => {
     id: 1,
     username: "juanperez",
     full_name: "Juan Perez",
-    document: "12345678",
+    employee_code: "EMP001",
+    phone: "573001234567",
     role: "operator",
     is_active: true,
   };
@@ -138,9 +141,11 @@ describe("UserFormModal — Edit mode (R4)", () => {
       props: { show: true, mode: "edit", user: mockUser },
     });
     const nombreInput = screen.getByPlaceholderText("Nombre completo");
-    const docInput = screen.getByPlaceholderText("Documento (opcional)");
+    const codeInput = screen.getByPlaceholderText("Código de empleado (opcional)");
+    const phoneInput = screen.getByPlaceholderText("Teléfono (opcional)");
     expect(nombreInput.value).toBe("Juan Perez");
-    expect(docInput.value).toBe("12345678");
+    expect(codeInput.value).toBe("EMP001");
+    expect(phoneInput.value).toBe("573001234567");
   });
 
   it("muestra username como texto informativo en modo edit (M4)", () => {
@@ -185,7 +190,8 @@ describe("UserFormModal — Edit mode (R4)", () => {
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({
         full_name: "Juan Perez",
-        document: "12345678",
+        employee_code: "EMP001",
+        phone: "573001234567",
         role: "operator",
         is_active: true,
       })

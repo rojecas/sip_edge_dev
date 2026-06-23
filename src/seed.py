@@ -20,7 +20,7 @@ def seed_admin_user(db: Session) -> None:
         password_hash=hash_password(password),
         role="admin",
         full_name="Administrador",
-        document="",
+        employee_code="",
         is_active=True,
     )
     db.add(admin)

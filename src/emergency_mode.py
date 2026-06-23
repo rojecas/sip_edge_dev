@@ -702,7 +702,7 @@ def list_admin_users(
 ) -> list[dict]:
     """Retorna lista de usuarios con rol admin y is_active=true.
 
-    Cada elemento incluye: id, full_name, document.
+    Cada elemento incluye: id, full_name, employee_code, phone.
     Accesible por: cualquier rol autenticado.
     """
     users = (
@@ -714,7 +714,8 @@ def list_admin_users(
         {
             "id": u.id,
             "full_name": u.full_name,
-            "document": u.document,
+            "employee_code": u.employee_code,
+            "phone": u.phone,
         }
         for u in users
     ]

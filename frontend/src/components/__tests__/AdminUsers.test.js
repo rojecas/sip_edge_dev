@@ -31,17 +31,17 @@ vi.mock("../../lib/api.js", () => ({
 
 const mockUsers = [
   {
-    id: 1, username: "admin", full_name: "Administrador", document: "11111",
+    id: 1, username: "admin", full_name: "Administrador", employee_code: "11111", phone: "573001111111",
     role: "admin", is_active: true,
     created_at: "2026-01-01T10:00:00", updated_at: "2026-06-01T10:00:00",
   },
   {
-    id: 2, username: "oper1", full_name: "Operador Uno", document: "22222",
+    id: 2, username: "oper1", full_name: "Operador Uno", employee_code: "22222", phone: null,
     role: "operator", is_active: true,
     created_at: "2026-02-01T10:00:00", updated_at: "2026-06-01T10:00:00",
   },
   {
-    id: 3, username: "corr1", full_name: "Corresponsal Uno", document: "",
+    id: 3, username: "corr1", full_name: "Corresponsal Uno", employee_code: "", phone: null,
     role: "corresponsal", is_active: false,
     created_at: "2026-03-01T10:00:00", updated_at: "2026-06-01T10:00:00",
   },
@@ -93,7 +93,8 @@ describe("AdminUsers — carga de usuarios (R1)", () => {
     expect(screen.getByText("ID")).toBeInTheDocument();
     expect(screen.getByText("Usuario")).toBeInTheDocument();
     expect(screen.getByText("Nombre Completo")).toBeInTheDocument();
-    expect(screen.getByText("Documento")).toBeInTheDocument();
+    expect(screen.getByText("Código Empresa")).toBeInTheDocument();
+    expect(screen.getByText("Teléfono")).toBeInTheDocument();
     expect(screen.getByText("Rol")).toBeInTheDocument();
     expect(screen.getByText("Activo")).toBeInTheDocument();
     expect(screen.getByText("Creado")).toBeInTheDocument();

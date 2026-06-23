@@ -1,4 +1,4 @@
-"""User management CRUD endpoints and schemas."""
+﻿"""User management CRUD endpoints and schemas."""
 
 from datetime import datetime
 from typing import List, Literal, Optional
@@ -16,13 +16,15 @@ class UserCreate(BaseModel):
     username: str = Field(min_length=1)
     password: str = Field(min_length=1)
     full_name: str = Field(min_length=1)
-    document: str = ""
+    employee_code: str = Field(min_length=1)
+    phone: str = Field(min_length=1)
     role: Literal["admin", "operator", "corresponsal"]
 
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
-    document: Optional[str] = None
+    employee_code: Optional[str] = None
+    phone: Optional[str] = None
     role: Optional[Literal["admin", "operator", "corresponsal"]] = None
     is_active: Optional[bool] = None
     new_password: Optional[str] = None
@@ -32,7 +34,8 @@ class UserResponse(BaseModel):
     id: int
     username: str
     full_name: str
-    document: str
+    employee_code: str
+    phone: Optional[str] = None
     role: str
     is_active: bool
     force_password_change: bool = False
@@ -49,7 +52,8 @@ def _user_to_response(user: User) -> UserResponse:
         id=user.id,
         username=user.username,
         full_name=user.full_name,
-        document=user.document,
+        employee_code=user.employee_code,
+        phone=user.phone,
         role=user.role,
         is_active=user.is_active,
         force_password_change=bool(user.force_password_change),
@@ -73,14 +77,18 @@ def get_user(db: Session, user_id: int) -> UserResponse:
 def create_user(db: Session, data: UserCreate) -> UserResponse:
     existing = db.query(User).filter(User.username == data.username).first()
     if existing is not None:
-        raise HTTPException(status_code=409, detail="Ya existe un usuario con este nombre. Elija otro nombre para poder guardarlo.")
+        raise HTTPException(
+            status_code=409,
+            detail="Ya existe un usuario con este nombre. Elija otro nombre para poder guardarlo.",
+        )
     user = User(
         username=data.username,
         password_hash=hash_password(data.password),
         full_name=data.full_name,
-        document=data.document,
+        employee_code=data.employee_code,
         role=data.role,
         is_active=True,
+        phone=data.phone,
     )
     db.add(user)
     db.commit()
@@ -95,8 +103,10 @@ def update_user(db: Session, user_id: int, data: UserUpdate) -> UserResponse:
     update_fields = {}
     if data.full_name is not None:
         update_fields["full_name"] = data.full_name
-    if data.document is not None:
-        update_fields["document"] = data.document
+    if data.employee_code is not None:
+        update_fields["employee_code"] = data.employee_code
+    if data.phone is not None:
+        update_fields["phone"] = data.phone
     if data.role is not None:
         update_fields["role"] = data.role
     if data.is_active is not None:
