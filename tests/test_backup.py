@@ -124,33 +124,31 @@ class TestMysqldumpToFile(unittest.TestCase):
     def test_successful_dump(self):
         with tempfile.TemporaryDirectory() as d:
             output = os.path.join(d, "dump.sql.gz")
-            with mock.patch.dict(os.environ, {"DB_HOST": "localhost", "DB_PORT": "3306", "DB_USER": "test", "DB_PASSWORD": "test", "DB_NAME": "test"}):
-                with mock.patch("src.backup.subprocess.Popen") as mock_popen:
-                    mock_proc = mock.MagicMock()
-                    mock_proc.returncode = 0
-                    mock_proc.communicate.return_value = (b"CREATE DATABASE;\n", b"")
-                    mock_popen.return_value = mock_proc
+            with mock.patch("src.backup.subprocess.Popen") as mock_popen:
+                mock_proc = mock.MagicMock()
+                mock_proc.returncode = 0
+                mock_proc.communicate.return_value = (b"CREATE DATABASE;\n", b"")
+                mock_popen.return_value = mock_proc
 
-                    from src.backup import _mysqldump_to_file
-                    _mysqldump_to_file(output)
+                from src.backup import _mysqldump_to_file
+                _mysqldump_to_file(output)
 
-                    self.assertTrue(os.path.exists(output))
-                    self.assertTrue(os.path.getsize(output) > 0)
+                self.assertTrue(os.path.exists(output))
+                self.assertTrue(os.path.getsize(output) > 0)
 
     def test_mysqldump_failure_raises_runtime_error(self):
         with tempfile.TemporaryDirectory() as d:
             output = os.path.join(d, "dump.sql.gz")
-            with mock.patch.dict(os.environ, {"DB_HOST": "localhost", "DB_PORT": "3306", "DB_USER": "test", "DB_PASSWORD": "test", "DB_NAME": "test"}):
-                with mock.patch("src.backup.subprocess.Popen") as mock_popen:
-                    mock_proc = mock.MagicMock()
-                    mock_proc.returncode = 1
-                    mock_proc.communicate.return_value = (b"", b"Access denied")
-                    mock_popen.return_value = mock_proc
+            with mock.patch("src.backup.subprocess.Popen") as mock_popen:
+                mock_proc = mock.MagicMock()
+                mock_proc.returncode = 1
+                mock_proc.communicate.return_value = (b"", b"Access denied")
+                mock_popen.return_value = mock_proc
 
-                    from src.backup import _mysqldump_to_file
-                    with self.assertRaises(RuntimeError) as ctx:
-                        _mysqldump_to_file(output)
-                    self.assertIn("Access denied", str(ctx.exception))
+                from src.backup import _mysqldump_to_file
+                with self.assertRaises(RuntimeError) as ctx:
+                    _mysqldump_to_file(output)
+                self.assertIn("Access denied", str(ctx.exception))
 
     def test_creates_output_directory_if_missing(self):
         with tempfile.TemporaryDirectory() as d:
@@ -298,9 +296,8 @@ class TestRunBackup(unittest.TestCase):
                 mock_proc.communicate.return_value = (b"dump content", b"")
                 mock_popen.return_value = mock_proc
 
-                with mock.patch("src.backup.find_removable_media", return_value=None):
-                    usb_dir = os.path.join(local, "nonexistent_usb")
-                    run_backup(usb_dir, local, 30)
+                usb_dir = os.path.join(local, "nonexistent_usb")
+                run_backup(usb_dir, local, 30)
 
                 db = self.TestSessionLocal()
                 logs = db.query(BackupLog).all()
