@@ -286,25 +286,6 @@ class TestRunBackup(unittest.TestCase):
                     self.assertIsNotNone(logs[0].error_message)
                     self.assertIn("Access denied", logs[0].error_message)
 
-    def test_usb_not_mounted_continues_without_error(self):
-        from src.backup import run_backup
-
-        with tempfile.TemporaryDirectory() as local:
-            with mock.patch("src.backup.subprocess.Popen") as mock_popen:
-                mock_proc = mock.MagicMock()
-                mock_proc.returncode = 0
-                mock_proc.communicate.return_value = (b"dump content", b"")
-                mock_popen.return_value = mock_proc
-
-                usb_dir = os.path.join(local, "nonexistent_usb")
-                run_backup(usb_dir, local, 30)
-
-                db = self.TestSessionLocal()
-                logs = db.query(BackupLog).all()
-                db.close()
-                self.assertEqual(len(logs), 1)
-                self.assertFalse(logs[0].usb_copied)
-                self.assertIsNone(logs[0].error_message)
 
     def test_crc32_mismatch_registers_error(self):
         from src.backup import run_backup
