@@ -342,9 +342,9 @@ class EmergencyModeService:
                 sms_text = (
                     f"SIP-Edge: {analyst_name} solicita activar modo manual. "
                     f"Motivo: {motivo}. "
-                    f"Responda 'manual on' para activar (24h), "
-                    f"'manual on Xh/Xm' para duracion especifica, "
-                    f"o 'manual off' para denegar."
+                    f"Responda: manual on para activar (24h), "
+                    f"manual on Xh/Xm para duracion especifica, "
+                    f"o manual off para denegar."
                 )
                 self._sms_service.send_sms(supervisor.phone, sms_text)
 

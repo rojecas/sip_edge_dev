@@ -71,9 +71,9 @@ class SMSService:
         modem_arg = str(self._modem_index)
 
         # Escapar comillas simples para mmcli: '' representa una comilla literal
-        escaped = message.replace('"', '\"')
+        escaped = message.replace("'", "")  # quitar comillas simples, rompen mmcli
         # Envolver en comillas simples para que mmcli no interprete comas ni otros chars
-        props = f"number={phone},text=\"{escaped}\""
+        props = f"number='{phone}',text='{escaped}'"
 
         # Paso 1: crear el SMS
         create_args = [
