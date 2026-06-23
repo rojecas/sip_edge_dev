@@ -70,11 +70,16 @@ class SMSService:
         mmcli_path = "sudo"
         modem_arg = str(self._modem_index)
 
+        # Escapar comillas simples para mmcli: '' representa una comilla literal
+        escaped = message.replace("'", "''")
+        # Envolver en comillas simples para que mmcli no interprete comas ni otros chars
+        props = f"number={phone},text='{escaped}'"
+
         # Paso 1: crear el SMS
         create_args = [
             mmcli_path, "-n", "mmcli", "-m", modem_arg,
             "--messaging-create-sms",
-            f"number={phone},text='{message.replace(\"'\", \"''\")}'",
+            props,
         ]
         try:
             result = subprocess.run(
