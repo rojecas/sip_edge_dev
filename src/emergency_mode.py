@@ -191,6 +191,9 @@ class EmergencyModeService:
     # ------------------------------------------------------------------
 
     def process_incoming_sms(self, sender_phone: str, text: str) -> bool:
+        with open("/tmp/ems_debug.log", "a") as f:
+            from datetime import datetime
+            f.write(f"{datetime.now()}: CALLED phone={sender_phone} text={text}\n")
         """Procesa un SMS entrante como handler del dispatcher compartido.
 
         Retorna True si el SMS fue reconocido como comando de emergencia
@@ -204,6 +207,8 @@ class EmergencyModeService:
         # Parsear el texto para ver si es un comando de emergencia
         logger.info("SMS entrante: phone=%s text=%s", sender_phone, text[:50])
         parsed = parse_emergency_sms(text)
+        with open("/tmp/ems_debug.log", "a") as f:
+            f.write(f"  parsed: action={parsed.action} duration={parsed.duration_minutes}\n")
         if parsed.action == "invalid":
             # No coincide con ningun patron de emergencia → otro handler
             return False
