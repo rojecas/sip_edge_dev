@@ -411,6 +411,8 @@ class EmergencyModeService:
             cmd_source: "sms" o "ui".
             sender_phone: Numero de telefono del remitente (para SMS).
         """
+        with open("/tmp/ems_debug.log", "a") as f:
+            f.write(f"  INSIDE activate: supervisor={supervisor_id} duration={duration_minutes}\n")
         db: Session = self._db_session_factory()
         try:
             # Validar que el supervisor existe y es admin
