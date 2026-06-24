@@ -1,4 +1,4 @@
-﻿<script>
+<script>
   import { onMount, onDestroy } from "svelte";
   import { api } from "../lib/api.js";
   import { ENDPOINTS, CONFIG } from "../lib/constants.js";
@@ -13,10 +13,11 @@
   async function checkStatus() {
     try {
       const data = await api.get(ENDPOINTS.EMERGENCY_STATUS);
-      manualMode = data.manual_mode === true;
+      manualMode = data.active === true;
       emergencyStore.isEmergencyMode = manualMode;
-      if (data.remaining_hours !== undefined) {
-        timeRemaining = formatTime(data.remaining_hours);
+      if (data.remaining_seconds !== undefined) {
+        const hours = data.remaining_seconds / 3600;
+        timeRemaining = formatTime(hours);
       }
     } catch {}
   }
