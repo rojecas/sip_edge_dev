@@ -217,6 +217,7 @@ class EmergencyModeService:
                 .first()
             )
 
+            logger.info("SMS sender lookup: phone=%s found=%s", sender_phone, user is not None)
             if user is None or user.role != "admin":
                 # Emisor no autorizado
                 invalid_log = EmergencyModeLog(
@@ -239,6 +240,7 @@ class EmergencyModeService:
 
             supervisor_id = user.id
 
+            logger.info("Emergency SMS: action=%s supervisor_id=%s", parsed.action, supervisor_id)
             if parsed.action == "activate":
                 self.activate(
                     request_id=None,
