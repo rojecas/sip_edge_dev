@@ -293,6 +293,8 @@ class EmergencyModeService:
                         reason="manual_off",
                     )
         finally:
+            with open("/tmp/ems_debug.log", "a") as f:
+                f.write(f"  activate() finished\n")
             db.close()
 
         return True
@@ -336,6 +338,8 @@ class EmergencyModeService:
                 analyst.full_name if analyst else str(analyst_id)
             )
 
+            with open("/tmp/ems_debug.log", "a") as f:
+                f.write(f"  creating EmergencyModeLog\n")
             log_entry = EmergencyModeLog(
                 status="pending",
                 analyst_id=analyst_id,
@@ -347,6 +351,8 @@ class EmergencyModeService:
             db.add(log_entry)
             db.commit()
             db.refresh(log_entry)
+            with open("/tmp/ems_debug.log", "a") as f:
+                f.write(f"  log committed: id={log_entry.id}\n")
             request_id = log_entry.id
 
             # Enviar SMS al supervisor
@@ -362,6 +368,8 @@ class EmergencyModeService:
 
             return request_id
         finally:
+            with open("/tmp/ems_debug.log", "a") as f:
+                f.write(f"  activate() finished\n")
             db.close()
 
     # ------------------------------------------------------------------
@@ -421,6 +429,8 @@ class EmergencyModeService:
                 .filter(User.id == supervisor_id, User.role == "admin")
                 .first()
             )
+            with open("/tmp/ems_debug.log", "a") as f:
+                f.write(f"  supervisor validated: id={supervisor.id if supervisor else 'NONE'}\n")
             if supervisor is None:
                 raise EmergencyModeError(
                     f"Usuario {supervisor_id} no es admin valido"
@@ -430,6 +440,8 @@ class EmergencyModeService:
             expires_at = datetime.fromtimestamp(
                 now.timestamp() + duration_minutes * 60, tz=timezone.utc
             )
+            with open("/tmp/ems_debug.log", "a") as f:
+                f.write(f"  expires_at={expires_at}\n")
 
             # Si ya habia un modo activo, marcarlo como cancelled (R12: reinicio)
             if self._active and self._active_record_id is not None:
@@ -480,6 +492,8 @@ class EmergencyModeService:
             db.refresh(activation)
 
             self._active = True
+            with open("/tmp/ems_debug.log", "a") as f:
+                f.write(f"  _active set to True\n")
             self._expires_at = expires_at
             self._active_record_id = activation.id
 
@@ -492,6 +506,8 @@ class EmergencyModeService:
                 duration_minutes,
             )
         finally:
+            with open("/tmp/ems_debug.log", "a") as f:
+                f.write(f"  activate() finished\n")
             db.close()
 
     def extend(
@@ -551,6 +567,8 @@ class EmergencyModeService:
                 new_expires.isoformat(),
             )
         finally:
+            with open("/tmp/ems_debug.log", "a") as f:
+                f.write(f"  activate() finished\n")
             db.close()
 
     def deactivate(
@@ -606,6 +624,8 @@ class EmergencyModeService:
                 supervisor_id,
             )
         finally:
+            with open("/tmp/ems_debug.log", "a") as f:
+                f.write(f"  activate() finished\n")
             db.close()
 
     # ------------------------------------------------------------------
@@ -639,6 +659,8 @@ class EmergencyModeService:
 
             if expires_at_value is not None and expires_at_value > now:
                 self._active = True
+            with open("/tmp/ems_debug.log", "a") as f:
+                f.write(f"  _active set to True\n")
                 self._expires_at = expires_at_value
                 self._active_record_id = latest_active.id
                 logger.info(
@@ -664,6 +686,8 @@ class EmergencyModeService:
                     latest_active.id,
                 )
         finally:
+            with open("/tmp/ems_debug.log", "a") as f:
+                f.write(f"  activate() finished\n")
             db.close()
 
     # ------------------------------------------------------------------
