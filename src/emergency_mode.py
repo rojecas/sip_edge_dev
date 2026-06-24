@@ -248,8 +248,6 @@ class EmergencyModeService:
                     sender_phone=sender_phone,
                 )
 
-            with open("/tmp/ems_debug.log", "a") as f:
-                f.write(f"  after activate: _active={self._active} _active_record_id={self._active_record_id}\n")
             elif parsed.action == "extend":
                 if not self._active:
                     invalid_log = EmergencyModeLog(
@@ -470,8 +468,6 @@ class EmergencyModeService:
             db.refresh(activation)
 
             self._active = True
-            with open("/tmp/ems_debug.log", "a") as f:
-                f.write(f"  activate: _active set True, record_id={self._active_record_id}\n")
             self._expires_at = expires_at
             self._active_record_id = activation.id
 
