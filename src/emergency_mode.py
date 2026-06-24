@@ -26,22 +26,22 @@ logger = logging.getLogger(__name__)
 # ------------------------------------------------------------------
 
 _SMS_MANUAL_ON_RE = re.compile(
-    r"^\s*manual\s+on\s*$", re.IGNORECASE
+    r"^\s*manual[\s_]+on[\s_]*$", re.IGNORECASE
 )
 _SMS_MANUAL_ON_H_RE = re.compile(
-    r"^\s*manual\s+on\s+(\d+)\s*h\s*$", re.IGNORECASE
+    r"^\s*manual[\s_]+on[\s_]+(\d+)\s*h\s*$", re.IGNORECASE
 )
 _SMS_MANUAL_ON_M_RE = re.compile(
-    r"^\s*manual\s+on\s+(\d+)\s*m\s*$", re.IGNORECASE
+    r"^\s*manual[\s_]+on[\s_]+(\d+)\s*m\s*$", re.IGNORECASE
 )
 _SMS_MANUAL_ON_EXT_H_RE = re.compile(
-    r"^\s*manual\s+on\s+ext\s+(\d+)\s*h\s*$", re.IGNORECASE
+    r"^\s*manual[\s_]+on[\s_]+ext[\s_]+(\d+)\s*h\s*$", re.IGNORECASE
 )
 _SMS_MANUAL_ON_EXT_M_RE = re.compile(
-    r"^\s*manual\s+on\s+ext\s+(\d+)\s*m\s*$", re.IGNORECASE
+    r"^\s*manual[\s_]+on[\s_]+ext[\s_]+(\d+)\s*m\s*$", re.IGNORECASE
 )
 _SMS_MANUAL_OFF_RE = re.compile(
-    r"^\s*manual\s+off\s*$", re.IGNORECASE
+    r"^\s*manual[\s_]+off[\s_]*$", re.IGNORECASE
 )
 
 
