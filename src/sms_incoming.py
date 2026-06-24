@@ -119,7 +119,7 @@ class IncomingSmsDispatcher:
             result = await asyncio.to_thread(
                 subprocess.run,
                 [
-                    "mmcli", "-m", str(self._modem_index),
+                    "sudo", "-n", "mmcli", "-m", str(self._modem_index),
                     "--messaging-list-sms",
                 ],
                 capture_output=True,
@@ -139,7 +139,7 @@ class IncomingSmsDispatcher:
                 try:
                     read = await asyncio.to_thread(
                         subprocess.run,
-                        ["mmcli", "-s", sms_id],
+                        ["sudo", "-n", "mmcli", "-s", sms_id],
                         capture_output=True,
                         text=True,
                         timeout=10,
@@ -173,7 +173,7 @@ class IncomingSmsDispatcher:
         try:
             await asyncio.to_thread(
                 subprocess.run,
-                ["mmcli", "-s", sms_id, "--delete"],
+                ["sudo", "-n", "mmcli", "-s", sms_id, "--delete"],
                 capture_output=True,
                 timeout=10,
             )
