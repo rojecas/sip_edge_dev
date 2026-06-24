@@ -223,8 +223,6 @@ class EmergencyModeService:
             )
 
             logger.info("SMS sender lookup: phone=%s found=%s", sender_phone, user is not None)
-            with open("/tmp/ems_debug.log", "a") as f:
-                f.write(f"  user_lookup: found={user is not None} role={user.role if user else 'N/A'}\n")
             if user is None or user.role != "admin":
                 # Emisor no autorizado
                 invalid_log = EmergencyModeLog(
@@ -248,8 +246,6 @@ class EmergencyModeService:
             supervisor_id = user.id
 
             logger.info("Emergency SMS: action=%s supervisor_id=%s", parsed.action, supervisor_id)
-            with open("/tmp/ems_debug.log", "a") as f:
-                f.write(f"  about to activate: supervisor_id={supervisor_id}\n")
             if parsed.action == "activate":
                 self.activate(
                     request_id=None,
