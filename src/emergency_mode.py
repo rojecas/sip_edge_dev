@@ -238,55 +238,63 @@ class EmergencyModeService:
 
             supervisor_id = user.id
 
-            if parsed.action == "activate":
-                self.activate(
-                    request_id=None,
-                    supervisor_id=supervisor_id,
-                    duration_minutes=parsed.duration_minutes,
-                    cmd_raw=parsed.raw_text,
-                    cmd_source="sms",
-                    sender_phone=sender_phone,
-                )
-                # Verificar que la activacion realmente funciono
-                if not self._active:
-                    logger.error(
-                        "BUG #23 DETECTADO: activate() retorno pero self._active=False. "
-                        "supervisor_id=%s, duration=%s, sender=%s",
-                        supervisor_id, parsed.duration_minutes, sender_phone,
-                    )
-
-            elif parsed.action == "extend":
-                if not self._active:
-                    invalid_log = EmergencyModeLog(
-                        status="invalid",
+            try:
+                if parsed.action == "activate":
+                    self.activate(
+                        request_id=None,
                         supervisor_id=supervisor_id,
+                        duration_minutes=parsed.duration_minutes,
+                        cmd_raw=parsed.raw_text,
                         cmd_source="sms",
-                        cmd_raw=parsed.raw_text,
                         sender_phone=sender_phone,
                     )
-                    db.add(invalid_log)
-                    db.commit()
-                    self._sms_service.send_sms(
-                        sender_phone,
-                        "SIP-Edge: El modo manual no esta activo. "
-                        "Use 'manual on' o 'manual on Xh/Xm' para activarlo.",
-                    )
-                    return True
-                self.extend(
-                    supervisor_id=supervisor_id,
-                    extra_minutes=parsed.duration_minutes,
-                    cmd_raw=parsed.raw_text,
-                    sender_phone=sender_phone,
-                )
+                    # Verificar que la activacion realmente funciono
+                    if not self._active:
+                        logger.error(
+                            "BUG #23: activate() retorno pero self._active=False. "
+                            "supervisor_id=%s, duration=%s, sender=%s",
+                            supervisor_id, parsed.duration_minutes, sender_phone,
+                        )
 
-            elif parsed.action == "deactivate":
-                if self._active:
-                    self.deactivate(
+                elif parsed.action == "extend":
+                    if not self._active:
+                        invalid_log = EmergencyModeLog(
+                            status="invalid",
+                            supervisor_id=supervisor_id,
+                            cmd_source="sms",
+                            cmd_raw=parsed.raw_text,
+                            sender_phone=sender_phone,
+                        )
+                        db.add(invalid_log)
+                        db.commit()
+                        self._sms_service.send_sms(
+                            sender_phone,
+                            "SIP-Edge: El modo manual no esta activo. "
+                            "Use 'manual on' o 'manual on Xh/Xm' para activarlo.",
+                        )
+                        return True
+                    self.extend(
                         supervisor_id=supervisor_id,
+                        extra_minutes=parsed.duration_minutes,
                         cmd_raw=parsed.raw_text,
                         sender_phone=sender_phone,
-                        reason="manual_off",
                     )
+
+                elif parsed.action == "deactivate":
+                    if self._active:
+                        self.deactivate(
+                            supervisor_id=supervisor_id,
+                            cmd_raw=parsed.raw_text,
+                            sender_phone=sender_phone,
+                            reason="manual_off",
+                        )
+            except Exception:
+                logger.exception(
+                    "BUG #23: comando de emergencia '%s' ejecutado por admin %s "
+                    "fallo con excepcion. El SMS ya fue reconocido y no "
+                    "se reenviara a otros handlers.",
+                    parsed.action, supervisor_id,
+                )
         finally:
             db.close()
 
