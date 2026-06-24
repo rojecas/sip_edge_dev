@@ -202,7 +202,6 @@ class EmergencyModeService:
             text: Texto completo del SMS.
         """
         # Parsear el texto para ver si es un comando de emergencia
-        logger.info("SMS entrante: phone=%s text=%s", sender_phone, text[:50])
         parsed = parse_emergency_sms(text)
         if parsed.action == "invalid":
             # No coincide con ningun patron de emergencia → otro handler
