@@ -191,7 +191,10 @@ class IncomingSmsDispatcher:
                 if handler(sender_phone, text):
                     logger.debug("SMS handled by %s", handler)
                     return
-            except Exception:
+            except Exception as e:
+                with open("/tmp/ems_debug.log", "a") as f:
+                    import traceback
+                    f.write(f"  EXCEPTION in handler: {e}\n{traceback.format_exc()}\n")
                 logger.exception("Handler %s fallo procesando SMS", handler)
         logger.debug("SMS no manejado por ningun handler: %s", text[:50])
 
