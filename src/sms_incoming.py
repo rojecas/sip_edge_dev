@@ -198,18 +198,12 @@ class IncomingSmsDispatcher:
 
 def _extract_sms_field(mmcli_output: str, field: str) -> str | None:
     """Extrae el valor de un campo de la salida de mmcli -s <id>."""
+    # mmcli output format: spaces | spaces fieldname: value
     pattern = re.compile(
-        r"^\s*" + re.escape(field) + r"\s*\|\s*(.+?)(?:\s*\[.*?\])?\s*$",
+        r"\|\s*" + re.escape(field) + r"\s*:\s*(.+)$",
         re.MULTILINE,
     )
     match = pattern.search(mmcli_output)
     if match:
         return match.group(1).strip()
-    # Fallback: formato sin pipes
-    pattern2 = re.compile(
-        r"^\s*" + re.escape(field) + r"\s*:\s*(.+)$", re.MULTILINE
-    )
-    match2 = pattern2.search(mmcli_output)
-    if match2:
-        return match2.group(1).strip()
     return None
