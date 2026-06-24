@@ -149,6 +149,12 @@ class IncomingSmsDispatcher:
                         await self._delete_sms(sms_id)
                         continue
 
+                    status = _extract_sms_field(read.stdout, "status")
+                    if status and status.lower() != "received":
+                        # SMS de salida o en otro estado: eliminar sin procesar
+                        await self._delete_sms(sms_id)
+                        continue
+
                     sender = _extract_sms_field(read.stdout, "number")
                     text = _extract_sms_field(read.stdout, "text")
                     if sender and text:
