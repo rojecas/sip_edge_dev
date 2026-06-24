@@ -1173,5 +1173,155 @@ class TestEmergencyModeLogModel(unittest.TestCase):
             db.close()
 
 
+# ==================================================================
+# T19: Full pipeline test — dispatcher -> process_incoming_sms -> activate -> status
+# ==================================================================
+
+
+class TestFullPipeline(unittest.TestCase):
+    """Tests que simulan el pipeline completo de produccion:
+    IncomingSmsDispatcher → process_incoming_sms → activate() → get_status().
+    
+    Esto reproduce exactamente el flujo del bug #23 donde la activacion
+    via SMS no persiste en el estado del servicio."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(bind=cls._engine)
+        cls._SessionLocal = sessionmaker(bind=cls._engine)
+
+    def setUp(self):
+        db = self._SessionLocal()
+        try:
+            db.query(EmergencyModeLog).delete()
+            db.query(User).delete()
+            db.commit()
+        finally:
+            db.close()
+
+        db = self._SessionLocal()
+        try:
+            self.admin = User(
+                username="admin_test",
+                password_hash=hash_password("adminpass"),
+                role="admin",
+                full_name="Admin Test",
+                is_active=True,
+                phone="+573001111111",
+            )
+            db.add(self.admin)
+            db.commit()
+            db.refresh(self.admin)
+        finally:
+            db.close()
+
+        self.sms_config = SmsConfig(
+            admin_phones=["+573001111111"],
+            scheduled_reports=["06:00"],
+        )
+        self.sms_service = SMSService(
+            config=self.sms_config, modem_index=0, dev_mode=True
+        )
+        self.svc = EmergencyModeService(
+            db_session_factory=self._SessionLocal,
+            sms_service=self.sms_service,
+            modem_index=0,
+            dev_mode=True,
+        )
+
+    def test_pipeline_dispatcher_to_activate(self):
+        """Pipeline completo: dispatcher → process_incoming_sms → activate → status active."""
+        from src.sms_incoming import IncomingSmsDispatcher
+
+        # Crear dispatcher en modo dev
+        dispatcher = IncomingSmsDispatcher(modem_index=0, dev_mode=True)
+        dispatcher.register_handler(self.svc.process_incoming_sms)
+
+        # State inicial
+        self.assertFalse(self.svc.is_active())
+        status = self.svc.get_status()
+        self.assertFalse(status["active"])
+
+        # Encolar SMS "manual on" del admin (simula llegada de mmcli)
+        dispatcher.enqueue_incoming_sms("+573001111111", "manual on")
+
+        # Ejecutar un ciclo de polling manualmente
+        import asyncio
+        asyncio.run(dispatcher._check_incoming_sms())
+
+        # Verificar que el modo manual se activo
+        self.assertTrue(
+            self.svc.is_active(),
+            "BUG #23: PIPELINE FAILED - service should be active after SMS 'manual on'"
+        )
+        status = self.svc.get_status()
+        self.assertTrue(status["active"], "get_status() should return active=True")
+        self.assertIsNotNone(status["expires_at"])
+        self.assertIsNotNone(status["remaining_seconds"])
+        self.assertGreater(status["remaining_seconds"], 0)
+
+        # Verificar que se creo un registro de auditoria
+        db = self._SessionLocal()
+        try:
+            active_logs = (
+                db.query(EmergencyModeLog)
+                .filter(EmergencyModeLog.status == "active")
+                .all()
+            )
+            self.assertEqual(len(active_logs), 1)
+            self.assertEqual(active_logs[0].cmd_source, "sms")
+        finally:
+            db.close()
+
+    def test_pipeline_dispatcher_to_deactivate(self):
+        """Pipeline completo: dispatcher → activate → deactivate."""
+        from src.sms_incoming import IncomingSmsDispatcher
+
+        dispatcher = IncomingSmsDispatcher(modem_index=0, dev_mode=True)
+        dispatcher.register_handler(self.svc.process_incoming_sms)
+
+        # Activar via SMS
+        dispatcher.enqueue_incoming_sms("+573001111111", "manual on")
+        import asyncio
+        asyncio.run(dispatcher._check_incoming_sms())
+        self.assertTrue(self.svc.is_active())
+
+        # Desactivar via SMS
+        dispatcher.enqueue_incoming_sms("+573001111111", "manual off")
+        asyncio.run(dispatcher._check_incoming_sms())
+        self.assertFalse(self.svc.is_active())
+
+    def test_pipeline_dispatcher_unauthorized(self):
+        """Pipeline: SMS de operador no activa modo manual."""
+        from src.sms_incoming import IncomingSmsDispatcher
+
+        dispatcher = IncomingSmsDispatcher(modem_index=0, dev_mode=True)
+        dispatcher.register_handler(self.svc.process_incoming_sms)
+
+        # SMS de numero no registrado
+        dispatcher.enqueue_incoming_sms("+579999999999", "manual on")
+        import asyncio
+        asyncio.run(dispatcher._check_incoming_sms())
+        self.assertFalse(self.svc.is_active())
+
+    def test_pipeline_dispatcher_invalid_command(self):
+        """Pipeline: SMS no relevante no afecta estado."""
+        from src.sms_incoming import IncomingSmsDispatcher
+
+        dispatcher = IncomingSmsDispatcher(modem_index=0, dev_mode=True)
+        dispatcher.register_handler(self.svc.process_incoming_sms)
+
+        # Texto no relacionado
+        dispatcher.enqueue_incoming_sms("+573001111111", "hello world")
+        import asyncio
+        asyncio.run(dispatcher._check_incoming_sms())
+        self.assertFalse(self.svc.is_active())
+
+
 if __name__ == "__main__":
     unittest.main()

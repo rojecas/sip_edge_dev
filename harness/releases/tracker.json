@@ -50,6 +50,13 @@
       "name": "user_phone_not_exposed",
       "title": "Campo phone no expuesto y campo document ambiguo - renombrar a employee_code",
       "completed_at": "2026-06-23"
+    },
+    {
+      "id": 23,
+      "type": "bug",
+      "name": "emergency_mode_not_activating",
+      "title": "Modo manual de emergencia no se activa via SMS",
+      "completed_at": "2026-06-24"
     }
   ],
   "history": [

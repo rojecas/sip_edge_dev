@@ -247,6 +247,13 @@ class EmergencyModeService:
                     cmd_source="sms",
                     sender_phone=sender_phone,
                 )
+                # Verificar que la activacion realmente funciono
+                if not self._active:
+                    logger.error(
+                        "BUG #23 DETECTADO: activate() retorno pero self._active=False. "
+                        "supervisor_id=%s, duration=%s, sender=%s",
+                        supervisor_id, parsed.duration_minutes, sender_phone,
+                    )
 
             elif parsed.action == "extend":
                 if not self._active:
@@ -398,9 +405,21 @@ class EmergencyModeService:
             cmd_raw: Texto crudo del comando que origino la activacion.
             cmd_source: "sms" o "ui".
             sender_phone: Numero de telefono del remitente (para SMS).
+
+        Raises:
+            EmergencyModeError: Si supervisor_id no corresponde a un admin valido.
         """
-        with open("/tmp/ems_debug.log", "a") as f:
-            f.write(f"  INSIDE activate: supervisor={supervisor_id} duration={duration_minutes}\n")
+        # Verificar que _db_session_factory sea invocable antes de usarla
+        if not callable(self._db_session_factory):
+            logger.error(
+                "BUG #23: _db_session_factory no es invocable (tipo=%s). "
+                "No se puede activar el modo manual.",
+                type(self._db_session_factory).__name__,
+            )
+            raise EmergencyModeError(
+                "Error interno: fabrica de sesiones no disponible"
+            )
+
         db: Session = self._db_session_factory()
         try:
             # Validar que el supervisor existe y es admin
@@ -479,6 +498,13 @@ class EmergencyModeService:
                 expires_at.isoformat(),
                 duration_minutes,
             )
+        except Exception:
+            logger.exception(
+                "BUG #23: activate() fallo con excepcion. "
+                "supervisor_id=%s, duration=%s, self._active=%s",
+                supervisor_id, duration_minutes, self._active,
+            )
+            raise
         finally:
             db.close()
 

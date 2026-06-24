@@ -23,7 +23,8 @@
 7. Lee `harness/docs/sessions.md` para conocer el estandar de documentacion
    (planes, cierres, bloqueos).
 8. **Session reminder:** Revisa si hay contenido entre las marcas
-   <!-- SESSION_REMINDER_START --> y <!-- SESSION_REMINDER_END --> al final
+   <!-- SESSION_REMINDER_START -->
+<!-- SESSION_REMINDER_END --> al final
    de este archivo. Si hay contenido, presentalo al usuario y luego BORRA todo
    el contenido entre esas marcas (pero deja las marcas vacias).
    Si no hay contenido, continua normalmente.
@@ -263,6 +264,5 @@ mejoras del harness:
 8. Registrar la sesion de actualizacion en `harness/progress/history.md`.
 
 <!-- SESSION_REMINDER_START -->
-Leer harness/progress/next_session_reminder.md -- contiene el contexto completo de la sesion anterior (SMS, backup, phone, modo manual pendiente).
 <!-- SESSION_REMINDER_END -->
 
