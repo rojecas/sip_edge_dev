@@ -1,4 +1,4 @@
-"""Modulo de modo manual de emergencia.
+﻿"""Modulo de modo manual de emergencia.
 
 Gestiona solicitudes desde el kiosco, comandos SMS entrantes,
 activacion/desactivacion/extension del modo manual, y auditoria completa
