@@ -263,5 +263,6 @@ mejoras del harness:
 8. Registrar la sesion de actualizacion en `harness/progress/history.md`.
 
 <!-- SESSION_REMINDER_START -->
+Leer harness/progress/next_session_reminder.md -- contiene el contexto completo de la sesion anterior (SMS, backup, phone, modo manual pendiente).
 <!-- SESSION_REMINDER_END -->
 

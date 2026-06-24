@@ -1,95 +1,161 @@
 ﻿# Recordatorio para la proxima sesion
 
-> Leer al iniciar la sesion. Este archivo contiene tareas pendientes
-> y contexto necesario para continuar el trabajo.
+> Generado: 2026-06-23 ~19:55. Leer al iniciar la sesion.
 
 ---
 
 ## 1. Estado del repositorio
 
-El working tree tiene cambios sin commit. NO esta sincronizado con origin/master.
+El working tree tiene cambios sin commit (debug removido, archivos de scripts temporales).
 Ejecutar antes de empezar:
 
     git status
     git diff --stat
+    git log --oneline -10
 
-## 2. Pruebas en entorno remoto (EdgeBox-RPI-200)
+---
 
-Pendiente de realizar. Requiere acceso SSH a la EdgeBox:
+## 2. Lo que se completo en esta sesion
 
-    ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42
+### Backup USB dinamico (src/backup.py)
+- `find_removable_media()`: escanea `/proc/mounts` y detecta cualquier USB/SD montado bajo `/media/` o `/run/media/`
+- `_determine_usb_path()`: fallback automatico si el path configurado no existe
+- 9 tests nuevos en `tests/test_backup.py`
+- **Probado en EdgeBox**: detecta USB en `/media/sipedge/GENIUS` y copia backup correctamente
 
-### Features a probar
+### Campo phone en usuarios (Bug #22)
+- `phone` expuesto en `UserCreate`, `UserUpdate`, `UserResponse` (schemas en `src/users.py`)
+- `phone` en `GET /api/emergency/admins` (src/emergency_mode.py)
+- `phone` y `employee_code` en frontend: `UserFormModal.svelte`, `AdminUsers.svelte`
+- `document` renombrado a `employee_code` en BD (migracion), API, frontend, seeds, tests
 
-| Feature | Nombre | Hardware relevante |
-|---------|--------|-------------------|
-| 14 | frontend_admin_dashboard | Pantalla (navegacion admin) |
-| 15 | frontend_admin_operations | Config RS485/RS232, Backup |
-| 16 | frontend_admin_masterdata | CRUD Usuarios/Haciendas/Suertes |
+### Harness v1.15.0
+- `specs.md`: Nueva seccion "Impacto en APIs existentes"
+- `AGENTS.md`: Regla de verificacion cross-feature para reviewer
 
-### Flujo de pruebas
+### tests_hardware/
+- Creado directorio y `test_backup_usb.py` con test que verifica deteccion real de USB
+- Se ejecuta solo en EdgeBox: `python -m unittest discover -s tests_hardware -v`
 
-1. Hacer git pull en EdgeBox + reiniciar servicio
-2. Ingresar al SPA via http://192.168.1.42:8000
-3. Loguear como admin/admin
-4. Probar:
+### Features 17 y 18 corregidas
+- `frontend_analytics` y `harvest_type`: de `in_progress` a `pending` (no tenian spec)
 
-   - [ ] /admin/dashboard — navegacion
-   - [ ] /admin/config — configuracion RS485/RS232/GSM
-   - [ ] /admin/usuarios — CRUD completo
-   - [ ] /admin/haciendas — CRUD con paginacion
-   - [ ] /admin/suertes — CRUD filtrado por hacienda
-   - [ ] /admin/backup — historial y ejecucion
+---
 
-## 3. Modo manual de emergencia (SMS)
+## 3. SMS — Infraestructura CORREGIDA
 
-Se requiere probar el flujo de emergencia via SMS.
+Todos los fixes de SMS estan desplegados y funcionando. Commit base: `e823320`.
 
-### Pre-requisitos
-- Modem 4G Quectel EC25 activo (mmcli -m 0)
-- Plan de datos activo
-- Numero de admin configurado en users.phone
+| Fix | Archivo | Que se corrigio |
+|-----|---------|----------------|
+| `--messaging-delete-sms=ID` | `sms_incoming.py` | Comando delete estaba mal (`-s ID --delete` no funciona) |
+| Regex extraccion campos | `sms_incoming.py` | `_\|\\s*field\\s*:\\s*(.+)$` (antes esperaba field al inicio de linea) |
+| sudo para mmcli | `sms_service.py`, `sms_incoming.py` | PolicyKit bloqueaba al user `sipedge`. Se agrego `sudo -n mmcli` + regla sudoers |
+| Comillas simples en texto | `sms_service.py` | `number='phone',text='message'` (bash-style quoting) |
+| Escape de comillas | `sms_service.py` | `message.replace("'", "")` elimina comillas simples del texto |
+| Underscore en comandos | `emergency_mode.py` | Regex acepta `manual_on`, `manual_on`, etc: `[\s_]+` |
+| Slash en Xh/Xm | `emergency_mode.py` | `Xh/Xm` → `Xh o Xm` (el `/` causa rejection del carrier) |
+| Sudoers | `/etc/sudoers.d/sipedge-mmcli` | `sipedge ALL=(ALL) NOPASSWD: /usr/bin/mmcli` |
 
-### Flujo a probar
-1. Desde el kiosco: solicitar modo manual
-2. Verificar que llega SMS al admin
-3. Responder con 'manual on' desde el celular
-4. Verificar que el modo manual se activa
-5. Pesar con peso editable
-6. Extender con SMS 'manual on ext 30m'
-7. Desactivar con 'manual off'
+---
 
-### Comandos utiles
-`ash
-# Estado del modem
-ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 \"mmcli -m 0\"
+## 4. BUG PENDIENTE: Modo manual no se activa
 
-# Logs del servicio
-ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 \"sudo journalctl -u sip-edge -n 50 --no-pager\"
+### Diagnostico con file debug
 
-# Tests de hardware
-ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 \
-  \"cd /home/sipedge/sip_edge && source venv/bin/activate && python -m unittest discover -s tests_hardware -v\"
+Se agrego file debug en `process_incoming_sms` (luego revertido en commit `246b22d`).
+El file debug (`/tmp/ems_debug.log`) confirmo:
 
-# Smoke test
+```
+CALLED phone=3502490204 text=manual_on
+parsed: action=activate duration=1440
+user_lookup: found=True role=admin
+about to activate: supervisor_id=1
+INSIDE activate: supervisor=1 duration=1440
+```
+
+**El handler se ejecuta completo**: parseo OK, busqueda de admin OK, `self.activate()` se llama.
+**Pero el modo NO se activa.** `GET /api/emergency/status` retorna `active: false`.
+
+### Hipotesis
+
+Algo dentro de `src/emergency_mode.py::activate()` (linea ~395) falla silenciosamente:
+- `self._db_session_factory()` podria retornar None o lanzar excepcion atrapada
+- La validacion del supervisor podria fallar
+- `EmergencyModeLog` podria tener un error de schema (columna faltante)
+- `self._active = True` se setea pero luego algo lo revierte
+
+### Como reproducir
+
+```bash
+# 1. Verificar que el servicio esta corriendo
 curl http://192.168.1.42:8000/health
-`
 
-### Feature 9 — emergency_mode
-- RF-020a a RF-020k: flujo completo de modo manual
-- Requiere: modem GSM activo + usuarios con telefono registrado
+# 2. Crear SMS simulado para disparar el handler
+python3 /home/sipedge/sip_edge/scripts/sim_sms.py
 
-## 4. Feature 21 — pagination_users_backups
+# 3. Esperar 20s y verificar estado
+# (el dispatcher procesa cada 15s)
+```
 
-Creada en status 'pending'. Cuando se retome:
-1. Lanzar spec-author para redactar requirements + design + tasks
-2. Aprobacion humana
-3. Implementer
-4. Reviewer + release-manager
+### Archivos clave para debug
 
-## 5. Git antes de terminar
+| Archivo | Lineas | Que hace |
+|---------|--------|---------|
+| `src/emergency_mode.py` | 193-260 | `process_incoming_sms()` — handler del dispatcher |
+| `src/emergency_mode.py` | 395-450 | `activate()` — activa el modo manual |
+| `src/emergency_mode.py` | 143-175 | `__init__` — inicializa `_active`, `_db_session_factory` |
+| `src/sms_incoming.py` | 110-170 | `_fetch_mmcli_sms()` — lee y extrae campos |
+| `src/sms_incoming.py` | 185-195 | `_dispatch()` — distribuye a handlers |
 
-Recordar:
-1. Hacer commit de los cambios
-2. Push a origin/master
-3. Ejecutar close.ps1
+### Sugerencia para la proxima sesion
+
+1. Agregar file debug temporal en `activate()` para trazar cada paso
+2. Verificar que `self._db_session_factory` no sea None
+3. Revisar si hay `try/except` silenciosos dentro de `activate()`
+4. Probar llamar `activate()` directamente via endpoint o script
+
+---
+
+## 5. Comandos utiles
+
+```bash
+# Estado del servicio
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "sudo systemctl status sip-edge"
+
+# Logs (filtrando status polling)
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 \
+  "echo sipedge1234 | sudo -S journalctl -u sip-edge --no-pager -n 50"
+
+# Listar SMS en el modem
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 \
+  "sudo -n mmcli -m 0 --messaging-list-sms"
+
+# Borrar todos los SMS
+python3 /home/sipedge/sip_edge/scripts/del_all_v2.py
+
+# Simular SMS entrante
+python3 /home/sipedge/sip_edge/scripts/sim_sms.py
+
+# Probar parser directamente
+cd /home/sipedge/sip_edge && source venv/bin/activate && \
+python3 -c "from src.emergency_mode import parse_emergency_sms; print(parse_emergency_sms('manual_on'))"
+
+# Tests backend
+python -m unittest tests.test_users tests.test_backup -v
+
+# Tests hardware
+python -m unittest discover -s tests_hardware -v
+```
+
+---
+
+## 6. Features pendientes
+
+| ID | Nombre | Status |
+|----|--------|--------|
+| 17 | frontend_analytics | pending |
+| 18 | harvest_type | pending |
+| 21 | pagination_users_backups | pending |
+| 22 | user_phone_not_exposed | done (bug) |
+
