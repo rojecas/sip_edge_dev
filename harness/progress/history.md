@@ -589,3 +589,36 @@ Feature 15 — frontend_admin_operations (Configuración y Backup, 14b)
 - harness/progress/next_session_reminder.md — recordatorio para pruebas en EdgeBox
 
 ---
+
+---
+## Sesion 2026-06-24 — Bug #23 (emergency_mode_not_activating) + fix frontend
+
+**Estado:** Cerrada
+**Agente:** Leader → bug-fixer → reviewer → release-manager
+
+### Problemas resueltos
+
+1. **Contenedor no arrancaba** — Migracion document→employee_code de Bug #22 no aplicada en MariaDB. Ejecutado ALTER TABLE.
+2. **Bug #23 — Modo manual no se activa via SMS** — Excepcion silenciosa en activate() tragada por _dispatch(). Fix: try/except en process_incoming_sms que retorna True aunque falle la activacion.
+3. **Loop SMS "Lo siento..." cada 30s** — Respuestas SMS del AI handler se re-procesaban como entrantes. Fix: filtro status=received en dispatcher.
+4. **Frontend no muestra modo activo** — EmergencyBanner leia data.manual_mode en vez de data.active. Pesos siempre readonly por misma causa.
+5. **Boton "Solicitar Modo Manual" redundante** — Aparecia en banner cuando modo ya estaba activo. Eliminado.
+
+### Archivos modificados (backend)
+- src/emergency_mode.py — try/except en process_incoming_sms, logging en activate()
+- src/sms_incoming.py — filtro status=received en _fetch_mmcli_sms
+
+### Archivos modificados (frontend)
+- frontend/src/components/EmergencyBanner.svelte — data.active, remaining_seconds, boton eliminado
+- src/static/ — frontend rebuild
+
+### Archivos creados (harness)
+- harness/progress/plan-bug-emergency_mode_not_activating.md
+- harness/progress/review_emergency_mode_not_activating.md
+- harness/progress/closure-emergency_mode_not_activating.md
+
+### Tests
+- 59/59 emergency mode tests pasan
+- 22/22 sms_service tests pasan
+- 5 errores pre-existentes en TestIncomingSmsDispatcher (Python 3.11, no relacionados)
+

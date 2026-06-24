@@ -3,10 +3,10 @@
 > Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
 > Los cierres y bloqueos van en archivos separados: ver harness/docs/sessions.md.
 
-- **Inicio:** 2026-06-24
-- **Agente:** release-manager
-- **Bug registrado:** 23 — emergency_mode_not_activating
-- **Estado:** done — bug fix registrado en tracker
+- **Inicio:** (pendiente)
+- **Agente:** (pendiente)
+- **Feature en curso:** (pendiente)
+- **Estado:** (pendiente)
 
 ---
 
@@ -42,11 +42,7 @@
 
 ## Plan
 
-1. ⬜ Diagnosticar y arreglar contenedor backend (no arrancaba por migracion BD faltante) — HECHO
-2. ✅ Bug #23 diagnosticado y fixeado — HECHO
-   - Causa raiz: excepcion silenciosa en activate() tragada por _dispatch()
-   - Fix: guard callable, exception logging, verificacion post-activacion, pipeline tests
-   - Closure: `harness/progress/closure-emergency_mode_not_activating.md`
+(pendiente)
 
 ---
 
