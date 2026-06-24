@@ -3,11 +3,9 @@
   import { api } from "../lib/api.js";
   import { ENDPOINTS, CONFIG } from "../lib/constants.js";
   import { emergencyStore } from "../stores/emergency.js";
-  import EmergencyModal from "./EmergencyModal.svelte";
 
   let manualMode = $state(false);
   let timeRemaining = $state("");
-  let showModal = $state(false);
   let timer = null;
 
   async function checkStatus() {
@@ -33,9 +31,6 @@
     return parts.join(" ");
   }
 
-  function openModal() { showModal = true; }
-  function closeModal() { showModal = false; }
-
   onMount(() => {
     checkStatus();
     timer = setInterval(checkStatus, CONFIG.POLLING_INTERVAL_MS);
@@ -51,12 +46,7 @@
         <span class="time-remaining">({timeRemaining} restante)</span>
       {/if}
     </span>
-    <button class="btn-request" onclick={openModal}>Solicitar Modo Manual</button>
   </div>
-{/if}
-
-{#if showModal}
-  <EmergencyModal onclose={closeModal} />
 {/if}
 
 <style>
@@ -68,11 +58,4 @@
   }
   .banner-text { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .time-remaining { font-weight: 400; opacity: 0.85; font-size: 13px; }
-  .btn-request {
-    padding: 8px 18px;
-    border: 2px solid rgba(255,255,255,0.5); border-radius: 6px;
-    background: rgba(255,255,255,0.1); color: white; font-size: 13px;
-    font-weight: 600; cursor: pointer; white-space: nowrap;
-  }
-  .btn-request:hover { background: rgba(255,255,255,0.2); border-color: white; }
 </style>
