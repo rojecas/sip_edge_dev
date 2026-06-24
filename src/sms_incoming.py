@@ -173,7 +173,7 @@ class IncomingSmsDispatcher:
         try:
             await asyncio.to_thread(
                 subprocess.run,
-                ["sudo", "-n", "mmcli", "-s", sms_id, "--delete"],
+                ["sudo", "-n", "mmcli", "-m", str(self._modem_index), f"--messaging-delete-sms={sms_id}"],
                 capture_output=True,
                 timeout=10,
             )
