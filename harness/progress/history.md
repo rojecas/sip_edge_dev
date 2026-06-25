@@ -622,3 +622,40 @@ Feature 15 — frontend_admin_operations (Configuración y Backup, 14b)
 - 22/22 sms_service tests pasan
 - 5 errores pre-existentes en TestIncomingSmsDispatcher (Python 3.11, no relacionados)
 
+---
+
+## Sesion: 2026-06-24 — Balanza Virtual + Reset Individual
+
+**Inicio:** 2026-06-24 21:00
+**Fin:** 2026-06-24 ~22:00
+**Agente:** Leader (orquestrador) + subagentes
+**Estado:** Sesion de planificacion y diseno
+
+### Resumen
+- Sesion inicial con brainstorming Phase A completo para la **Balanza Virtual DINI ARGEO** (feature #25)
+- Creacion y spec de feature **Reset Individual de Pesos** (feature #24)
+- Discusion detallada del protocolo DINI ARGEO, simulacion de estabilidad, formato CSV, distribucion de datos
+- Se definieron 5 datasets (A-E) para validar las 12 herramientas estadisticas
+- Decisiones: script standalone en repo, REPL interactivo, dos disparadores (REXT serial + tecla PRINT), tecla 'p' retroceso
+
+### Features
+| ID | Nombre | Status |
+|----|--------|--------|
+| 24 | reset_individual_pesos | spec_ready |
+| 25 | virtual_scale | spec_ready |
+
+### Pendiente para proxima sesion
+- Revisar y aprobar specs de ambas features
+- Implementar feature 25 (Balanza Virtual) primero
+- Luego feature 24 (Reset Individual)
+
+### Archivos creados
+| Archivo | Proposito |
+|---------|-----------|
+| harness/specs/24_reset_individual_pesos/requirements.md | Spec SDD |
+| harness/specs/24_reset_individual_pesos/design.md | Spec SDD |
+| harness/specs/24_reset_individual_pesos/tasks.md | Spec SDD |
+| harness/specs/25_virtual_scale/requirements.md | Spec SDD |
+| harness/specs/25_virtual_scale/design.md | Spec SDD |
+| harness/specs/25_virtual_scale/tasks.md | Spec SDD |
+| docs/superpowers/brainstorms/2026-06-24-balanza-virtual-brainstorm.md | Decision log |

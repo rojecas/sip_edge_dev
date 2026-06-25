@@ -1,4 +1,4 @@
-{
+﻿{
     "project":  "sip_edge",
     "description":  "Sistema Inteligente de Pesaje y Control de Materia ExtraÃ±a (SIP-Edge)",
     "rules":  {
@@ -489,29 +489,71 @@
                                                  "database/seeds/: actualizar nombres de campo"
                                              ]
                      },
-                    {
-                        "id":  23,
-                        "type":  "bug",
-                        "files_to_modify":  [
-                                                  "src/emergency_mode.py: `activate()` - anadido guard callable + exception logging",
-                                                  "src/emergency_mode.py: `process_incoming_sms()` - anadida verificacion post-activacion",
-                                                  "tests/test_emergency_mode.py: anadidos 4 tests de pipeline completo"
-                                              ],
-                        "affected_feature_ids":  [
-                                                       9,
-                                                       7,
-                                                       12
-                                                   ],
-                        "description":  "process_incoming_sms() en emergency_mode.py se ejecuta completo (parseo OK, lookup de admin OK, self.activate() se llama) pero GET /api/emergency/status retorna active: false. Causa raiz: excepcion silenciosa dentro de activate() tragada por _dispatch()/except Exception. Fix: guard callable, exception logging con contexto, verificacion post-activacion, pipeline tests.",
-                        "name":  "emergency_mode_not_activating",
-                        "status":  "done",
-                        "title":  "Modo manual de emergencia no se activa via SMS",
-                        "reproduction":  [
-                                               "1. Enviar SMS \u0027manual on\u0027 al modem desde un telefono autorizado",
-                                               "2. Verificar en logs que process_incoming_sms recibe y parsea correctamente",
-                                               "3. Esperar ~15s (ciclo del dispatcher) y consultar GET /api/emergency/status",
-                                               "4. Observar: active: false a pesar de que activate() fue llamada"
-                                           ]
-                    }
-                 ]
+                     {
+                         "id":  23,
+                         "type":  "bug",
+                         "files_to_modify":  [
+                                                 "src/emergency_mode.py: `activate()` - anadido guard callable + exception logging",
+                                                 "src/emergency_mode.py: `process_incoming_sms()` - anadida verificacion post-activacion",
+                                                 "tests/test_emergency_mode.py: anadidos 4 tests de pipeline completo"
+                                             ],
+                         "affected_feature_ids":  [
+                                                      9,
+                                                      7,
+                                                      12
+                                                  ],
+                         "description":  "process_incoming_sms() en emergency_mode.py se ejecuta completo (parseo OK, lookup de admin OK, self.activate() se llama) pero GET /api/emergency/status retorna active: false. Causa raiz: excepcion silenciosa dentro de activate() tragada por _dispatch()/except Exception. Fix: guard callable, exception logging con contexto, verificacion post-activacion, pipeline tests.",
+                         "name":  "emergency_mode_not_activating",
+                         "status":  "done",
+                         "title":  "Modo manual de emergencia no se activa via SMS",
+                         "reproduction":  [
+                                              "1. Enviar SMS \u0027manual on\u0027 al modem desde un telefono autorizado",
+                                              "2. Verificar en logs que process_incoming_sms recibe y parsea correctamente",
+                                              "3. Esperar ~15s (ciclo del dispatcher) y consultar GET /api/emergency/status",
+                                              "4. Observar: active: false a pesar de que activate() fue llamada"
+                                          ]
+                     },
+                      {
+                          "acceptance":  [
+                                             "El formulario en /kiosko muestra un boton Reset junto a cada campo de peso (muestra, mineral, vegetal)",
+                                             "Cada boton Reset borra solo el campo de peso correspondiente, dejando intactos los otros campos y el resto del formulario",
+                                             "Al presionar Reset en un campo, ese campo queda limpio para volver a capturar el peso",
+                                             "El boton de Reset general de toda la medida se elimina o se reubica como accion secundaria",
+                                             "Backend: endpoint nuevo o modificado que acepte el campo especifico a resetear (POST /api/weighings/reset/{step} o similar)",
+                                             "Frontend: se actualiza el componente de pesaje en src/routes/kiosko/ para mostrar 3 botones individuales",
+                                             "Tests: se actualizan los tests de weighing_capture y kiosko"
+                                         ],
+                          "id":  24,
+                          "type":  "feature",
+                          "sdd":  true,
+                          "description":  "Reemplazar el boton unico de Reset general de la medida actual por tres botones de reset individual, uno por cada campo de peso en el formulario de pesaje del kiosko (peso_muestra, peso_mineral, peso_vegetal). Actualmente el boton Reset borra toda la medida completa (los 3 pesos + campos de texto). Con el cambio, cada peso tiene su propio boton Reset que borra solo ese valor, permitiendo al operador corregir un error en una sola lectura sin perder las otras dos ni tener que re-mezclar el material fisicamente en la mesa de trabajo.",
+                          "name":  "reset_individual_pesos",
+                          "status":  "spec_ready",
+                          "depends_on":  [
+                                             6,
+                                             13
+                                         ],
+                          "title":  "Reset Individual de Pesos en Kiosko de Pesaje"
+                      },
+                      {
+                          "id":  25,
+                          "name":  "virtual_scale",
+                          "title":  "Balanza Virtual DINI ARGEO DFWLI-2 para Desarrollo y Pruebas",
+                          "type":  "feature",
+                          "sdd":  true,
+                          "description":  "Herramienta de desarrollo standalone dentro del repo sip_edge que simula el protocolo DINI ARGEO DFWLI-2 via puerto serial. Corre en el workstation de desarrollo Windows, abre un puerto COM, y se conecta via conversor RS-232 a RS-485 al puerto RS-485 del EdgeBox. Responde a los comandos REXT, TARE, TMAN, ZERO, CLEAR del protocolo DINI ARGEO con datos desde archivos CSV pre-generados. Permite probar el ciclo completo de pesaje sin la balanza fisica. Incluye REPL interactivo con teclas n/p/w/g/s/q/espacio, simulacion de estabilidad (ST/US), y script generador de datos de prueba.",
+                          "acceptance":  [
+                                             "Script src/tools/virtual_scale.py que abre un puerto COM/serial y responde al protocolo DINI ARGEO DFWLI-2 (REXT, TARE, TMAN, ZERO, CLEAR)",
+                                             "Carga archivos CSV con columnas: status_muestra,peso_muestra,status_mineral,peso_mineral,status_vegetal,peso_vegetal,unit",
+                                             "5 datasets: A (baja contaminacion), B (media), C (alta + tendencia), D (outliers), E (aleatoria uniforme) - 250 medidas totales",
+                                             "Simula estabilidad: ST responde inmediato, US introduce delay aleatorio 200ms-3s antes de responder",
+                                             "REPL interactivo con teclas: n (siguiente lectura), p (retrocede un sub-paso), w (override peso), g (saltar a medida N), s (status), q (salir)",
+                                             "Tecla espacio/'d' simula boton PRINT de balanza (envia dato sin delay, sin avanzar puntero)",
+                                             "Script generador: scripts/generate_readings.py produce los 5 datasets CSV",
+                                             "Documentacion de conexion fisica: workstation USB->RS232 -> conversor RS232/RS485 -> EdgeBox RS485"
+                                         ],
+                           "status":  "spec_ready",
+                           "depends_on":  []
+                       }
+                   ]
 }
