@@ -1,4 +1,4 @@
-﻿{
+{
   "project_version": "1.0.0",
   "pending": [
     {
@@ -57,6 +57,20 @@
       "name": "emergency_mode_not_activating",
       "title": "Modo manual de emergencia no se activa via SMS",
       "completed_at": "2026-06-24"
+    },
+    {
+      "id": 18,
+      "type": "feature",
+      "name": "harvest_type",
+      "title": "Campo tipo de cosecha en registro de pesaje",
+      "completed_at": "2026-06-25"
+    },
+    {
+      "id": 21,
+      "type": "feature",
+      "name": "pagination_users_backups",
+      "title": "Paginacion en endpoints y tablas de Usuarios y Backups",
+      "completed_at": "2026-06-12"
     }
   ],
   "history": [

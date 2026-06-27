@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models for SIP-Edge."""
 
-from sqlalchemy import BigInteger, Boolean, Column, Date, Enum, ForeignKey, Index, Integer, Numeric, String, Text, Time, TIMESTAMP, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, Column, Date, Enum, ForeignKey, Index, Integer, Numeric, String, Text, Time, TIMESTAMP, UniqueConstraint, func, text
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -83,6 +83,16 @@ class Weighing(Base):
     created_at = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp())
     enviado_pc = Column(Boolean, nullable=False, default=False)
     manual_entry = Column(Boolean, nullable=False, default=False)
+    tipo_cosecha = Column(
+        Enum(
+            "Manual - Incendio", "Manual - Quemado", "Manual - Verde",
+            "Mecanico - Incendio", "Mecanico - Verde", "No convencional - Verde",
+            name="tipo_cosecha_enum",
+        ),
+        nullable=False,
+        default="Mecanico - Verde",
+        server_default=text("'Mecanico - Verde'"),
+    )
 
 
 class BackupLog(Base):

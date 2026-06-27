@@ -4,31 +4,26 @@ import logging
 import math
 from datetime import date, datetime, time
 from decimal import Decimal
-from typing import Any, Generic, List, Optional, TypeVar
+from typing import Any, Generic, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session
 
 from src.auth import check_inactivity, require_any_role
 from src.database import get_db
 from src.models import Hacienda, Suerte, Weighing
-
-T = TypeVar("T")
-
-
-class PaginatedResponse(BaseModel, Generic[T]):
-    """Generic paginated response wrapper."""
-    items: list[T]
-    total: int
-    page: int
-    page_size: int
-    total_pages: int
+from src.schemas import PaginatedResponse
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/weighings")
+
+TIPO_COSECHA_VALUES = [
+    "Manual - Incendio", "Manual - Quemado", "Manual - Verde",
+    "Mecanico - Incendio", "Mecanico - Verde", "No convencional - Verde",
+]
 
 
 class WeighingCreate(BaseModel):
@@ -41,6 +36,16 @@ class WeighingCreate(BaseModel):
     peso_mineral: Decimal = Field(ge=0)
     peso_vegetal_extrano: Decimal = Field(ge=0)
     manual_entry: bool = Field(default=False)
+    tipo_cosecha: str = Field(default="Mecanico - Verde")
+
+    @field_validator("tipo_cosecha")
+    @classmethod
+    def validate_tipo_cosecha(cls, v):
+        if v not in TIPO_COSECHA_VALUES:
+            raise ValueError(
+                f"tipo_cosecha debe ser uno de: {', '.join(TIPO_COSECHA_VALUES)}"
+            )
+        return v
 
 
 class WeighingResponse(BaseModel):
@@ -59,6 +64,7 @@ class WeighingResponse(BaseModel):
     created_at: datetime
     enviado_pc: bool
     manual_entry: bool
+    tipo_cosecha: str
 
     class Config:
         from_attributes = True
@@ -82,6 +88,7 @@ def _build_frame_data(record: Weighing, hacienda: Hacienda, suerte: Suerte) -> d
             "mineral": float(record.peso_mineral),
             "vegetal_extrano": float(record.peso_vegetal_extrano),
         },
+        "tipo_cosecha": record.tipo_cosecha,
     }
 
 
@@ -130,6 +137,7 @@ def create_weighing(
         peso_vegetal_extrano=body.peso_vegetal_extrano,
         usuario_id=current_user["user_id"],
         manual_entry=body.manual_entry,
+        tipo_cosecha=body.tipo_cosecha,
     )
     db.add(record)
     db.commit()
@@ -264,6 +272,7 @@ def list_weighings(
             created_at=w.created_at,
             enviado_pc=w.enviado_pc,
             manual_entry=w.manual_entry,
+            tipo_cosecha=w.tipo_cosecha,
         ))
 
     return PaginatedResponse(

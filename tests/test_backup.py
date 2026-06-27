@@ -396,7 +396,14 @@ class TestBackupEndpoints(unittest.TestCase):
             "/api/backup/status", headers={"Authorization": f"Bearer {token}"},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertIsInstance(response.json(), list)
+        data = response.json()
+        self.assertIsInstance(data, dict)
+        self.assertIn("items", data)
+        self.assertIn("total", data)
+        self.assertIn("page", data)
+        self.assertIn("page_size", data)
+        self.assertIn("total_pages", data)
+        self.assertIsInstance(data["items"], list)
 
     def test_post_run_with_admin_returns_202(self):
         client, _ = _build_backup_test_app()
@@ -434,6 +441,52 @@ class TestBackupEndpoints(unittest.TestCase):
             "/api/backup/run", headers={"Authorization": f"Bearer {token}"},
         )
         self.assertEqual(response.status_code, 403)
+
+    # --- Pagination tests (R16) ---
+
+    def test_get_status_default_pagination(self):
+        """GET /api/backup/status retorna formato paginado con defaults page=1, page_size=10."""
+        client, _ = _build_backup_test_app()
+        token = self._login(client, "admin", "adminpass")
+        response = client.get(
+            "/api/backup/status", headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["page"], 1)
+        self.assertEqual(data["page_size"], 10)
+        self.assertIn("items", data)
+        self.assertIn("total", data)
+        self.assertIn("total_pages", data)
+
+    def test_get_status_with_custom_pagination(self):
+        """GET /api/backup/status?page=1&page_size=5 retorna page_size=5."""
+        client, _ = _build_backup_test_app()
+        token = self._login(client, "admin", "adminpass")
+        response = client.get(
+            "/api/backup/status?page=1&page_size=5",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["page"], 1)
+        self.assertEqual(data["page_size"], 5)
+        self.assertLessEqual(len(data["items"]), 5)
+
+    def test_get_status_page_beyond_total(self):
+        """GET /api/backup/status?page=999 retorna items vacio."""
+        client, _ = _build_backup_test_app()
+        token = self._login(client, "admin", "adminpass")
+        response = client.get(
+            "/api/backup/status?page=999",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["page"], 999)
+        self.assertEqual(data["items"], [])
+        self.assertGreaterEqual(data["total_pages"], 1)
+
 # Test additions for find_removable_media and _determine_usb_path
 import tempfile, unittest
 from unittest import mock

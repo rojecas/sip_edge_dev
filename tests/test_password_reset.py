@@ -895,7 +895,8 @@ class TestUserResponseHidesResetFields(unittest.TestCase):
             headers={"Authorization": f"Bearer {token}"},
         )
         self.assertEqual(resp.status_code, 200)
-        for user in resp.json():
+        data = resp.json()
+        for user in data["items"]:
             self.assertNotIn("reset_pin", user)
             self.assertNotIn("reset_pin_expires_at", user)
 
@@ -919,7 +920,8 @@ class TestUserResponseHidesResetFields(unittest.TestCase):
             headers={"Authorization": f"Bearer {token}"},
         )
         self.assertEqual(resp.status_code, 200)
-        operator_user = [u for u in resp.json() if u["username"] == "operator1"]
+        data = resp.json()
+        operator_user = [u for u in data["items"] if u["username"] == "operator1"]
         self.assertEqual(len(operator_user), 1)
         self.assertTrue(operator_user[0]["force_password_change"])
 

@@ -178,6 +178,36 @@ describe("AdminUsers — paginacion (C1, R1)", () => {
     const select = document.querySelector(".page-size-select");
     expect(select).toBeInTheDocument();
   });
+
+  it("cambiar page size resetea a page=1 (R17)", async () => {
+    api.get.mockResolvedValue({
+      items: mockUsers,
+      total: 50,
+      total_pages: 3,
+      page: 1,
+      page_size: 20,
+    });
+    render(AdminUsers);
+    await waitForLoaded();
+
+    api.get.mockClear();
+    api.get.mockResolvedValue({
+      items: mockUsers,
+      total: 50,
+      total_pages: 2,
+      page: 1,
+      page_size: 50,
+    });
+
+    const select = document.querySelector(".page-size-select");
+    await fireEvent.change(select, { target: { value: "50" } });
+    expect(api.get).toHaveBeenCalledWith(
+      expect.stringContaining("page_size=50")
+    );
+    expect(api.get).toHaveBeenCalledWith(
+      expect.stringContaining("page=1")
+    );
+  });
 });
 
 describe("AdminUsers — crear usuario (R3)", () => {

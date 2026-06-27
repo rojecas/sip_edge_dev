@@ -2,7 +2,7 @@
 
 import math
 from datetime import datetime
-from typing import Any, Generic, List, Optional, TypeVar
+from typing import Any, Generic, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -12,17 +12,7 @@ from sqlalchemy.orm import Session
 from src.auth import check_inactivity, require_any_role, require_role
 from src.database import get_db
 from src.models import Hacienda, Suerte
-
-T = TypeVar("T")
-
-
-class PaginatedResponse(BaseModel, Generic[T]):
-    """Generic paginated response."""
-    items: list[T]
-    total: int
-    page: int
-    page_size: int
-    total_pages: int
+from src.schemas import PaginatedResponse
 
 
 class HaciendaCreate(BaseModel):

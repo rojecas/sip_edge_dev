@@ -24,6 +24,13 @@
    (planes, cierres, bloqueos).
 8. **Session reminder:** Revisa si hay contenido entre las marcas
    <!-- SESSION_REMINDER_START -->
+**Recordatorio próxima sesión:** Probar la paginación en TODAS las vistas modificadas (AdminUsers, AdminBackup) adicionando suficientes registros en la BD para verificar:
+- Botones Anterior/Siguiente funcionan con múltiples páginas
+- Selector de page size (10/20/50/100) resetea a página 1
+- La paginación se oculta cuando hay una sola página
+- Navegación a página más allá del total retorna vacío
+
+Feature 24 (reset_individual_pesos) está en spec_ready — revisar spec y aprobar para implementar.
 <!-- SESSION_REMINDER_END --> al final
    de este archivo. Si hay contenido, presentalo al usuario y luego BORRA todo
    el contenido entre esas marcas (pero deja las marcas vacias).
@@ -264,5 +271,13 @@ mejoras del harness:
 8. Registrar la sesion de actualizacion en `harness/progress/history.md`.
 
 <!-- SESSION_REMINDER_START -->
+**Recordatorio próxima sesión:** Probar la paginación en TODAS las vistas modificadas (AdminUsers, AdminBackup) adicionando suficientes registros en la BD para verificar:
+- Botones Anterior/Siguiente funcionan con múltiples páginas
+- Selector de page size (10/20/50/100) resetea a página 1
+- La paginación se oculta cuando hay una sola página
+- Navegación a página más allá del total retorna vacío
+
+Feature 24 (reset_individual_pesos) está en spec_ready — revisar spec y aprobar para implementar.
 <!-- SESSION_REMINDER_END -->
+
 

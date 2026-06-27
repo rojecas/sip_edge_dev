@@ -2,7 +2,7 @@
   /**
    * AdminUsers — User management: list, create, edit, deactivate.
    */
-  import { api, ApiError } from "../lib/api.js";
+  import { api, ApiError, buildQuery } from "../lib/api.js";
   import { onMount } from "svelte";
   import { ENDPOINTS } from "../lib/constants.js";
   import ConfirmModal from "./ConfirmModal.svelte";
@@ -13,6 +13,10 @@
   let loading = $state(true);
   let loadError = $state("");
   let emptyMsg = $state("");
+  let currentPage = $state(1);
+  let totalPages = $state(1);
+  let totalItems = $state(0);
+  let pageSize = $state(20);
 
   // Success/result message
   let resultMsg = $state("");
@@ -39,12 +43,12 @@
     loadError = "";
     emptyMsg = "";
     try {
-      const result = await api.get(ENDPOINTS.USERS);
-      if (Array.isArray(result)) {
-        users = result;
-      } else {
-        users = result.items || [];
-      }
+      const qs = buildQuery({ page: currentPage, page_size: pageSize });
+      const result = await api.get(`${ENDPOINTS.USERS}${qs}`);
+      users = result.items || [];
+      currentPage = result.page || 1;
+      totalPages = result.total_pages || 1;
+      totalItems = result.total || 0;
       if (!users || users.length === 0) {
         emptyMsg = "No hay usuarios registrados.";
         users = [];
@@ -141,6 +145,17 @@
     confirmTarget = null;
   }
 
+  function goToPage(page) {
+    currentPage = page;
+    loadUsers();
+  }
+
+  function changePageSize(e) {
+    pageSize = parseInt(e.target.value);
+    currentPage = 1;
+    loadUsers();
+  }
+
   function formatDate(dateStr) {
     if (!dateStr) return "—";
     try {
@@ -215,6 +230,20 @@
           {/each}
         </tbody>
       </table>
+      {#if totalPages > 1}
+        <div class="pagination">
+          <button class="btn-page" disabled={currentPage <= 1} onclick={() => goToPage(currentPage - 1)}>Anterior</button>
+          <span class="page-info">
+          <select class="page-size-select" value={pageSize} onchange={changePageSize}>
+            <option value={10}>10 por página</option>
+            <option value={20}>20 por página</option>
+            <option value={50}>50 por página</option>
+            <option value={100}>100 por página</option>
+          </select>
+          Página {currentPage} de {totalPages} ({totalItems} registros)</span>
+          <button class="btn-page" disabled={currentPage >= totalPages} onclick={() => goToPage(currentPage + 1)}>Siguiente</button>
+        </div>
+      {/if}
     </div>
   {/if}
 </div>
@@ -409,4 +438,29 @@
   .btn-delete:hover {
     background: rgba(255, 107, 107, 0.1);
   }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 16px;
+    padding: 12px;
+  }
+  .page-info {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .btn-page {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn-page:hover:not(:disabled) { background: var(--accent); color: white; }
+  .btn-page:disabled { opacity: 0.4; cursor: not-allowed; }
+  .page-size-select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font-size: 13px; cursor: pointer; }
 </style>

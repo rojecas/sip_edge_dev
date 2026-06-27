@@ -1,5 +1,6 @@
 ﻿"""User management CRUD endpoints and schemas."""
 
+import math
 from datetime import datetime
 from typing import List, Literal, Optional
 
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session
 from src.auth import check_inactivity, hash_password, require_role
 from src.database import get_db
 from src.models import User
+from src.schemas import PaginatedResponse
 
 
 class UserCreate(BaseModel):
@@ -134,13 +136,27 @@ def deactivate_user(db: Session, user_id: int) -> UserResponse:
 router = APIRouter(prefix="/api/users")
 
 
-@router.get("", response_model=List[UserResponse])
+@router.get("", response_model=PaginatedResponse[UserResponse])
 def get_users(
     _admin: dict = Depends(check_inactivity),
     __admin: dict = Depends(require_role("admin")),
     db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
 ):
-    return list_users(db)
+    query = db.query(User)
+    total = query.count()
+    total_pages = max(1, math.ceil(total / page_size))
+    offset = (page - 1) * page_size
+    records = query.offset(offset).limit(page_size).all()
+    items = [_user_to_response(u) for u in records]
+    return PaginatedResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @router.get("/{user_id}", response_model=UserResponse)

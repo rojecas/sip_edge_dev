@@ -659,3 +659,89 @@ Feature 15 — frontend_admin_operations (Configuración y Backup, 14b)
 | harness/specs/25_virtual_scale/design.md | Spec SDD |
 | harness/specs/25_virtual_scale/tasks.md | Spec SDD |
 | docs/superpowers/brainstorms/2026-06-24-balanza-virtual-brainstorm.md | Decision log |
+
+------------------------------------------------------------
+# Sesion actual
+
+> Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
+> Los cierres y bloqueos van en archivos separados: ver harness/docs/sessions.md.
+
+- **Inicio:** 2026-06-25
+- **Fin:** 2026-06-25
+- **Agente:** leader
+- **Feature completada:** 18 — harvest_type
+- **Estado:** done ✅
+
+---
+
+## Indice de features
+
+| ID | Nombre | Status |
+|----|--------|--------|
+| 18 | harvest_type | done |
+
+---
+
+## Resumen
+
+1. Feature 18 actualizada con 6 valores ENUM (default Mecanico - Verde)
+2. Spec redactado y aprobado (harness/specs/18_harvest_type/)
+3. Implementación: backend + frontend + tests
+4. Review aprobado
+5. Release-manager: registrado en tracker.json
+
+---
+
+## Bloqueos activos
+
+(none)
+
+## Sesion 2026-06-25 — harvest_type (Feature 18)
+
+**Agente:** leader
+**Estado:** done ✅
+**Ciclo completo:** pending → spec-author → spec_ready → aprobado → implementer → reviewer → release-manager → done
+**Resumen:** Campo tipo_cosecha (ENUM 6 valores, default Mecanico - Verde) agregado a tabla weighings, formulario kiosco, historial, filtro anomalías y 11 SQL tools. Migración BD aplicada post-review.
+---
+# Sesion actual
+
+> Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
+
+- **Inicio:** 2026-06-26
+- **Fin:** 2026-06-26
+- **Agente:** lider / implementer / reviewer / release-manager
+- **Feature completada:** 21 — pagination_users_backups
+- **Estado:** done
+
+---
+
+## Indice de features
+
+| ID | Nombre | Status |
+|----|--------|--------|
+| 21 | pagination_users_backups | ✅ done |
+| 24 | reset_individual_pesos | ⏳ spec_ready |
+| 25 | virtual_scale | ⏳ spec_ready |
+| 17 | frontend_analytics | ⏳ pending |
+
+---
+
+## Resumen
+
+Se completó la feature 21 (pagination_users_backups) que estaba interrumpida:
+
+1. **Implementación verificada** — T1-T19 todas completadas [x]
+2. **Review encontró 4 issues:**
+   - 🔴 BUG: currentPage no se actualizaba desde result.page → corregido
+   - 🟡 Falta test R17 en AdminUsers.test.js → agregado
+   - 🟡 Skills consultados no documentados → documentado
+   - 🟢 Falta github_issue → creado por release-manager (#19)
+3. **Re-review** → APROBADO ✅
+4. **Release-manager** registró: feature_list.json → done, VERSION 1.15.1, CHANGELOG actualizado, GitHub issue #19 creado/cerrado, tracker.json actualizado, closure doc creado.
+5. **Feature 24** (reset_individual_pesos) quedó en `spec_ready` — el usuario revisó el spec y prefiere dejarlo para la próxima sesión.
+
+## Bloqueos activos
+
+(none)
+---
+

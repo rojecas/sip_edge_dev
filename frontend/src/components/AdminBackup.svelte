@@ -3,13 +3,17 @@
    * AdminBackup — Backup panel: history table, run backup, refresh.
    */
   import { onMount } from "svelte";
-  import { api, ApiError } from "../lib/api.js";
+  import { api, ApiError, buildQuery } from "../lib/api.js";
   import { ENDPOINTS } from "../lib/constants.js";
 
   let backups = $state([]);
   let loading = $state(true);
   let loadError = $state("");
   let emptyMsg = $state("");
+  let currentPage = $state(1);
+  let totalPages = $state(1);
+  let totalItems = $state(0);
+  let pageSize = $state(10);
 
   let resultMsg = $state("");
   let resultError = $state(false);
@@ -25,8 +29,12 @@
     loadError = "";
     emptyMsg = "";
     try {
-      const result = await api.get(ENDPOINTS.BACKUP_STATUS);
-      backups = result.items || result || [];
+      const qs = buildQuery({ page: currentPage, page_size: pageSize });
+      const result = await api.get(`${ENDPOINTS.BACKUP_STATUS}${qs}`);
+      backups = result.items || [];
+      currentPage = result.page || 1;
+      totalPages = result.total_pages || 1;
+      totalItems = result.total || 0;
       if (!backups || backups.length === 0) {
         emptyMsg = "No hay registros de backup.";
         backups = [];
@@ -63,6 +71,17 @@
     } finally {
       running = false;
     }
+  }
+
+  function goToPage(page) {
+    currentPage = page;
+    loadBackups();
+  }
+
+  function changePageSize(e) {
+    pageSize = parseInt(e.target.value);
+    currentPage = 1;
+    loadBackups();
   }
 
   function formatBytes(bytes) {
@@ -159,6 +178,20 @@
           {/each}
         </tbody>
       </table>
+      {#if totalPages > 1}
+        <div class="pagination">
+          <button class="btn-page" disabled={currentPage <= 1} onclick={() => goToPage(currentPage - 1)}>Anterior</button>
+          <span class="page-info">
+          <select class="page-size-select" value={pageSize} onchange={changePageSize}>
+            <option value={10}>10 por página</option>
+            <option value={20}>20 por página</option>
+            <option value={50}>50 por página</option>
+            <option value={100}>100 por página</option>
+          </select>
+          Página {currentPage} de {totalPages} ({totalItems} registros)</span>
+          <button class="btn-page" disabled={currentPage >= totalPages} onclick={() => goToPage(currentPage + 1)}>Siguiente</button>
+        </div>
+      {/if}
     </div>
   {/if}
 </div>
@@ -203,4 +236,28 @@
   .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
   .btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
   .btn-secondary:hover:not(:disabled) { background: var(--border); }
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 16px;
+    padding: 12px;
+  }
+  .page-info {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .btn-page {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn-page:hover:not(:disabled) { background: var(--accent); color: white; }
+  .btn-page:disabled { opacity: 0.4; cursor: not-allowed; }
+  .page-size-select { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font-size: 13px; cursor: pointer; }
 </style>

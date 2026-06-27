@@ -328,3 +328,14 @@ class TestDetectOnDemand(_DetectorTestBase):
     def test_detect_on_demand(self):
         results = self.detector.detect_on_demand(10, 3.0)
         self.assertIsInstance(results, list)
+
+    # T20: detect_on_demand with tipo_cosecha filter (R10)
+    def test_detect_on_demand_filter_tipo_cosecha(self):
+        """Verifica que detect_on_demand con tipo_cosecha no falla."""
+        # Use a tipo_cosecha value that exists in the test data
+        # Since records were created without explicit tipo_cosecha,
+        # in SQLite they should have the default value.
+        results = self.detector.detect_on_demand(10, 3.0, tipo_cosecha="Mecanico - Verde")
+        self.assertIsInstance(results, list)
+        # Should return results for matching tipo_cosecha only
+        # (in test setup, all records use default = Mecanico - Verde)

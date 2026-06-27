@@ -162,7 +162,7 @@ class TestUserManagement(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 403)
 
-    # --- R1: List users ---
+    # --- R1: List users (paginated) ---
     def test_list_users_as_admin(self):
         token = self._login()
         response = self.client.get(
@@ -171,13 +171,19 @@ class TestUserManagement(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertIsInstance(data, list)
-        self.assertGreaterEqual(len(data), 2)
-        usernames = [u["username"] for u in data]
+        self.assertIsInstance(data, dict)
+        self.assertIn("items", data)
+        self.assertIn("total", data)
+        self.assertIn("page", data)
+        self.assertIn("page_size", data)
+        self.assertIn("total_pages", data)
+        self.assertIsInstance(data["items"], list)
+        self.assertGreaterEqual(len(data["items"]), 2)
+        usernames = [u["username"] for u in data["items"]]
         self.assertIn("admin", usernames)
         self.assertIn("operator", usernames)
         self.assertIn("inactive", usernames)
-        for user in data:
+        for user in data["items"]:
             self.assertNotIn("password_hash", user)
             self.assertIn("employee_code", user)
             self.assertIn("phone", user)
@@ -449,6 +455,54 @@ class TestUserManagement(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["detail"], "User not found")
+
+    # --- Pagination tests (R15) ---
+
+    def test_list_users_default_pagination(self):
+        """GET /api/users sin parametros retorna formato paginado con defaults."""
+        token = self._login()
+        response = self.client.get(
+            "/api/users",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("items", data)
+        self.assertIn("total", data)
+        self.assertIn("page", data)
+        self.assertIn("page_size", data)
+        self.assertIn("total_pages", data)
+        self.assertEqual(data["page"], 1)
+        self.assertEqual(data["page_size"], 20)
+        self.assertIsInstance(data["items"], list)
+        self.assertGreaterEqual(data["total"], 0)
+
+    def test_list_users_with_custom_pagination(self):
+        """GET /api/users?page=1&page_size=5 retorna page_size=5."""
+        token = self._login()
+        response = self.client.get(
+            "/api/users?page=1&page_size=5",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["page"], 1)
+        self.assertEqual(data["page_size"], 5)
+        self.assertLessEqual(len(data["items"]), 5)
+
+    def test_list_users_page_beyond_total(self):
+        """GET /api/users?page=999 retorna items vacio con metadata correcta."""
+        token = self._login()
+        response = self.client.get(
+            "/api/users?page=999",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["page"], 999)
+        self.assertEqual(data["items"], [])
+        self.assertGreaterEqual(data["total"], 0)
+        self.assertGreaterEqual(data["total_pages"], 1)
 
 
 if __name__ == "__main__":

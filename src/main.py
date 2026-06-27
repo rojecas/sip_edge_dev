@@ -2,6 +2,7 @@
 import asyncio
 import json
 import logging
+import math
 import os
 import subprocess
 from contextlib import asynccontextmanager
@@ -16,6 +17,7 @@ from fastapi import (
     Depends,
     FastAPI,
     HTTPException,
+    Query,
     Request,
     WebSocket,
     WebSocketDisconnect,
@@ -53,6 +55,7 @@ from src.config import (
     save_system_config,
     validate_config,
 )
+from src.schemas import PaginatedResponse
 import src.database as _db
 from src.database import get_db, init_db
 from src.models import BackupLog, Base, User, Weighing
@@ -274,31 +277,55 @@ app.include_router(password_reset_router)
 backup_router = APIRouter(prefix="/api/backup", tags=["backup"])
 
 
-@backup_router.get("/status")
+class BackupLogResponse(BaseModel):
+    """Response schema for a single backup log entry."""
+    id: int
+    filename: str
+    file_size: int
+    local_checksum: str
+    usb_copied: bool
+    usb_checksum: str | None = None
+    error_message: str | None = None
+    created_at: str  # ISO format
+
+    class Config:
+        from_attributes = True
+
+
+def _backup_log_to_response(log: BackupLog) -> BackupLogResponse:
+    return BackupLogResponse(
+        id=log.id,
+        filename=log.filename,
+        file_size=log.file_size,
+        local_checksum=log.local_checksum,
+        usb_copied=log.usb_copied,
+        usb_checksum=log.usb_checksum,
+        error_message=log.error_message,
+        created_at=log.created_at.isoformat(),
+    )
+
+
+@backup_router.get("/status", response_model=PaginatedResponse[BackupLogResponse])
 async def get_backup_status(
     _: dict = Depends(check_inactivity),
     __: dict = Depends(require_role("admin")),
     db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
 ):
-    logs = (
-        db.query(BackupLog)
-        .order_by(BackupLog.created_at.desc())
-        .limit(10)
-        .all()
+    query = db.query(BackupLog).order_by(BackupLog.created_at.desc())
+    total = query.count()
+    total_pages = max(1, math.ceil(total / page_size))
+    offset = (page - 1) * page_size
+    records = query.offset(offset).limit(page_size).all()
+    items = [_backup_log_to_response(log) for log in records]
+    return PaginatedResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
     )
-    return [
-        {
-            "id": log.id,
-            "filename": log.filename,
-            "file_size": log.file_size,
-            "local_checksum": log.local_checksum,
-            "usb_copied": log.usb_copied,
-            "usb_checksum": log.usb_checksum,
-            "error_message": log.error_message,
-            "created_at": log.created_at.isoformat(),
-        }
-        for log in logs
-    ]
 
 
 def _run_backup_background():
@@ -539,12 +566,13 @@ anomaly_router = APIRouter(prefix="/api/anomalies", tags=["anomalies"])
 async def detect_anomalies_on_demand(
     window: int = 120,
     threshold: float = 3.0,
+    tipo_cosecha: str | None = Query(None),
     _: dict = Depends(check_inactivity),
     __: dict = Depends(require_role("admin")),
 ):
     detector = app.state.anomaly_detector
     try:
-        results = detector.detect_on_demand(window, threshold)
+        results = detector.detect_on_demand(window, threshold, tipo_cosecha=tipo_cosecha)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return [

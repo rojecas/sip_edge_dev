@@ -48,3 +48,12 @@ export const LS_KEYS = {
   ROLE: "sip_edge_role",
   USERNAME: "sip_edge_username",
 };
+
+export const HARVEST_TYPES = [
+  "Manual - Incendio",
+  "Manual - Quemado",
+  "Manual - Verde",
+  "Mecanico - Incendio",
+  "Mecanico - Verde",
+  "No convencional - Verde",
+];

@@ -3,7 +3,7 @@
  * Cubre: R7, R8, R9, R10
  */
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/svelte";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/svelte";
 import AdminBackup from "../AdminBackup.svelte";
 import { api } from "../../lib/api.js";
 
@@ -17,6 +17,15 @@ vi.mock("../../lib/api.js", () => ({
       this.status = status;
     }
   },
+  buildQuery: vi.fn((params) => {
+    const parts = [];
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== "") {
+        parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+      }
+    }
+    return parts.length ? `?${parts.join("&")}` : "";
+  }),
 }));
 
 // ── Fixtures ────────────────────────────────────────────────────
@@ -72,11 +81,13 @@ async function waitForLoaded() {
 describe("AdminBackup", () => {
   // ─── T15.1: carga historial al montar ─────────────────────────
   describe("carga de historial (R7)", () => {
-    it("llama GET /api/backup/status al montar", async () => {
-      api.get.mockResolvedValue({ items: mockBackupItems });
+    it("llama GET /api/backup/status con paginacion al montar", async () => {
+      api.get.mockResolvedValue({ items: mockBackupItems, total: 2, total_pages: 1 });
       render(AdminBackup);
       await waitForLoaded();
-      expect(api.get).toHaveBeenCalledWith("/api/backup/status");
+      expect(api.get).toHaveBeenCalledWith(
+        expect.stringContaining("/api/backup/status?")
+      );
     });
 
     it("muestra indicador de carga mientras carga", () => {
@@ -89,7 +100,7 @@ describe("AdminBackup", () => {
   // ─── T15.2: renderiza tabla con datos ─────────────────────────
   describe("tabla de backups (R7)", () => {
     it("renderiza tabla con los field names corregidos", async () => {
-      api.get.mockResolvedValue({ items: mockBackupItems });
+      api.get.mockResolvedValue({ items: mockBackupItems, total: 2, total_pages: 1 });
       render(AdminBackup);
       await waitForLoaded();
 
@@ -127,15 +138,15 @@ describe("AdminBackup", () => {
   // ─── T15.3: lista vacía ───────────────────────────────────────
   describe("lista vacia (R7)", () => {
     it("muestra 'No hay registros de backup' si items esta vacio", async () => {
-      api.get.mockResolvedValue({ items: [] });
+      api.get.mockResolvedValue({ items: [], total: 0, total_pages: 1 });
       render(AdminBackup);
       await waitForLoaded();
       expect(screen.getByText("No hay registros de backup.")).toBeInTheDocument();
     });
 
     it("maneja respuesta sin propiedad items (fallback)", async () => {
-      // Fallback: result.items || result || []
-      api.get.mockResolvedValue([]);
+      // Fallback: result.items || result || [] - empty object has no items
+      api.get.mockResolvedValue({ total: 0, total_pages: 1 });
       render(AdminBackup);
       await waitForLoaded();
       expect(screen.getByText("No hay registros de backup.")).toBeInTheDocument();
@@ -154,7 +165,7 @@ describe("AdminBackup", () => {
   // ─── T15.4: ejecutar backup ───────────────────────────────────
   describe("ejecutar backup (R8, R9)", () => {
     it("envia POST /api/backup/run al pulsar Ejecutar Backup", async () => {
-      api.get.mockResolvedValue({ items: mockBackupItems });
+      api.get.mockResolvedValue({ items: mockBackupItems, total: 2, total_pages: 1 });
       api.post.mockResolvedValue({});
       render(AdminBackup);
       await waitForLoaded();
@@ -163,7 +174,7 @@ describe("AdminBackup", () => {
     });
 
     it("tras 202, muestra mensaje y deshabilita el boton 30s", async () => {
-      api.get.mockResolvedValue({ items: mockBackupItems });
+      api.get.mockResolvedValue({ items: mockBackupItems, total: 2, total_pages: 1 });
       api.post.mockResolvedValue({}); // HTTP 202 success
       render(AdminBackup);
       await waitForLoaded();
@@ -179,7 +190,7 @@ describe("AdminBackup", () => {
     });
 
     it("error 4xx/5xx NO deshabilita el boton", async () => {
-      api.get.mockResolvedValue({ items: mockBackupItems });
+      api.get.mockResolvedValue({ items: mockBackupItems, total: 2, total_pages: 1 });
       // Regular Error (not ApiError) → component shows "Error de conexión."
       api.post.mockRejectedValue(new Error("Server error"));
       render(AdminBackup);
@@ -201,16 +212,105 @@ describe("AdminBackup", () => {
   // ─── T15.6: boton Refrescar ──────────────────────────────────
   describe("boton Refrescar (R10)", () => {
     it("recarga la tabla al pulsar Refrescar", async () => {
-      api.get.mockResolvedValue({ items: mockBackupItems });
+      api.get.mockResolvedValue({ items: mockBackupItems, total: 2, total_pages: 1 });
       render(AdminBackup);
       await waitForLoaded();
 
       // Clear the mock call record to verify second call
       api.get.mockClear();
-      api.get.mockResolvedValue({ items: mockBackupItems });
+      api.get.mockResolvedValue({ items: mockBackupItems, total: 2, total_pages: 1 });
 
       screen.getByRole("button", { name: "Refrescar" }).click();
-      expect(api.get).toHaveBeenCalledWith("/api/backup/status");
+      expect(api.get).toHaveBeenCalledWith(
+        expect.stringContaining("/api/backup/status?")
+      );
+    });
+  });
+
+  // ─── Paginacion (T19) ──────────────────────────────────────
+  describe("paginacion (R11, R12, R13, R14)", () => {
+    it("muestra controles de paginacion cuando hay mas paginas", async () => {
+      api.get.mockResolvedValue({
+        items: mockBackupItems,
+        total: 50,
+        total_pages: 5,
+        page: 1,
+        page_size: 10,
+      });
+      render(AdminBackup);
+      await waitForLoaded();
+      expect(screen.getByText("Anterior")).toBeInTheDocument();
+      expect(screen.getByText("Siguiente")).toBeInTheDocument();
+    });
+
+    it("oculta controles cuando hay una sola pagina", async () => {
+      api.get.mockResolvedValue({
+        items: mockBackupItems,
+        total: 2,
+        total_pages: 1,
+      });
+      render(AdminBackup);
+      await waitForLoaded();
+      expect(screen.queryByText("Anterior")).toBeNull();
+      expect(screen.queryByText("Siguiente")).toBeNull();
+    });
+
+    it("boton Anterior deshabilitado en primera pagina", async () => {
+      api.get.mockResolvedValue({
+        items: mockBackupItems,
+        total: 50,
+        total_pages: 5,
+        page: 1,
+        page_size: 10,
+      });
+      render(AdminBackup);
+      await waitForLoaded();
+      const prevBtn = screen.getByText("Anterior");
+      expect(prevBtn).toBeDisabled();
+    });
+
+    it("boton Siguiente deshabilitado en ultima pagina", async () => {
+      api.get.mockResolvedValue({
+        items: mockBackupItems,
+        total: 50,
+        total_pages: 5,
+        page: 5,
+        page_size: 10,
+      });
+      render(AdminBackup);
+      await waitForLoaded();
+      const nextBtn = screen.getByText("Siguiente");
+      expect(nextBtn).toBeDisabled();
+    });
+
+    it("cambiar page size resetea a page=1", async () => {
+      api.get.mockResolvedValue({
+        items: mockBackupItems,
+        total: 50,
+        total_pages: 5,
+        page: 1,
+        page_size: 10,
+      });
+      render(AdminBackup);
+      await waitForLoaded();
+
+      api.get.mockClear();
+      api.get.mockResolvedValue({
+        items: mockBackupItems,
+        total: 50,
+        total_pages: 3,
+        page: 1,
+        page_size: 20,
+      });
+
+      const select = document.querySelector(".page-size-select");
+      await fireEvent.change(select, { target: { value: "20" } });
+      expect(api.get).toHaveBeenCalledWith(
+        expect.stringContaining("page_size=20")
+      );
+      expect(api.get).toHaveBeenCalledWith(
+        expect.stringContaining("page=1")
+      );
     });
   });
 

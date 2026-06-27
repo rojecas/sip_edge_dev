@@ -20,13 +20,14 @@ TOOL_DEFINITIONS: list[dict] = [
         "type": "function",
         "function": {
             "name": "get_basic_stats",
-            "description": "Obtiene estadisticas basicas (count, avg, min, max, std) de los pesajes en un rango de fechas, opcionalmente filtradas por tipo de material.",
+            "description": "Obtiene estadisticas basicas (count, avg, min, max, std) de los pesajes en un rango de fechas, opcionalmente filtradas por tipo de material y tipo de cosecha.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "fecha_inicio": {"type": "string", "description": "Fecha inicio formato YYYY-MM-DD"},
                     "fecha_fin": {"type": "string", "description": "Fecha fin formato YYYY-MM-DD"},
                     "tipo_material": {"type": "string", "description": "muestra, mineral, vegetal o null para peso total"},
+                    "tipo_cosecha": {"type": "string", "description": "Filtro opcional por tipo de cosecha"},
                 },
                 "required": ["fecha_inicio", "fecha_fin"],
             },
@@ -43,6 +44,7 @@ TOOL_DEFINITIONS: list[dict] = [
                     "fecha_inicio": {"type": "string", "description": "Fecha inicio formato YYYY-MM-DD"},
                     "fecha_fin": {"type": "string", "description": "Fecha fin formato YYYY-MM-DD"},
                     "percentil": {"type": "number", "description": "Percentil deseado (0-100)"},
+                    "tipo_cosecha": {"type": "string", "description": "Filtro opcional por tipo de cosecha"},
                 },
                 "required": ["fecha_inicio", "fecha_fin", "percentil"],
             },
@@ -58,6 +60,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 "properties": {
                     "window_size": {"type": "integer", "description": "Numero de registros en la ventana"},
                     "tipo_material": {"type": "string", "description": "muestra, mineral, vegetal o null para peso total"},
+                    "tipo_cosecha": {"type": "string", "description": "Filtro opcional por tipo de cosecha"},
                 },
                 "required": ["window_size"],
             },
@@ -74,6 +77,7 @@ TOOL_DEFINITIONS: list[dict] = [
                     "fecha_inicio": {"type": "string", "description": "Fecha inicio formato YYYY-MM-DD"},
                     "fecha_fin": {"type": "string", "description": "Fecha fin formato YYYY-MM-DD"},
                     "tipo_material": {"type": "string", "description": "muestra, mineral, vegetal o null para peso total"},
+                    "tipo_cosecha": {"type": "string", "description": "Filtro opcional por tipo de cosecha"},
                 },
                 "required": ["fecha_inicio", "fecha_fin"],
             },
@@ -89,6 +93,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 "properties": {
                     "fecha_inicio": {"type": "string", "description": "Fecha inicio formato YYYY-MM-DD"},
                     "fecha_fin": {"type": "string", "description": "Fecha fin formato YYYY-MM-DD"},
+                    "tipo_cosecha": {"type": "string", "description": "Filtro opcional por tipo de cosecha"},
                 },
                 "required": ["fecha_inicio", "fecha_fin"],
             },
@@ -104,6 +109,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 "properties": {
                     "fecha_inicio": {"type": "string", "description": "Fecha inicio formato YYYY-MM-DD"},
                     "fecha_fin": {"type": "string", "description": "Fecha fin formato YYYY-MM-DD"},
+                    "tipo_cosecha": {"type": "string", "description": "Filtro opcional por tipo de cosecha"},
                 },
                 "required": ["fecha_inicio", "fecha_fin"],
             },
@@ -119,6 +125,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 "properties": {
                     "fecha_inicio": {"type": "string", "description": "Fecha inicio formato YYYY-MM-DD"},
                     "fecha_fin": {"type": "string", "description": "Fecha fin formato YYYY-MM-DD"},
+                    "tipo_cosecha": {"type": "string", "description": "Filtro opcional por tipo de cosecha"},
                 },
                 "required": ["fecha_inicio", "fecha_fin"],
             },
@@ -134,6 +141,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 "properties": {
                     "fecha": {"type": "string", "description": "Fecha formato YYYY-MM-DD"},
                     "turno": {"type": "string", "description": "Turno: manana (00:00-06:00), tarde (06:00-14:00), noche (14:00-22:00), madrugada (22:00-24:00)"},
+                    "tipo_cosecha": {"type": "string", "description": "Filtro opcional por tipo de cosecha"},
                 },
                 "required": ["fecha", "turno"],
             },
@@ -148,6 +156,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 "type": "object",
                 "properties": {
                     "fecha": {"type": "string", "description": "Fecha formato YYYY-MM-DD"},
+                    "tipo_cosecha": {"type": "string", "description": "Filtro opcional por tipo de cosecha"},
                 },
                 "required": ["fecha"],
             },
@@ -163,6 +172,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 "properties": {
                     "fecha_inicio": {"type": "string", "description": "Fecha inicio formato YYYY-MM-DD"},
                     "fecha_fin": {"type": "string", "description": "Fecha fin formato YYYY-MM-DD"},
+                    "tipo_cosecha": {"type": "string", "description": "Filtro opcional por tipo de cosecha"},
                 },
                 "required": ["fecha_inicio", "fecha_fin"],
             },
@@ -192,6 +202,7 @@ TOOL_DEFINITIONS: list[dict] = [
                 "type": "object",
                 "properties": {
                     "window_size": {"type": "integer", "description": "Numero de registros a evaluar"},
+                    "tipo_cosecha": {"type": "string", "description": "Filtro opcional por tipo de cosecha"},
                 },
                 "required": ["window_size"],
             },
@@ -218,14 +229,14 @@ class SqlTools:
     # Herramientas de estadisticas (T5)
     # ------------------------------------------------------------------
 
-    def get_basic_stats(self, fecha_inicio: str, fecha_fin: str, tipo_material: str | None = None) -> dict:
+    def get_basic_stats(self, fecha_inicio: str, fecha_fin: str, tipo_material: str | None = None, tipo_cosecha: str | None = None) -> dict:
         """Count, avg, min, max, std de los pesajes en un rango."""
         db = self._get_db()
         try:
             fi = date.fromisoformat(fecha_inicio)
             ff = date.fromisoformat(fecha_fin)
             weight_expr = self._weight_column(tipo_material)
-            row = (
+            query = (
                 db.query(
                     func.count(Weighing.id).label("count"),
                     func.coalesce(func.avg(weight_expr), 0).label("avg"),
@@ -233,17 +244,21 @@ class SqlTools:
                     func.coalesce(func.max(weight_expr), 0).label("max"),
                 )
                 .filter(Weighing.fecha >= fi, Weighing.fecha <= ff)
-                .first()
             )
+            if tipo_cosecha:
+                query = query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            row = query.first()
             # Calculate std separately
             total = float(row.count)
             if total > 1:
                 mean = float(row.avg)
-                rows = (
+                rows_query = (
                     db.query(weight_expr)
                     .filter(Weighing.fecha >= fi, Weighing.fecha <= ff)
-                    .all()
                 )
+                if tipo_cosecha:
+                    rows_query = rows_query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+                rows = rows_query.all()
                 variance = sum((float(r[0]) - mean) ** 2 for r in rows) / (total - 1)
                 std = variance ** 0.5
             else:
@@ -258,7 +273,7 @@ class SqlTools:
         finally:
             db.close()
 
-    def get_percentiles(self, fecha_inicio: str, fecha_fin: str, percentil: float) -> dict:
+    def get_percentiles(self, fecha_inicio: str, fecha_fin: str, percentil: float, tipo_cosecha: str | None = None) -> dict:
         """Calcula el percentil especifico de peso total."""
         if not 0 <= percentil <= 100:
             raise ToolExecutionError(f"Percentil debe estar entre 0 y 100: {percentil}")
@@ -269,12 +284,13 @@ class SqlTools:
             total_weight = (
                 Weighing.peso_muestra + Weighing.peso_mineral + Weighing.peso_vegetal_extrano
             )
-            rows = (
+            query = (
                 db.query(total_weight)
                 .filter(Weighing.fecha >= fi, Weighing.fecha <= ff)
-                .order_by(total_weight)
-                .all()
             )
+            if tipo_cosecha:
+                query = query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            rows = query.order_by(total_weight).all()
             values = [float(r[0]) for r in rows]
             if not values:
                 return {"percentil": percentil, "valor": 0.0, "count": 0}
@@ -290,19 +306,21 @@ class SqlTools:
         finally:
             db.close()
 
-    def get_moving_average(self, window_size: int, tipo_material: str | None = None) -> dict:
+    def get_moving_average(self, window_size: int, tipo_material: str | None = None, tipo_cosecha: str | None = None) -> dict:
         """Promedio movil de los ultimos N pesajes."""
         if window_size <= 0:
             raise ToolExecutionError(f"window_size debe ser > 0: {window_size}")
         db = self._get_db()
         try:
             weight_expr = self._weight_column(tipo_material)
-            rows = (
+            query = (
                 db.query(weight_expr)
                 .order_by(Weighing.id.desc())
                 .limit(window_size)
-                .all()
             )
+            if tipo_cosecha:
+                query = query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            rows = query.all()
             values = [float(r[0]) for r in rows]
             if not values:
                 return {"window_size": window_size, "moving_average": 0.0, "count": 0}
@@ -311,19 +329,20 @@ class SqlTools:
         finally:
             db.close()
 
-    def get_trend(self, fecha_inicio: str, fecha_fin: str, tipo_material: str | None = None) -> dict:
+    def get_trend(self, fecha_inicio: str, fecha_fin: str, tipo_material: str | None = None, tipo_cosecha: str | None = None) -> dict:
         """Pendiente de regresion lineal simple."""
         db = self._get_db()
         try:
             fi = date.fromisoformat(fecha_inicio)
             ff = date.fromisoformat(fecha_fin)
             weight_expr = self._weight_column(tipo_material)
-            rows = (
+            query = (
                 db.query(Weighing.id, weight_expr)
                 .filter(Weighing.fecha >= fi, Weighing.fecha <= ff)
-                .order_by(Weighing.id)
-                .all()
             )
+            if tipo_cosecha:
+                query = query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            rows = query.order_by(Weighing.id).all()
             n = len(rows)
             if n < 2:
                 return {"pendiente": 0.0, "count": n, "interpretacion": "Datos insuficientes"}
@@ -352,13 +371,13 @@ class SqlTools:
     # Herramientas de desglose (T6)
     # ------------------------------------------------------------------
 
-    def get_breakdown_by_hacienda(self, fecha_inicio: str, fecha_fin: str) -> list[dict]:
+    def get_breakdown_by_hacienda(self, fecha_inicio: str, fecha_fin: str, tipo_cosecha: str | None = None) -> list[dict]:
         """Desglose de pesajes por hacienda con JOIN."""
         db = self._get_db()
         try:
             fi = date.fromisoformat(fecha_inicio)
             ff = date.fromisoformat(fecha_fin)
-            rows = (
+            query = (
                 db.query(
                     Hacienda.id,
                     Hacienda.codigo,
@@ -373,12 +392,12 @@ class SqlTools:
                 )
                 .join(Hacienda, Weighing.hacienda_id == Hacienda.id)
                 .filter(Weighing.fecha >= fi, Weighing.fecha <= ff)
-                .group_by(Hacienda.id)
-                .order_by(func.sum(
-                    Weighing.peso_muestra + Weighing.peso_mineral + Weighing.peso_vegetal_extrano
-                ).desc())
-                .all()
             )
+            if tipo_cosecha:
+                query = query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            rows = query.group_by(Hacienda.id).order_by(func.sum(
+                Weighing.peso_muestra + Weighing.peso_mineral + Weighing.peso_vegetal_extrano
+            ).desc()).all()
             return [
                 {
                     "hacienda_id": r.id,
@@ -393,13 +412,13 @@ class SqlTools:
         finally:
             db.close()
 
-    def get_breakdown_by_operator(self, fecha_inicio: str, fecha_fin: str) -> list[dict]:
+    def get_breakdown_by_operator(self, fecha_inicio: str, fecha_fin: str, tipo_cosecha: str | None = None) -> list[dict]:
         """Desglose de pesajes por operador con JOIN."""
         db = self._get_db()
         try:
             fi = date.fromisoformat(fecha_inicio)
             ff = date.fromisoformat(fecha_fin)
-            rows = (
+            query = (
                 db.query(
                     User.id,
                     User.username,
@@ -411,12 +430,12 @@ class SqlTools:
                 )
                 .join(User, Weighing.usuario_id == User.id)
                 .filter(Weighing.fecha >= fi, Weighing.fecha <= ff)
-                .group_by(User.id)
-                .order_by(func.sum(
-                    Weighing.peso_muestra + Weighing.peso_mineral + Weighing.peso_vegetal_extrano
-                ).desc())
-                .all()
             )
+            if tipo_cosecha:
+                query = query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            rows = query.group_by(User.id).order_by(func.sum(
+                Weighing.peso_muestra + Weighing.peso_mineral + Weighing.peso_vegetal_extrano
+            ).desc()).all()
             return [
                 {
                     "user_id": r.id,
@@ -430,21 +449,23 @@ class SqlTools:
         finally:
             db.close()
 
-    def get_material_composition(self, fecha_inicio: str, fecha_fin: str) -> dict:
+    def get_material_composition(self, fecha_inicio: str, fecha_fin: str, tipo_cosecha: str | None = None) -> dict:
         """Proporcion muestra/mineral/vegetal en el rango de fechas."""
         db = self._get_db()
         try:
             fi = date.fromisoformat(fecha_inicio)
             ff = date.fromisoformat(fecha_fin)
-            row = (
+            query = (
                 db.query(
                     func.coalesce(func.sum(Weighing.peso_muestra), 0).label("muestra"),
                     func.coalesce(func.sum(Weighing.peso_mineral), 0).label("mineral"),
                     func.coalesce(func.sum(Weighing.peso_vegetal_extrano), 0).label("vegetal"),
                 )
                 .filter(Weighing.fecha >= fi, Weighing.fecha <= ff)
-                .first()
             )
+            if tipo_cosecha:
+                query = query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            row = query.first()
             muestra = float(row.muestra)
             mineral = float(row.mineral)
             vegetal = float(row.vegetal)
@@ -465,7 +486,7 @@ class SqlTools:
     # Herramientas de resumen (T7)
     # ------------------------------------------------------------------
 
-    def get_shift_summary(self, fecha: str, turno: str) -> dict:
+    def get_shift_summary(self, fecha: str, turno: str, tipo_cosecha: str | None = None) -> dict:
         """Reporte completo de un turno especifico."""
         SHIFT_HOURS = {
             "manana": ("00:00", "06:00"),
@@ -482,16 +503,18 @@ class SqlTools:
             t_start = time.fromisoformat(start)
             t_end = time.fromisoformat(end)
             # Query with time constraints
-            count = (
+            count_query = (
                 db.query(func.count(Weighing.id))
                 .filter(
                     Weighing.fecha == fd,
                     Weighing.hora >= t_start,
                     Weighing.hora <= t_end,
                 )
-                .scalar()
-            ) or 0
-            row = (
+            )
+            if tipo_cosecha:
+                count_query = count_query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            count = count_query.scalar() or 0
+            row_query = (
                 db.query(
                     func.coalesce(func.sum(Weighing.peso_muestra), 0).label("muestra"),
                     func.coalesce(func.sum(Weighing.peso_mineral), 0).label("mineral"),
@@ -502,8 +525,10 @@ class SqlTools:
                     Weighing.hora >= t_start,
                     Weighing.hora <= t_end,
                 )
-                .first()
             )
+            if tipo_cosecha:
+                row_query = row_query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            row = row_query.first()
             total = float(row.muestra) + float(row.mineral) + float(row.vegetal)
             return {
                 "fecha": fecha,
@@ -518,25 +543,29 @@ class SqlTools:
         finally:
             db.close()
 
-    def get_daily_summary(self, fecha: str) -> dict:
+    def get_daily_summary(self, fecha: str, tipo_cosecha: str | None = None) -> dict:
         """Resumen agregado de un dia completo."""
         db = self._get_db()
         try:
             fd = date.fromisoformat(fecha)
-            count = (
+            count_query = (
                 db.query(func.count(Weighing.id))
                 .filter(Weighing.fecha == fd)
-                .scalar()
-            ) or 0
-            row = (
+            )
+            if tipo_cosecha:
+                count_query = count_query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            count = count_query.scalar() or 0
+            row_query = (
                 db.query(
                     func.coalesce(func.sum(Weighing.peso_muestra), 0).label("muestra"),
                     func.coalesce(func.sum(Weighing.peso_mineral), 0).label("mineral"),
                     func.coalesce(func.sum(Weighing.peso_vegetal_extrano), 0).label("vegetal"),
                 )
                 .filter(Weighing.fecha == fd)
-                .first()
             )
+            if tipo_cosecha:
+                row_query = row_query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            row = row_query.first()
             total = float(row.muestra) + float(row.mineral) + float(row.vegetal)
             avg_weight = round(total / count, 2) if count > 0 else 0.0
             return {
@@ -551,18 +580,20 @@ class SqlTools:
         finally:
             db.close()
 
-    def get_custom_period_summary(self, fecha_inicio: str, fecha_fin: str) -> dict:
+    def get_custom_period_summary(self, fecha_inicio: str, fecha_fin: str, tipo_cosecha: str | None = None) -> dict:
         """Resumen completo de un periodo personalizado."""
         db = self._get_db()
         try:
             fi = date.fromisoformat(fecha_inicio)
             ff = date.fromisoformat(fecha_fin)
-            count = (
+            count_query = (
                 db.query(func.count(Weighing.id))
                 .filter(Weighing.fecha >= fi, Weighing.fecha <= ff)
-                .scalar()
-            ) or 0
-            row = (
+            )
+            if tipo_cosecha:
+                count_query = count_query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            count = count_query.scalar() or 0
+            row_query = (
                 db.query(
                     func.coalesce(func.sum(Weighing.peso_muestra), 0).label("muestra"),
                     func.coalesce(func.sum(Weighing.peso_mineral), 0).label("mineral"),
@@ -572,15 +603,19 @@ class SqlTools:
                     ), 0).label("avg_weight"),
                 )
                 .filter(Weighing.fecha >= fi, Weighing.fecha <= ff)
-                .first()
             )
+            if tipo_cosecha:
+                row_query = row_query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            row = row_query.first()
             total = float(row.muestra) + float(row.mineral) + float(row.vegetal)
             # Distinct haciendas
-            hacienda_count = (
+            hacienda_query = (
                 db.query(func.count(func.distinct(Weighing.hacienda_id)))
                 .filter(Weighing.fecha >= fi, Weighing.fecha <= ff)
-                .scalar()
-            ) or 0
+            )
+            if tipo_cosecha:
+                hacienda_query = hacienda_query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            hacienda_count = hacienda_query.scalar() or 0
             return {
                 "fecha_inicio": fecha_inicio,
                 "fecha_fin": fecha_fin,
@@ -624,11 +659,11 @@ class SqlTools:
         finally:
             db.close()
 
-    def check_thresholds(self, window_size: int) -> dict:
+    def check_thresholds(self, window_size: int, tipo_cosecha: str | None = None) -> dict:
         """Evalua los ultimos N pesajes contra los umbrales configurados."""
         db = self._get_db()
         try:
-            rows = (
+            query = (
                 db.query(
                     Weighing.peso_muestra,
                     Weighing.peso_mineral,
@@ -636,8 +671,10 @@ class SqlTools:
                 )
                 .order_by(Weighing.id.desc())
                 .limit(window_size)
-                .all()
             )
+            if tipo_cosecha:
+                query = query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            rows = query.all()
             if not rows:
                 return {"window_size": window_size, "count": 0, "violations": []}
             violations = []

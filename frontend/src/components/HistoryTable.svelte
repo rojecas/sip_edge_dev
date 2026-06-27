@@ -162,6 +162,7 @@
             <th>Guía</th>
             <th>Hacienda</th>
             <th>Suerte</th>
+            <th>Tipo Cosecha</th>
             <th>Peso Muestra</th>
             <th>Peso Mineral</th>
             <th>Peso Vegetal</th>
@@ -177,6 +178,7 @@
               <td>{w.numero_guia || "—"}</td>
               <td>{w.hacienda_id}</td>
               <td>{w.suerte_id}</td>
+              <td>{w.tipo_cosecha || "—"}</td>
               <td class="num">{formatDecimal(w.peso_muestra)}</td>
               <td class="num">{formatDecimal(w.peso_mineral)}</td>
               <td class="num">{formatDecimal(w.peso_vegetal_extrano)}</td>

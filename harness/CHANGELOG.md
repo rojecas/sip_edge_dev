@@ -43,6 +43,18 @@
 - `.gitignore` â€” Anadido `harness/.session` (flag de runtime).
 - `harness/.session` â€” `git rm --cached` (fuera del tracking).
 
+## [1.15.1] - 2026-06-12
+
+### Added
+- Feature 21 — Paginación en endpoints y tablas de Usuarios y Backups (`pagination_users_backups`):
+  GET /api/users paginado con formato `{items, total, page, page_size, total_pages}` + controles
+  de paginación en AdminUsers.svelte. GET /api/backup/status paginado + controles en
+  AdminBackup.svelte. Modelo genérico `PaginatedResponse[T]` extraído a `src/schemas.py`.
+  Refactorización de haciendas.py y weighings.py para usar el schema compartido.
+
+### Changed
+- harness/VERSION: 1.15.0 → 1.15.1 (patch)
+
 ## [1.15.0] - 2026-06-23
 
 ### Added

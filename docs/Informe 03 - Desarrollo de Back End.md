@@ -645,19 +645,6 @@ ssh sipedge@192.168.1.42 "cd /home/sipedge/sip_edge && \
 curl http://192.168.1.42:8000/health
 ```
 
-#### 9.3 Verificacion del harness
-
-```powershell
-./harness/init.ps1
-# Bloque 1: Entorno [OK]
-# Bloque 2: Archivos base [OK]
-# Bloque 3: Entorno ejecucion [OK]
-# Bloque 4: Schema BD [OK]
-# Bloque 5: Feature list + specs [OK]
-# Bloque 6: Tests [OK]  (430 tests)
-# Bloque 7: Resumen [OK]
-```
-
 ---
 
 ### 10. Resumen de Archivos del Backend
@@ -700,7 +687,7 @@ a traves de **23 modulos (~6,500 lineas)** y **17 archivos de test (~7,800 linea
 | **Features** | 12/12 completadas |
 | **Modulos** | 23 archivos en src/ |
 | **Endpoints** | ~30 funcionales |
-| **Tests** | 430 tests, todos verdes |
+| **Tests** | 430 tests, todos pasan en verde |
 | **Base de Datos** | 8 tablas, 6 migraciones |
 | **Hardware** | RS485 (bascula), RS232 (PC), GSM (SMS duplex) |
 | **IA** | Qwen 2.5 1.5B con Function Calling, 3 cores dedicados |

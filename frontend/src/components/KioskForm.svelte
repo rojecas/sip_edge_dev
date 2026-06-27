@@ -6,7 +6,7 @@
    */
   import { onMount } from "svelte";
   import { api, ApiError, buildQuery } from "../lib/api.js";
-  import { ENDPOINTS, CONFIG } from "../lib/constants.js";
+  import { ENDPOINTS, CONFIG, HARVEST_TYPES } from "../lib/constants.js";
   import { authStore } from "../stores/auth.js";
   import { emergencyStore } from "../stores/emergency.js";
   import ScaleReader from "./ScaleReader.svelte";
@@ -32,6 +32,9 @@ import EmergencyModal from "./EmergencyModal.svelte";
   let pesoMuestra = $state(0);
   let pesoMineral = $state(0);
   let pesoVegetal = $state(0);
+
+  // Harvest type
+  let tipoCosecha = $state("Mecanico - Verde");
 
   // Emergency mode — makes weight fields editable
   let isEmergencyMode = $derived(emergencyStore.isEmergencyMode);
@@ -116,6 +119,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
     pesoMuestra = 0;
     pesoMineral = 0;
     pesoVegetal = 0;
+    tipoCosecha = "Mecanico - Verde";
     successMessage = "";
     errorMessage = "";
   }
@@ -171,6 +175,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
         peso_mineral: pesoMineral || 0,
         peso_vegetal_extrano: pesoVegetal || 0,
         manual_entry: isEmergencyMode,
+        tipo_cosecha: tipoCosecha,
       };
       await api.post(ENDPOINTS.WEIGHINGS, body);
       successMessage = "Pesaje registrado exitosamente";
@@ -278,6 +283,22 @@ import EmergencyModal from "./EmergencyModal.svelte";
           </select>
         {/if}
       </div>
+    </div>
+  </div>
+
+  <!-- Tipo de Cosecha -->
+  <div class="form-section">
+    <h3>Tipo de Cosecha</h3>
+    <div class="field">
+      <select
+        id="tipo-cosecha"
+        bind:value={tipoCosecha}
+        class="select-input"
+      >
+        {#each HARVEST_TYPES as tipo}
+          <option value={tipo}>{tipo}</option>
+        {/each}
+      </select>
     </div>
   </div>
 

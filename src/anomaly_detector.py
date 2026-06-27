@@ -66,16 +66,17 @@ class AnomalyDetector:
         finally:
             db.close()
 
-    def detect_on_demand(self, window_size: int, z_threshold: float) -> list[AnomalyResult]:
+    def detect_on_demand(self, window_size: int, z_threshold: float, tipo_cosecha: str | None = None) -> list[AnomalyResult]:
         """Ejecuta deteccion bajo demanda con parametros personalizados."""
         db = self._db_session_factory()
         try:
-            records = (
+            query = (
                 db.query(Weighing)
                 .order_by(Weighing.id.desc())
-                .limit(window_size)
-                .all()
             )
+            if tipo_cosecha:
+                query = query.filter(Weighing.tipo_cosecha == tipo_cosecha)
+            records = query.limit(window_size).all()
             if not records:
                 return []
             results: list[AnomalyResult] = []
@@ -92,11 +93,12 @@ class AnomalyDetector:
     # Ventana movil (T10)
     # ------------------------------------------------------------------
 
-    def _get_window(self, db: Session) -> list[Weighing]:
+    def _get_window(self, db: Session, tipo_cosecha: str | None = None) -> list[Weighing]:
         """Obtiene los registros de la ventana movil configurada.
 
         Aplica el limite que se alcance primero entre window_size registros
         y window_hours horas hacia atras.
+        Si se proporciona tipo_cosecha, filtra por ese valor.
         """
         now = datetime.now(timezone.utc)
         cutoff = now - timedelta(hours=self._config.window_hours)
@@ -107,6 +109,8 @@ class AnomalyDetector:
             .order_by(Weighing.id.desc())
             .limit(self._config.window_size)
         )
+        if tipo_cosecha:
+            query = query.filter(Weighing.tipo_cosecha == tipo_cosecha)
         records = query.all()
 
         # Filtrar por ventana de horas

@@ -197,6 +197,45 @@ class TestWeighingsCreate(TestWeighingsAuth):
         data = response.json()
         self.assertTrue(data["enviado_pc"])
 
+    # T16: Default tipo_cosecha is "Mecanico - Verde" (R5, R6, R7)
+    def test_create_weighing_default_tipo_cosecha(self):
+        token = self._login("operator1", "op1pass")
+        body = self._create_weighing_body()
+        # No incluir tipo_cosecha en body
+        if "tipo_cosecha" in body:
+            del body["tipo_cosecha"]
+        response = self.client.post(
+            "/api/weighings",
+            json=body,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertIn("tipo_cosecha", data)
+        self.assertEqual(data["tipo_cosecha"], "Mecanico - Verde")
+
+    # T17: Explicit tipo_cosecha is persisted (R4, R7, R9)
+    def test_create_weighing_explicit_tipo_cosecha(self):
+        token = self._login("operator1", "op1pass")
+        response = self.client.post(
+            "/api/weighings",
+            json=self._create_weighing_body(tipo_cosecha="Manual - Incendio"),
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["tipo_cosecha"], "Manual - Incendio")
+
+    # T18: Invalid tipo_cosecha returns 422 (R5)
+    def test_create_weighing_invalid_tipo_cosecha(self):
+        token = self._login("operator1", "op1pass")
+        response = self.client.post(
+            "/api/weighings",
+            json=self._create_weighing_body(tipo_cosecha="Valor Invalido"),
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 422)
+
 
 class TestWeighingsList(TestWeighingsAuth):
     def _create_weighing(self, token):
@@ -314,6 +353,19 @@ class TestWeighingsList(TestWeighingsAuth):
             headers={"Authorization": f"Bearer {token}"},
         )
         self.assertEqual(response.status_code, 422)
+
+    # T19: List weighings includes tipo_cosecha (R7, R11)
+    def test_list_weighings_includes_tipo_cosecha(self):
+        token = self._login("operator1", "op1pass")
+        self._create_weighing(token)
+        response = self.client.get(
+            "/api/weighings",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertGreaterEqual(len(data["items"]), 1)
+        self.assertIn("tipo_cosecha", data["items"][0])
 
 
 class TestWeighingsGetById(TestWeighingsAuth):
