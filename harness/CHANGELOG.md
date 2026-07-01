@@ -1,4 +1,24 @@
 ﻿
+## [1.16.0] — 2026-07-01
+
+### Added
+- harness/AGENTS.md — Nueva puerta de aprobacion humana para pruebas manuales.
+  El flujo SDD ahora tiene DOS pausas: (1) aprobacion del spec y (2) pruebas
+  manuales con autorizacion humana antes de invocar al release-manager.
+  Nuevo estado "testing" entre reviewer y release-manager.
+- harness/feature_list.json — Anadido "testing" a valid_status.
+- harness/docs/specs.md — Documentado el nuevo estado "testing" y las dos
+  puertas de aprobacion humana. Actualizados los diagramas de flujo para
+  features y bugs.
+
+### Changed
+- harness/AGENTS.md seccion 3 — Anadida regla dura "No saltes la puerta de
+  pruebas manuales".
+- harness/AGENTS.md seccion 4 — Flujo SDD actualizado con paso de testing
+  y pausa para pruebas manuales del humano.
+- harness/AGENTS.md seccion 4.1 — Flujo de bugs actualizado con paso de
+  testing y autorizacion humana.
+
 ## [1.15.2] — 2026-07-01
 
 ### Added

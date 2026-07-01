@@ -9,6 +9,7 @@
       "pending",
       "spec_ready",
       "in_progress",
+      "testing",
       "done",
       "blocked",
       "untriaged",

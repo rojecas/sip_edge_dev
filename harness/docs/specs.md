@@ -32,7 +32,7 @@ Cada entrada en `feature_list.json` DEBE tener un campo `"type"`:
   reproducir) y `affected_feature_ids` (IDs de features que impacta).
 
 Los bugs NO pasan por SDD. Su flujo es independiente:
-`untriaged -> triaged -> bug-fixer -> reviewer -> release-manager -> done`.
+`untriaged -> triaged -> bug-fixer -> reviewer -> testing -> humano autoriza -> release-manager -> done`.
 
 ## Estados de una feature
 
@@ -41,21 +41,32 @@ Los bugs NO pasan por SDD. Su flujo es independiente:
 | `pending`      | Sin spec. El `spec_author` es el primero en actuar.            |
 | `spec_ready`   | Spec drafted. Esperando aprobaciÃ³n humana. NO se toca cÃ³digo.  |
 | `in_progress`  | Spec aprobado. `implementer` trabajando.                       |
-| `done`         | CÃ³digo verde, `reviewer` aprobÃ³, sesiÃ³n cerrada.               |
+| `testing`      | ImplementaciÃ³n terminada y revisada. Esperando pruebas manuales
+                  del humano y autorizaciÃ³n para cerrar.              |
+| `done`         | CÃ³digo verde, pruebas manuales pasadas, sesiÃ³n cerrada.         |
 | `blocked`      | Atascado. RazÃ³n en `progress/current.md`.                      |
 
-## La puerta de aprobaciÃ³n humana
+## Las puertas de aprobaciÃ³n humana
 
-El flujo automÃ¡tico se detiene **una vez**: cuando el `spec_author` termina
-sus tres archivos, marca la feature como `spec_ready` y para. El humano
-lee `specs/<feature>/` y dice "aprobado" (o pide cambios).
+El flujo automÃ¡tico se detiene **dos veces** para que el humano intervenga:
 
-Solo entonces el `leader` transiciona `spec_ready â†’ in_progress` y lanza
-el `implementer`.
+### Puerta 1 â AprobaciÃ³n del spec
+
+Cuando el `spec_author` termina sus tres archivos, marca la feature como
+`spec_ready` y para. El humano lee `specs/<feature>/` y dice "aprobado"
+(o pide cambios). Solo entonces el `leader` transiciona a `in_progress`.
+
+### Puerta 2 â Pruebas manuales y autorizaciÃ³n de cierre
+
+Cuando el `implementer` termina y el `reviewer` aprueba, el leader cambia
+el status a `testing` y se detiene. El humano realiza pruebas manuales
+sobre la funcionalidad. Solo cuando el humano autoriza el cierre,
+el leader invoca al `release-manager`.
 
 ```
-intake-agent â†’ [spec_author] â†’ spec_ready â†’ â¸ HUMANO â†’ in_progress â†’
-  [implementer â†’ reviewer â†’ release-manager (register)] â†’ done
+intake-agent â [spec_author] â spec_ready â â¸ HUMANO aprueba spec â
+  in_progress â [implementer â reviewer] â testing â
+  â¸ HUMANO autoriza cierre â [release-manager] â done
 ```
 
 ## requirements.md â€” EARS estricto
@@ -168,7 +179,8 @@ el design.md DEBE incluir una sección ## Impacto en APIs existentes que declare
 - **Frontend:** componentes de UI que deben agregar la columna (formularios, tablas).
 - **Justificación:** si una columna NO se expone en la API, documentar por qué (ej. "columna interna de sistema, no editable por usuario").
 
-El implementer DEBE modificar los archivos listados. El eviewer DEBE verificar que todos los puntos de impacto fueron implementados y rechazar si falta alguno sin justificación documentada.
+El implementer DEBE modificar los archivos listados. El 
+eviewer DEBE verificar que todos los puntos de impacto fueron implementados y rechazar si falta alguno sin justificación documentada.
 
 Ejemplo de impacto de feature 9 (emergency_mode) sobre feature 3 (user_management):
 

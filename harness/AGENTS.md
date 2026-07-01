@@ -80,7 +80,10 @@
 - **No saltes la fase de spec.** Toda feature con `"sdd": true` debe pasar
   por `spec_author` y obtener aprobacion humana antes de tocar codigo.
 - **No saltes la puerta de aprobacion humana.** El leader detiene el flujo
-  en `spec_ready` y espera.
+  en `spec_ready` y espera aprobacion del spec.
+- **No saltes la puerta de pruebas manuales.** El leader detiene el flujo
+  en `testing` y espera autorizacion humana explicita antes de invocar
+  al release-manager.
 - **Documenta lo que haces** en `harness/progress/current.md` mientras trabajas.
 - **Deja el repositorio limpio** antes de cerrar la sesion (ver S5).
 - **Crea harness/progress/closure-<name>.md` al marcar `done`.** Ninguna feature se
@@ -112,25 +115,30 @@ eact18, laravel). Si el skill contiene reglas que contradicen el codigo existent
 ## 4. Flujo de trabajo (SDD)
 
 ```
-pending -> [spec-author] -> spec_ready -> HUMANO -> in_progress -> [implementer -> reviewer] -> done
+pending -> [spec-author] -> spec_ready -> HUMANO aprueba spec -> in_progress -> [implementer -> reviewer] -> testing -> HUMANO autoriza cierre -> [release-manager] -> done
 ```
 
 1. El leader detecta la primera feature `pending` con `"sdd": true`.
 2. El leader lanza `spec-author`, que crea
    `harness/specs/<name>/{requirements,design,tasks}.md` y marca el status como
    `spec_ready`.
-3. **Pausa.** El humano lee el spec en `harness/specs/<name>/` y aprueba (o pide cambios).
+3. **Pausa 1 (aprobacion de spec).** El humano lee el spec en `harness/specs/<name>/`
+   y aprueba (o pide cambios).
 4. Una vez aprobado, el leader cambia el status a `in_progress` y lanza `implementer`.
-5. El implementer ejecuta `tasks.md` una a una, marcanbolas `[x]`.
+5. El implementer ejecuta `tasks.md` una a una, marca `[x]` cada tarea.
 6. El reviewer verifica trazabilidad `R<n>` <-> test y tasks completas;
    aprueba o rechaza.
-7. Si aprueba, el leader lanza `release-manager (register)`, que cierra el issue de GitHub
+7. Si el reviewer aprueba, el leader cambia el status a `testing`.
+   **Pausa 2 (pruebas manuales).** El humano realiza pruebas manuales sobre
+   la funcionalidad implementada.
+8. Cuando el humano confirma que las pruebas pasaron y autoriza el cierre,
+   el leader lanza `release-manager (register)`, que cierra el issue de GitHub
    y marca `done`.
 
 ### 4.1 Flujo de trabajo (bugs)
 
 ```
-untriaged -> HUMANO -> triaged -> [bug-fixer -> reviewer -> release-manager] -> done
+untriaged -> HUMANO confirma -> triaged -> [bug-fixer -> reviewer] -> testing -> HUMANO autoriza cierre -> [release-manager] -> done
 ```
 
 1. El humano o `intake-agent` crea un item con `"type": "bug"` y status `untriaged`.
@@ -138,7 +146,10 @@ untriaged -> HUMANO -> triaged -> [bug-fixer -> reviewer -> release-manager] -> 
 3. Si el humano confirma, el leader cambia a `triaged` y lanza `bug-fixer`.
 4. El bug-fixer diagnostica, escribe `plan-bug-<name>.md`, implementa fix + regression test.
 5. El reviewer verifica cobertura del reproduction, regresiones, y `./init.ps1` verde.
-6. El release-manager cierra el issue y marca `done`.
+6. Si el reviewer aprueba, el leader cambia el status a `testing`.
+   **Pausa.** El humano realiza pruebas manuales sobre la correccion.
+7. Cuando el humano autoriza el cierre, el leader lanza `release-manager`,
+   que cierra el issue y marca `done`.
 
 ## 5. Cierre de sesion (lifecycle)
 
