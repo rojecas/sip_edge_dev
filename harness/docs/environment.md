@@ -275,9 +275,10 @@ ssh -i ~/.ssh/sip_edge_edgebox -L 3307:localhost:3306 sipedge@192.168.1.42
 # Opcion C — phpMyAdmin liviano sin Apache (YA INSTALADO)
 # Ya instalado en ~/phpMyAdmin-5.2.2-all-languages
 # Iniciar:
-#    php -S 0.0.0.0:8080 -t ~/phpMyAdmin-5.2.2-all-languages &
+#    ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "php -S 0.0.0.0:8080 -t ~/phpMyAdmin-5.2.2-all-languages &"
 # Abrir: http://192.168.1.42:8080 (user: sip_user, pass: sip_pass)
-# Detener: pkill -f "php -S"
+# Detener:
+#    ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "pkill -f 'php -S'"
 
 ```
 # Ejecutar tests de hardware en EdgeBox (post-deploy)
