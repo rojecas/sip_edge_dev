@@ -102,6 +102,43 @@ def _on_scale_data(data: dict, clients: set[WebSocket]) -> None:
             clients.discard(ws)
 
 
+
+def _find_quectel_modem() -> int:
+    import re
+    """Auto-detecta el indice del modem Quectel EC25 via mmcli -L.
+    
+    Escanea los modems disponibles y retorna el indice del primero que coincida
+    con QUECTEL. Si no encuentra ninguno, retorna 0 como fallback.
+    El indice puede cambiar tras resets del modem o rearranques del sistema.
+    """
+    if os.environ.get("DEV_MODE", "false").lower() in ("true", "1", "yes"):
+        return 0
+    try:
+        result = subprocess.run(
+            ["mmcli", "-L"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                m = re.search(r"/Modem/(\d+)\s+\[.*?\]\s+(.+)", line)
+                if m and "QUECTEL" in m.group(2).upper():
+                    idx = int(m.group(1))
+                    logger.info("Modem Quectel auto-detectado: indice %s", idx)
+                    return idx
+            logger.warning(
+                "No se encontro modem Quectel via mmcli -L. Usando fallback 0.\n%s",
+                result.stdout,
+            )
+        else:
+            logger.warning("mmcli -L fallo (rc=%s). Usando fallback 0.", result.returncode)
+    except FileNotFoundError:
+        logger.warning("mmcli no encontrado. Usando fallback 0.")
+    except subprocess.TimeoutExpired:
+        logger.warning("mmcli -L timed out. Usando fallback 0.")
+    except OSError as exc:
+        logger.warning("Error ejecutando mmcli -L: %s. Usando fallback 0.", exc)
+    return 0
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     (
@@ -134,7 +171,7 @@ async def lifespan(app: FastAPI):
 
     # Inicializar SMSService
     sms_config: SmsConfig = app.state.sms_config
-    modem_index = app.state.config.gsm.modem_index
+    modem_index = _find_quectel_modem()
     app.state.sms_service = SMSService(sms_config, modem_index, dev_mode=dev_mode)
 
     # Inicializar ReportTemplateService
@@ -825,7 +862,7 @@ async def test_port(
     if port == "gsm":
         try:
             result = subprocess.run(
-                ["mmcli", "-m", str(config.gsm.modem_index)],
+                ["mmcli", "-m", str(_find_quectel_modem())],
                 capture_output=True,
                 timeout=10,
             )
