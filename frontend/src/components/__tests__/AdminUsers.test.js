@@ -97,7 +97,7 @@ describe("AdminUsers — carga de usuarios (R1)", () => {
     expect(screen.getByText("Teléfono")).toBeInTheDocument();
     expect(screen.getByText("Rol")).toBeInTheDocument();
     expect(screen.getByText("Activo")).toBeInTheDocument();
-    expect(screen.getByText("Creado")).toBeInTheDocument();
+    expect(screen.getByText("Actualizado")).toBeInTheDocument();
     expect(screen.getByText("Acciones")).toBeInTheDocument();
   });
 

@@ -205,7 +205,7 @@
             <th>Teléfono</th>
             <th>Rol</th>
             <th>Activo</th>
-            <th>Creado</th>
+            <th>Actualizado</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -219,7 +219,7 @@
               <td>{u.phone || "—"}</td>
               <td><span class="role-tag">{u.role || "—"}</span></td>
               <td>{u.is_active ? "Sí" : "No"}</td>
-              <td>{formatDate(u.created_at)}</td>
+              <td>{formatDate(u.updated_at)}</td>
               <td class="actions-cell">
                 <button class="btn-sm btn-edit" onclick={() => openEdit(u)}>Editar</button>
                 <button class="btn-sm btn-delete" onclick={() => openDeactivate(u)}>Desactivar</button>
