@@ -1,4 +1,4 @@
-﻿# Sesion actual
+# Sesion actual
 
 > Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
 

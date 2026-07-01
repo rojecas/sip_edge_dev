@@ -745,3 +745,68 @@ Se completó la feature 21 (pagination_users_backups) que estaba interrumpida:
 (none)
 ---
 
+
+
+## 2026-07-01 16:56 — Cierre de sesion
+
+# Sesion actual
+
+> Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
+
+- **Inicio:** 2026-07-01 ~15:00
+- **Agente:** leader (DeepSeek-V4-Pro)
+- **Feature en curso:** Varias (ver tabla)
+- **Estado:** Cerrando sesion
+
+---
+
+## Indice de features
+
+| ID | Nombre | Status |
+|----|--------|--------|
+| 21 | pagination_users_backups | done |
+| 17 | frontend_analytics | pending |
+| 24 | reset_individual_pesos | spec_ready |
+| 25 | virtual_scale | spec_ready |
+
+---
+
+## Plan
+
+### Lo realizado en esta sesion:
+
+1. **Paginacion en AdminUsers** — Se reconstruyo el frontend (npm run build + copy a src/static/).
+   La pagina web servia una version antigua sin los cambios de paginacion de la Feature 21.
+   Corregido y verificado con 30 usuarios en BD.
+
+2. **Backup system** — Se corrigieron dos errores:
+   - `mariadb-client` no estaba instalado en el Dockerfile (mysqldump no encontrado)
+   - `--skip-ssl` faltaba en backup.py (SSL requerido por MariaDB en Docker)
+   Ambos fix aplicados y probados. Backup funcional.
+
+3. **phpMyAdmin** — Instalado en EdgeBox con PHP built-in server (sin Apache).
+   Documentado en environment.md. Iniciar: `php -S 0.0.0.0:8080 -t ~/phpMyAdmin-5.2.2-all-languages &`.
+
+4. **Columna Actualizado** — Por solicitud del usuario final, se renombro la columna
+   "Creado" a "Actualizado" mostrando updated_at en vez de created_at.
+
+5. **Documentacion harness** — Anadidas secciones sobre:
+   - Frontend build cycle (environment.md)
+   - YAML/PowerShell encoding pitfalls (conventions.md)
+   - Acceso a BD en EdgeBox: tunel SSH, CLI, phpMyAdmin (environment.md)
+   - Nueva puerta de aprobacion humana "testing" en el workflow (AGENTS.md, specs.md)
+
+6. **Workflow SDD** — Modificado para incluir estado "testing" entre reviewer y
+   release-manager. Ahora hay DOS pausas humanas: aprobacion de spec y pruebas
+   manuales con autorizacion de cierre.
+
+### Encoding issues:
+- Se detecto que PowerShell agrega BOM y corrompe caracteres UTF-8 (\xe9, \xf3, \xf1, etc.)
+  al usar Set-Content. Solucion: usar Python para editar archivos con caracteres
+  especiales. Documentado en conventions.md.
+
+---
+
+## Bloqueos activos
+
+(none)
