@@ -1,4 +1,4 @@
-# Environment â€” sip_edge
+﻿# Environment â€” sip_edge
 
 > El agente DEBE leer este archivo **antes de ejecutar cualquier comando bash**.
 > Describe DONDE y COMO se ejecutan los comandos, y que servicios estan disponibles.
@@ -258,6 +258,28 @@ ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "ls -la /dev/ttyACM*"
 # Verificar MariaDB
 ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "sudo systemctl status mariadb"
 
+
+### Acceso a MariaDB en la EdgeBox
+
+```bash
+# Opcion A — Query directa via SSH (siempre funciona)
+ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 \
+  "mysql -usip_user -psip_pass sip_edge -e 'SELECT COUNT(*) FROM users;'"
+
+# Opcion B — Tunel SSH + cliente grafico local (recomendado)
+# En tu PC local, abre un tunel:
+ssh -i ~/.ssh/sip_edge_edgebox -L 3307:localhost:3306 sipedge@192.168.1.42
+# Deja esta terminal abierta. Conectate desde HeidiSQL/DBeaver/MySQL Workbench a:
+#   Host: 127.0.0.1  Port: 3307  User: sip_user  Pass: sip_pass  DB: sip_edge
+
+# Opcion C — phpMyAdmin liviano sin Apache (YA INSTALADO)
+# Ya instalado en ~/phpMyAdmin-5.2.2-all-languages
+# Iniciar:
+#    php -S 0.0.0.0:8080 -t ~/phpMyAdmin-5.2.2-all-languages &
+# Abrir: http://192.168.1.42:8080 (user: sip_user, pass: sip_pass)
+# Detener: pkill -f "php -S"
+
+```
 # Ejecutar tests de hardware en EdgeBox (post-deploy)
 ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42 "cd /home/sipedge/sip_edge && source venv/bin/activate && python -m unittest discover -s tests_hardware -v"
 
