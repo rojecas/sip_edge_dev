@@ -981,28 +981,5 @@ class TestPasswordResetModels(unittest.TestCase):
 # ==================================================================
 
 
-class TestLoginPage(unittest.TestCase):
-    """Tests para la pagina de login HTML (R15, R16)."""
-
-    @classmethod
-    def setUpClass(cls):
-        cls.client, _ = _build_test_app()
-
-    def test_login_page_has_forgot_password_link_and_pin_modal(self):
-        """R15: GET /login retorna HTML con enlace 'Olvido su contrasena' y modal de PIN."""
-        resp = self.client.get("/login")
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("Olvido", resp.text, "Login page must contain forgot-password link")
-        self.assertIn("pin-modal", resp.text, "Login page must contain pin-modal element")
-
-    def test_login_page_has_password_modal_with_fields(self):
-        """R16: GET /login retorna HTML con modal de cambio de contrasena y sus campos."""
-        resp = self.client.get("/login")
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("password-modal", resp.text, "Login page must contain password-modal")
-        self.assertIn("new-password", resp.text, "Login page must contain new-password field")
-        self.assertIn("confirm-password", resp.text, "Login page must contain confirm-password field")
-
-
 if __name__ == "__main__":
     unittest.main()

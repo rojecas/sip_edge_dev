@@ -652,13 +652,6 @@ async def health():
     return {"status": "healthy"}
 
 
-@app.get("/login", response_class=HTMLResponse)
-async def login_page():
-    """Sirve la pagina de login con opcion de restablecimiento de contrasena."""
-    from src.login_page import LOGIN_PAGE_HTML
-    return HTMLResponse(content=LOGIN_PAGE_HTML)
-
-
 @app.websocket("/ws/scale")
 async def websocket_scale(websocket: WebSocket):
     await websocket.accept()
