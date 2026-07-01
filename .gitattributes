@@ -1,0 +1,33 @@
+﻿# Auto-detect text files and normalize to LF in repo, CRLF on Windows checkout
+* text=auto
+
+# Explicitly mark binary files
+*.gz binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.pdf binary
+*.whl binary
+
+# YAML/yml should stay LF in repo
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Shell scripts are LF-only
+*.sh text eol=lf
+
+# Python files
+*.py text diff=python
+
+# Markdown
+*.md text
+
+# Frontend
+*.js text
+*.ts text
+*.svelte text
+*.css text
+*.html text
+
+# Dockerfiles
+Dockerfile text eol=lf

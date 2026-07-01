@@ -1,4 +1,10 @@
-﻿# Changelog â€” Harness-SDD
+﻿
+## [1.15.2] — 2026-07-01
+
+### Added
+- harness/docs/environment.md — Nueva seccion "Frontend (SPA Svelte 5)" que documenta el ciclo de build del frontend Svelte 5. Explica que modificar rontend/src/ sin rebuild + copy a src/static/ deja el bundle desactualizado, error comun que causa que cambios del frontend no se vean en el navegador. Incluye comandos exactos de build, copy y tests.
+- harness/docs/conventions.md — Nueva seccion "YAML y Configuracion" que documenta el error comun de PowerShell expandiendo variables ${VAR:-default} de Docker Compose como variables de PowerShell. Incluye ejemplos de codigo correcto e incorrecto.
+# Changelog â€” Harness-SDD
 
 > âš ï¸ **ESTE ES EL CHANGELOG DE LA FABRICA DEL HARNESS.**
 > NO agregues entradas de features del proyecto aqui.

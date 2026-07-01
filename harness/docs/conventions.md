@@ -39,3 +39,27 @@ Cada archivo en `src/` empieza con:
 - Un archivo `test_<modulo>.py` por cada modulo en `src/`.
 - Clase `Test<Modulo>` con metodos `test_<funcion>_<escenario>`.
 - Cada test cubre exactamente un escenario (feliz o error).
+
+
+## YAML y Configuracion
+
+- **Archivos YAML** (`compose.yml`, `config.yaml`): usar siempre UTF-8 sin BOM.
+- **PowerShell y `${...}`** (ERROR COMUN): En PowerShell, las variables `${VAR:-default}` de Docker
+  Compose son interpretadas como variables de PowerShell. Al escribir archivos YAML en PowerShell:
+
+  ```powershell
+  # MAL — PowerShell expande `${DB_USER:-sip_user}` a string vacio:
+  @" ... ${DB_USER:-sip_user} ... "@
+
+  # BIEN — usar here-string con comillas simples (no expande variables):
+  @' ... ${DB_USER:-sip_user} ... '@
+
+  # BIEN — escapar $ con backtick:
+  @" ... `${DB_USER:-sip_user} ... "@
+
+  # BIEN — usar [System.IO.File]::WriteAllText con here-string simple:
+  [System.IO.File]::WriteAllText("ruta", @' ... ${DB_USER:-sip_user} ... '@)
+  ```
+
+  Verificar siempre que el YAML resultante preserve las variables `${...}` intactas.
+  Un `docker compose config` sin errores confirma que el YAML es valido.

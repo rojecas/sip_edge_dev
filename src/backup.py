@@ -1,4 +1,4 @@
-﻿"""Logica de backup: mysqldump, gzip, rotacion FIFO, copia USB dinamica y CRC32."""
+"""Logica de backup: mysqldump, gzip, rotacion FIFO, copia USB dinamica y CRC32."""
 
 import gzip
 import logging
@@ -20,10 +20,10 @@ def find_removable_media(mounts_file: str = "/proc/mounts") -> str | None:
     o None si no hay ninguno.
 
     Args:
-        mounts_file: Ruta al archivo de montajes (útil para tests).
+        mounts_file: Ruta al archivo de montajes (Ãºtil para tests).
 
     Returns:
-        str con el punto de montaje, o None si no se encontró.
+        str con el punto de montaje, o None si no se encontrÃ³.
     """
     try:
         with open(mounts_file, "r") as f:
@@ -79,6 +79,7 @@ def _mysqldump_to_file(output_path: str) -> None:
                     f"--port={port}",
                     f"--user={user}",
                     "--password",
+                    "--skip-ssl",
                     name,
                 ],
                 stdin=subprocess.PIPE,

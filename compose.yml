@@ -46,5 +46,21 @@ services:
       - ./harness:/app/harness
     working_dir: /app
 
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: sip_edge_phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_USER: sip_user
+      PMA_PASSWORD: sip_pass
+      UPLOAD_LIMIT: 100M
+    ports:
+      - "8080:80"
+
 volumes:
   mariadb_data:

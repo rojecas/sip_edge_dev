@@ -1,4 +1,4 @@
-﻿# Environment â€” sip_edge
+# Environment â€” sip_edge
 
 > El agente DEBE leer este archivo **antes de ejecutar cualquier comando bash**.
 > Describe DONDE y COMO se ejecutan los comandos, y que servicios estan disponibles.
@@ -196,6 +196,39 @@ docker compose exec backend pip install -r requirements.txt
 - `./src` â†’ `/app/src`
 - `./tests` â†’ `/app/tests`
 - `./harness` â†’ `/app/harness`
+
+
+### Frontend (SPA Svelte 5)
+
+El frontend es un SPA construido con Svelte 5.
+
+- **Fuente:** `frontend/src/`
+- **Servido desde:** `src/static/` (backen lo sirve en `/static/`)
+- **Ciclo de desarrollo:**
+
+  ```bash
+  # 1. Modificar componentes en frontend/src/components/
+  # 2. Compilar:
+  Set-Location -LiteralPath "frontend"
+  npm run build
+  # 3. Copiar a src/static/ (donde el backend lo sirve):
+  Remove-Item -LiteralPath "src/static" -Recurse -Force
+  Copy-Item -Recurse -Path "frontend/dist/*" -Destination "src/static/"
+  ```
+
+  El volumen `./src:/app/src` en Docker hace que los cambios en `src/static/`
+  se reflejen instantaneamente en el contenedor — **no require reiniciar el backend**.
+
+- **IMPORTANTE:** `src/static/` contiene el bundle compilado del frontend.
+  Si solo modificas archivos en `frontend/src/` sin rebuild + copy, los cambios
+  **NO** se veran reflejados en el navegador. Este es un error comun.
+  Verifica siempre que `src/static/index.html` tenga fecha/hora de build reciente.
+
+- **Tests de frontend:**
+  ```bash
+  Set-Location -LiteralPath "frontend"
+  npm test
+  ```
 
 ---
 
