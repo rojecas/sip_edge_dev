@@ -810,3 +810,89 @@ Se completó la feature 21 (pagination_users_backups) que estaba interrumpida:
 ## Bloqueos activos
 
 (none)
+
+
+---
+
+## Sesion: 2026-07-01 — Bug #26 + SMS diagnosis
+
+# Sesion actual
+
+> Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
+
+- **Inicio:** 2026-07-01 16:30
+- **Agente:** Leader (deepseek-v4-pro)
+- **Feature en curso:** Bug #26 — emergency_request_wrong_sms
+- **Estado:** done
+
+---
+
+## Indice de features
+
+| ID | Nombre | Status |
+|----|--------|--------|
+| 26 | emergency_request_wrong_sms | done |
+
+---
+
+## Plan
+
+1. Diagnosticar bug SMS — admin recibe "Lo siento..." al solicitar modo manual desde Kiosko
+2. Registrar bug en feature_list.json como #26
+3. Pasar flujo completo: triaged → bug-fixer → reviewer → release-manager → done
+4. Desplegar fix en EdgeBox
+5. Limpiar codigo legacy (`/login` + login_page.py)
+6. Construir script check_balance.py para monitoreo de saldo SIM
+
+---
+
+## Resumen de cambios
+
+### Bug #26 — "status" vs "state"
+- **Causa:** commit a06c1b9 (Jun 24) introdujo filtro en `sms_incoming.py:152` usando `"status"` pero mmcli usa `"state"`. El filtro nunca funciono — todos los SMS se procesaban como entrantes.
+- **Fix:** `"status"` → `"state"` en `sms_incoming.py:152`
+- **Tests:** 14 tests nuevos en `tests/test_sms_incoming.py`
+
+### Watchdog — servicio reiniciado cada 30s
+- **Causa:** `subprocess.run()` en `sms_service.py` bloqueaba el event loop hasta 30s. El heartbeat `sd_notify` no podia ejecutarse, systemd mataba el proceso.
+- **Fix:** ThreadPoolExecutor en `_send_via_mmcli` para ejecutar mmcli en thread separado sin bloquear event loop
+
+### Auto-deteccion del indice del modem
+- **Causa:** El indice del modem Quectel EC25 cambia tras resets (0↔1↔2). Tambien el modelo reportado cambia ("QUECTEL Mobile Broadband Module" vs "[Quectel] EC25")
+- **Fix:** `_find_quectel_modem()` en `main.py` y en `/usr/local/bin/send_sms.sh`
+
+### Cleanup legacy
+- Eliminado `src/login_page.py` y ruta `GET /login` (mostraba "Token: eyJH...")
+- Eliminados tests `TestLoginPage` en `test_password_reset.py`
+
+### Script check_balance.py
+- `scripts/check_balance.py` — USSD *10# → parseo SMS Tigo → alerta si < $5000
+- Cron diario 8:00 AM en EdgeBox
+
+### Estado del hardware al cierre
+- Modem Quectel EC25AU: **stack SMS roto** (QMI error 54 WmsCauseCode)
+- No recibe ni envia SMS despues de multiples resets/CFUN restarts
+- Detectado script faltante: `quectel-init.sh` (instalado pero no resuelve SMS)
+- Saldo SIM: $10,020 COP
+
+### Archivos modificados/creados
+| Archivo | Cambio |
+|---------|--------|
+| `src/sms_incoming.py` | `"status"` → `"state"` (linea 152) |
+| `src/sms_service.py` | ThreadPoolExecutor + timeout 20s |
+| `src/main.py` | `_find_quectel_modem()`, remove `/login` route |
+| `src/login_page.py` | ELIMINADO |
+| `tests/test_sms_incoming.py` | NUEVO — 14 tests |
+| `tests/test_password_reset.py` | Eliminado TestLoginPage |
+| `scripts/check_balance.py` | NUEVO — monitoreo saldo |
+| `harness/feature_list.json` | Bug #26 registrado |
+| `harness/progress/` | plan-bug, review, closure docs |
+| `harness/releases/tracker.json` | Bug #26 registrado |
+| `/usr/local/bin/send_sms.sh` | Auto-deteccion indice modem |
+| `/usr/local/bin/send_sms.sh.bak` | Backup del original |
+
+---
+
+## Bloqueos activos
+
+(none)
