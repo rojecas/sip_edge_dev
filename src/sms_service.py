@@ -68,17 +68,18 @@ class SMSService:
     def _send_via_mmcli(self, phone: str, message: str) -> bool:
         """Envia un SMS usando mmcli. Retorna True si exitoso, False si falla.
         
-        Los subprocess.run se ejecutan en un thread executor para no bloquear 
+        Ejecuta subprocess.run en un ThreadPoolExecutor para no bloquear
         el event loop asyncio. Esto evita que el watchdog heartbeat se detenga
-        cuando mmcli tarda en responder.
+        cuando mmcli tarda en responder (ej: QMI protocol errors).
         """
         try:
-            loop = asyncio.get_running_loop()
-            return loop.run_in_executor(
-                None, self._send_via_mmcli_sync, phone, message
-            ).result()
+            asyncio.get_running_loop()
+            # Hay event loop: ejecutar en thread para no bloquear
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(self._send_via_mmcli_sync, phone, message).result()
         except RuntimeError:
-            # No hay event loop corriendo: ejecutar sincrono
+            # No hay event loop: ejecutar sincrono
             return self._send_via_mmcli_sync(phone, message)
 
     def _send_via_mmcli_sync(self, phone: str, message: str) -> bool:
