@@ -66,13 +66,27 @@ class SMSService:
         return self._send_via_mmcli(phone, message)
 
     def _send_via_mmcli(self, phone: str, message: str) -> bool:
-        """Envia un SMS usando mmcli. Retorna True si exitoso, False si falla."""
+        """Envia un SMS usando mmcli. Retorna True si exitoso, False si falla.
+        
+        Los subprocess.run se ejecutan en un thread executor para no bloquear 
+        el event loop asyncio. Esto evita que el watchdog heartbeat se detenga
+        cuando mmcli tarda en responder.
+        """
+        try:
+            loop = asyncio.get_running_loop()
+            return loop.run_in_executor(
+                None, self._send_via_mmcli_sync, phone, message
+            ).result()
+        except RuntimeError:
+            # No hay event loop corriendo: ejecutar sincrono
+            return self._send_via_mmcli_sync(phone, message)
+
+    def _send_via_mmcli_sync(self, phone: str, message: str) -> bool:
+        """Version sincrona de _send_via_mmcli (se ejecuta en un thread)."""
         mmcli_path = "sudo"
         modem_arg = str(self._modem_index)
 
-        # Escapar comillas simples para mmcli: '' representa una comilla literal
-        escaped = message.replace("'", "")  # quitar comillas simples, rompen mmcli
-        # Envolver en comillas simples para que mmcli no interprete comas ni otros chars
+        escaped = message.replace("'", "")
         props = f"number='{phone}',text='{escaped}'"
 
         # Paso 1: crear el SMS
@@ -86,7 +100,7 @@ class SMSService:
                 create_args,
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=20,
             )
         except FileNotFoundError:
             logger.error("mmcli no encontrado en el sistema")
@@ -103,7 +117,6 @@ class SMSService:
             logger.error("mmcli fallo al crear SMS (exit %d): %s", result.returncode, stderr)
             return False
 
-        # Extraer indice del SMS creado
         match = _SMS_INDEX_RE.search(result.stdout)
         if not match:
             logger.error("No se pudo extraer el indice del SMS de la salida de mmcli: %s", result.stdout)
@@ -118,7 +131,7 @@ class SMSService:
                 send_args,
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=20,
             )
         except subprocess.TimeoutExpired:
             logger.error("Timeout al enviar SMS %s para %s", sms_index, phone)
