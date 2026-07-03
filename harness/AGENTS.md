@@ -25,30 +25,33 @@
 8. **Session reminder:** Revisa si hay contenido entre las marcas
    <!-- SESSION_REMINDER_START -->
 
-## Recordatorio — Proxima sesion (2026-07-03)
+## Recordatorio ï¿½ Proxima sesion
 
-### Pendientes
+### Pendientes (modem/SIM con problemas)
 
-1. **Feature 27 (sms_persistence)** — testing
-   - Desplegar migraciones SQL en EdgeBox (database/migrations/2026_07_02_*.sql)
-   - Pruebas manuales de recepcion SMS
-   - Autorizar cierre — release-manager (issue #20)
+1. **Feature 27 (sms_persistence)** ï¿½ testing
+   - Desplegar migraciones SQL en EdgeBox
+   - Probar recepcion de SMS real desde telefono
+   - Verificar persistencia en sms_messages y sms_conversations
+   - Autorizar cierre ï¿½ release-manager (issue #20)
 
-2. **Feature 25 (virtual_scale)** — testing
+2. **Feature 25 (virtual_scale)** ï¿½ testing
    - Conectar conversor RS232/RS485 entre workstation y EdgeBox
    - Probar envio de comandos REXT/TARE/TMAN/ZERO/CLEAR
    - Probar REPL interactivo (teclas n/p/w/g/s/q/espacio)
-   - Autorizar cierre — release-manager (issue #22)
+   - Autorizar cierre ï¿½ release-manager (issue #22)
 
-3. **Feature 24 (reset_individual_pesos)** — done
-   - Liberado. Pendiente git commit + push.
-
-4. **Bug 26 (emergency_request_wrong_sms)** — triaged
+3. **Bug 26 (emergency_request_wrong_sms)** ï¿½ triaged
    - Diagnosticado: AI handler catch-all responde error LLM
    - Pendiente de fix
 
-5. **Feature 28 (ai_multi_turn)** — pending
+4. **Feature 28 (ai_multi_turn)** ï¿½ pending
    - Bloqueada por Feature 27
+
+### Notas de la sesion anterior
+- SMSC +573003690025 verificado como OBLIGATORIO para envio de SMS
+- send_sms.sh reparado (sintaxis mmcli + SMSC explicito)
+- docs/sms_mmcli_guide.md creada con hallazgos
 
 <!-- SESSION_REMINDER_END --> al final
    de este archivo. Si hay contenido, presentalo al usuario y luego BORRA todo
@@ -329,31 +332,6 @@ mejoras del harness:
 8. Registrar la sesion de actualizacion en `harness/progress/history.md`.
 
 <!-- SESSION_REMINDER_START -->
-
-## Recordatorio — Proxima sesion (2026-07-03)
-
-### Pendientes
-
-1. **Feature 27 (sms_persistence)** — testing
-   - Desplegar migraciones SQL en EdgeBox (database/migrations/2026_07_02_*.sql)
-   - Pruebas manuales de recepcion SMS
-   - Autorizar cierre — release-manager (issue #20)
-
-2. **Feature 25 (virtual_scale)** — testing
-   - Conectar conversor RS232/RS485 entre workstation y EdgeBox
-   - Probar envio de comandos REXT/TARE/TMAN/ZERO/CLEAR
-   - Probar REPL interactivo (teclas n/p/w/g/s/q/espacio)
-   - Autorizar cierre — release-manager (issue #22)
-
-3. **Feature 24 (reset_individual_pesos)** — done
-   - Liberado. Pendiente git commit + push.
-
-4. **Bug 26 (emergency_request_wrong_sms)** — triaged
-   - Diagnosticado: AI handler catch-all responde error LLM
-   - Pendiente de fix
-
-5. **Feature 28 (ai_multi_turn)** — pending
-   - Bloqueada por Feature 27
 
 <!-- SESSION_REMINDER_END -->
 
