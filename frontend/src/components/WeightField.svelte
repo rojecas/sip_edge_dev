@@ -9,10 +9,11 @@
 
   let {
     fieldName = "",
-    value = 0,
+    value = $bindable(0),
     disabled = true,
     onTara = () => {},
     onLeer = () => {},
+    onReset = null,
   } = $props();
 
   function handleTara() {
@@ -59,6 +60,14 @@
       disabled={!scaleStore.connected}
       title="Leer peso de la báscula"
     >Leer</button>
+    {#if onReset}
+      <button
+        type="button"
+        class="btn-reset-peso"
+        onclick={onReset}
+        title="Resetear este peso"
+      >Reset</button>
+    {/if}
   </div>
 </div>
 
@@ -147,5 +156,22 @@
   .btn-leer:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .btn-reset-peso {
+    padding: 10px 14px;
+    border: 1px solid var(--error);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--error);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-reset-peso:hover {
+    background: rgba(255, 107, 107, 0.1);
   }
 </style>

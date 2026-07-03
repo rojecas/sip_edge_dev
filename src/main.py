@@ -60,7 +60,10 @@ import src.database as _db
 from src.database import get_db, init_db
 from src.models import BackupLog, Base, User, Weighing
 from src.sms_service import SMSService
-from src.sms_incoming import IncomingSmsDispatcher
+from src.sms_incoming import IncomingSmsDispatcher  # Legacy v1, kept for test references
+from src.sms_persistence import SmsPersistenceService
+from src.sms_dispatcher_v2 import IncomingSmsDispatcherV2
+from src.sms_send_queue import SmsSendQueue
 from src.emergency_mode import EmergencyModeService, emergency_router
 from src.password_reset import PasswordResetService, password_reset_router
 from src.report_templates import TemplateNotFoundError
@@ -174,6 +177,23 @@ async def lifespan(app: FastAPI):
     modem_index = _find_quectel_modem()
     app.state.sms_service = SMSService(sms_config, modem_index, dev_mode=dev_mode)
 
+    # Inicializar SmsPersistenceService (F27)
+    app.state.sms_persistence = SmsPersistenceService(
+        db_session_factory=_db.SessionLocal,
+    )
+    # Inyectar persistencia en sms_service
+    app.state.sms_service.set_persistence_service(app.state.sms_persistence)
+
+    # Inicializar SmsSendQueue (F27) — cola de envio asincrona
+    app.state.sms_send_queue = SmsSendQueue(
+        persistence=app.state.sms_persistence,
+        sms_service=app.state.sms_service,
+        modem_index=modem_index,
+        timeout_seconds=20,
+        poll_interval=2.0,
+    )
+    app.state.sms_send_queue.start()
+
     # Inicializar ReportTemplateService
     from src.report_templates import ReportTemplateService
     app.state.report_template_service = ReportTemplateService(
@@ -184,27 +204,30 @@ async def lifespan(app: FastAPI):
     app.state.sms_service.set_template_service(app.state.report_template_service)
     app.state.sms_service.start_scheduler()
 
-    # Inicializar IncomingSmsDispatcher (compartido)
-    app.state.sms_dispatcher = IncomingSmsDispatcher(
-        modem_index=modem_index, dev_mode=dev_mode
+    # Inicializar IncomingSmsDispatcherV2 (F27) — reemplaza v1
+    app.state.sms_dispatcher = IncomingSmsDispatcherV2(
+        modem_index=modem_index, dev_mode=dev_mode,
+        persistence=app.state.sms_persistence,
     )
 
-    # Inicializar EmergencyModeService
+    # Inicializar EmergencyModeService (F27: con persistencia inyectada)
     app.state.emergency_service = EmergencyModeService(
         db_session_factory=_db.SessionLocal,
         sms_service=app.state.sms_service,
         modem_index=modem_index,
         dev_mode=dev_mode,
+        sms_persistence=app.state.sms_persistence,
     )
     # Restaurar estado desde BD
     app.state.emergency_service.restore_from_db()
     # Iniciar tarea de expiry checker
     await app.state.emergency_service.start()
 
-    # Inicializar PasswordResetService
+    # Inicializar PasswordResetService (F27: con persistencia inyectada)
     app.state.password_reset_service = PasswordResetService(
         db_session_factory=_db.SessionLocal,
         sms_service=app.state.sms_service,
+        sms_persistence=app.state.sms_persistence,
     )
 
     # Inicializar LlamaClient
@@ -237,19 +260,24 @@ async def lifespan(app: FastAPI):
         db_session_factory=_db.SessionLocal,
     )
 
-    # Registrar handlers en el dispatcher (orden importa)
+    # Registrar handlers en dispatcher v2 (F27: orden importa)
+    # 1. Emergency — workflow_type='emergency'
     app.state.sms_dispatcher.register_handler(
-        app.state.emergency_service.process_incoming_sms
+        app.state.emergency_service.process_incoming_sms,
+        workflow_type="emergency",
     )
+    # 2. Password reset — workflow_type='password_reset'
     app.state.sms_dispatcher.register_handler(
-        app.state.password_reset_service.handle_incoming_sms
+        app.state.password_reset_service.handle_incoming_sms,
+        workflow_type="password_reset",
     )
-    # Handler de consultas AI via SMS (fallback)
+    # 3. AI query — workflow_type='ai_query' (EXPLICITO, no catch-all)
     app.state.sms_dispatcher.register_handler(
-        _build_ai_sms_handler(app.state.agent_orchestrator)
+        _build_ai_sms_handler(app.state.agent_orchestrator),
+        workflow_type="ai_query",
     )
 
-    # Iniciar dispatcher de SMS entrantes
+    # Iniciar dispatcher v2 de SMS entrantes (el v1 NO se inicia)
     await app.state.sms_dispatcher.start()
 
     # --- Watchdog heartbeat para systemd sd_notify ---
@@ -276,6 +304,7 @@ async def lifespan(app: FastAPI):
         pass
 
     await app.state.sms_dispatcher.stop()
+    app.state.sms_send_queue.stop()
     await app.state.emergency_service.stop()
     app.state.sms_service.stop_scheduler()
     app.state.llm_client.close()

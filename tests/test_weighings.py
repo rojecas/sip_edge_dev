@@ -445,6 +445,50 @@ class TestWeighingsReset(TestWeighingsAuth):
         response = self.client.post("/api/weighings/reset")
         self.assertEqual(response.status_code, 401)
 
+    # Feature 24: Reset individual step
+
+    def test_reset_individual_step_valid(self):
+        token = self._login("operator1", "op1pass")
+        response = self.client.post(
+            "/api/weighings/reset",
+            json={"step": "peso_muestra"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["mensaje"], "Campo peso_muestra reiniciado")
+
+    def test_reset_individual_step_invalid(self):
+        token = self._login("operator1", "op1pass")
+        response = self.client.post(
+            "/api/weighings/reset",
+            json={"step": "invalido"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertIn("step inválido", data["detail"])
+        self.assertIn("peso_muestra", data["detail"])
+        self.assertIn("peso_mineral", data["detail"])
+        self.assertIn("peso_vegetal_extrano", data["detail"])
+
+    def test_reset_individual_without_step(self):
+        token = self._login("operator1", "op1pass")
+        response = self.client.post(
+            "/api/weighings/reset",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["mensaje"], "Formulario reiniciado")
+
+    def test_reset_individual_no_token(self):
+        response = self.client.post(
+            "/api/weighings/reset",
+            json={"step": "peso_muestra"},
+        )
+        self.assertEqual(response.status_code, 401)
+
 
 class TestHaciendasOperatorRead(TestWeighingsAuth):
     # T25: GET /api/haciendas as operator returns paginated list (R1)

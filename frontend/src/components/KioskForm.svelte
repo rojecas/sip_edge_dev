@@ -128,10 +128,10 @@ import EmergencyModal from "./EmergencyModal.svelte";
     showResetConfirm = true;
   }
 
-  function confirmReset() {
+  async function confirmReset() {
     showResetConfirm = false;
     try {
-      api.post(ENDPOINTS.WEIGHINGS_RESET);
+      await api.post(ENDPOINTS.WEIGHINGS_RESET);
     } catch {
       // ignore errors from reset endpoint
     }
@@ -143,6 +143,33 @@ import EmergencyModal from "./EmergencyModal.svelte";
 
   function cancelReset() {
     showResetConfirm = false;
+  }
+
+  async function handleResetPesoMuestra() {
+    try {
+      await api.post(ENDPOINTS.WEIGHINGS_RESET, { step: "peso_muestra" });
+    } catch {
+      // ignore errors from reset endpoint
+    }
+    pesoMuestra = 0;
+  }
+
+  async function handleResetPesoMineral() {
+    try {
+      await api.post(ENDPOINTS.WEIGHINGS_RESET, { step: "peso_mineral" });
+    } catch {
+      // ignore errors from reset endpoint
+    }
+    pesoMineral = 0;
+  }
+
+  async function handleResetPesoVegetal() {
+    try {
+      await api.post(ENDPOINTS.WEIGHINGS_RESET, { step: "peso_vegetal_extrano" });
+    } catch {
+      // ignore errors from reset endpoint
+    }
+    pesoVegetal = 0;
   }
 
   function isFormValid() {
@@ -306,9 +333,9 @@ import EmergencyModal from "./EmergencyModal.svelte";
   <div class="form-section">
     <h3>Pesos</h3>
     <div class="weights-grid">
-      <WeightField fieldName="Peso Muestra" bind:value={pesoMuestra} disabled={!isEmergencyMode} />
-      <WeightField fieldName="Peso Mineral" bind:value={pesoMineral} disabled={!isEmergencyMode} />
-      <WeightField fieldName="Peso Vegetal" bind:value={pesoVegetal} disabled={!isEmergencyMode} />
+      <WeightField fieldName="Peso Muestra" bind:value={pesoMuestra} disabled={!isEmergencyMode} onReset={handleResetPesoMuestra} />
+      <WeightField fieldName="Peso Mineral" bind:value={pesoMineral} disabled={!isEmergencyMode} onReset={handleResetPesoMineral} />
+      <WeightField fieldName="Peso Vegetal" bind:value={pesoVegetal} disabled={!isEmergencyMode} onReset={handleResetPesoVegetal} />
     </div>
   </div>
 
@@ -322,14 +349,6 @@ import EmergencyModal from "./EmergencyModal.svelte";
 
   <!-- Action buttons -->
   <div class="form-actions">
-    <button
-      type="button"
-      class="btn-reset"
-      onclick={handleReset}
-      disabled={isSubmitting}
-    >
-      Reset
-    </button>
     <button
       type="button"
       class="btn-confirm"
@@ -348,6 +367,14 @@ import EmergencyModal from "./EmergencyModal.svelte";
   <div class="emergency-section">
     <button class="btn-emergency" onclick={openEmergencyModal}>
       Solicitar Modo Manual
+    </button>
+    <button
+      type="button"
+      class="btn-clear-all"
+      onclick={handleReset}
+      disabled={isSubmitting}
+    >
+      Limpiar todo
     </button>
   </div>
 
@@ -472,21 +499,6 @@ import EmergencyModal from "./EmergencyModal.svelte";
     margin-top: 8px;
   }
 
-  .btn-reset {
-    padding: 14px 32px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 16px;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .btn-reset:hover:not(:disabled) {
-    background: var(--bg-input);
-  }
-
   .btn-confirm {
     padding: 14px 40px;
     border: none;
@@ -511,6 +523,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
   .emergency-section {
     display: flex;
     justify-content: center;
+    gap: 16px;
     padding: 12px 0;
     margin-top: 8px;
     border-top: 1px solid var(--border);
@@ -530,5 +543,26 @@ import EmergencyModal from "./EmergencyModal.svelte";
 
   .btn-emergency:hover {
     background: #990000;
+  }
+
+  .btn-clear-all {
+    padding: 8px 20px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn-clear-all:hover:not(:disabled) {
+    background: var(--bg-input);
+  }
+
+  .btn-clear-all:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

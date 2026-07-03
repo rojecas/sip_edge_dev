@@ -15,6 +15,7 @@ from sqlalchemy.pool import StaticPool
 from src.auth import hash_password
 from src.config import SmsConfig
 from src.models import Base, EmergencyModeLog, User
+from src.sms_persistence import SmsPersistenceService
 from src.emergency_mode import (
     EmergencyModeError,
     EmergencyModeService,
@@ -1321,6 +1322,185 @@ class TestFullPipeline(unittest.TestCase):
         import asyncio
         asyncio.run(dispatcher._check_incoming_sms())
         self.assertFalse(self.svc.is_active())
+
+
+# ==================================================================
+# T14: Persistence tests (Feature 27)
+# ==================================================================
+
+
+class TestEmergencyModePersistence(unittest.TestCase):
+    """Tests de persistencia SMS en cada accion de emergencia (R12)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(bind=cls._engine)
+        cls._SessionLocal = sessionmaker(bind=cls._engine)
+
+    def setUp(self):
+        db = self._SessionLocal()
+        try:
+            db.query(EmergencyModeLog).delete()
+            db.query(User).delete()
+            # Clean sms tables too
+            from src.models import SmsConversation, SmsMessage
+            db.query(SmsMessage).delete()
+            db.query(SmsConversation).delete()
+            db.commit()
+        finally:
+            db.close()
+
+        db = self._SessionLocal()
+        try:
+            self.admin = User(
+                username="admin1",
+                password_hash=hash_password("adminpass"),
+                role="admin",
+                full_name="Admin Uno",
+                is_active=True,
+                phone="+573001111111",
+            )
+            db.add(self.admin)
+            db.commit()
+            db.refresh(self.admin)
+        finally:
+            db.close()
+
+        self.sms_config = SmsConfig(
+            admin_phones=["+573001111111"],
+            scheduled_reports=[],
+        )
+        self.sms_service = SMSService(
+            config=self.sms_config, modem_index=0, dev_mode=True,
+        )
+        self.persistence = SmsPersistenceService(
+            db_session_factory=self._SessionLocal,
+        )
+        self.svc = EmergencyModeService(
+            db_session_factory=self._SessionLocal,
+            sms_service=self.sms_service,
+            modem_index=0,
+            dev_mode=True,
+            sms_persistence=self.persistence,
+        )
+
+    def test_process_incoming_sms_persists(self):
+        """R12: process_incoming_sms persiste SMS entrante y conversacion."""
+        result = self.svc.process_incoming_sms("+573001111111", "manual on")
+        self.assertTrue(result)
+
+        # Verificar que se creo conversacion y mensaje
+        db = self._SessionLocal()
+        try:
+            from src.models import SmsConversation as SC, SmsMessage as SM
+            convs = db.query(SC).filter(
+                SC.peer_number == "+573001111111",
+                SC.workflow_type == "emergency",
+            ).all()
+            self.assertGreaterEqual(len(convs), 1,
+                "Debe existir conversacion emergency")
+
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001111111",
+                SM.direction == "received",
+            ).all()
+            self.assertGreaterEqual(len(msgs), 1,
+                "Debe existir SMS entrante persistido")
+        finally:
+            db.close()
+
+    def test_activate_persists_confirmation_sms(self):
+        """R12: activate persiste SMS de confirmacion."""
+        self.svc.activate(
+            request_id=None,
+            supervisor_id=self.admin.id,
+            duration_minutes=60,
+            cmd_raw="manual on 1h",
+            cmd_source="sms",
+            sender_phone="+573001111111",
+        )
+        self.assertTrue(self.svc.is_active())
+
+        db = self._SessionLocal()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001111111",
+                SM.direction == "sent",
+                SM.handler == "emergency",
+            ).all()
+            self.assertGreaterEqual(len(msgs), 1,
+                "activate debe persistir SMS de confirmacion")
+            self.assertIn("ACTIVADO", msgs[0].body)
+        finally:
+            db.close()
+
+    def test_deactivate_persists_notification_sms(self):
+        """R12: deactivate persiste SMS de notificacion."""
+        self.svc.activate(
+            request_id=None,
+            supervisor_id=self.admin.id,
+            duration_minutes=60,
+            cmd_raw="manual on 1h",
+            cmd_source="sms",
+            sender_phone="+573001111111",
+        )
+        self.svc.deactivate(
+            supervisor_id=self.admin.id,
+            cmd_raw="manual off",
+            sender_phone="+573001111111",
+            reason="manual_off",
+        )
+
+        db = self._SessionLocal()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001111111",
+                SM.direction == "sent",
+                SM.handler == "emergency",
+                SM.body.like("%desactivado%"),
+            ).all()
+            self.assertGreaterEqual(len(msgs), 1,
+                "deactivate debe persistir SMS con 'desactivado'")
+        finally:
+            db.close()
+
+    def test_extend_persists_notification_sms(self):
+        """R12: extend persiste SMS de notificacion."""
+        self.svc.activate(
+            request_id=None,
+            supervisor_id=self.admin.id,
+            duration_minutes=60,
+            cmd_raw="manual on 1h",
+            cmd_source="sms",
+            sender_phone="+573001111111",
+        )
+        self.svc.extend(
+            supervisor_id=self.admin.id,
+            extra_minutes=30,
+            cmd_raw="manual on ext 30m",
+            sender_phone="+573001111111",
+        )
+
+        db = self._SessionLocal()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001111111",
+                SM.direction == "sent",
+                SM.handler == "emergency",
+                SM.body.like("%extendido%"),
+            ).all()
+            self.assertGreaterEqual(len(msgs), 1,
+                "extend debe persistir SMS con 'extendido'")
+        finally:
+            db.close()
 
 
 if __name__ == "__main__":

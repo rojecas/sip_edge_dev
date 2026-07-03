@@ -896,3 +896,80 @@ Se completó la feature 21 (pagination_users_backups) que estaba interrumpida:
 ## Bloqueos activos
 
 (none)
+
+---
+
+## Sesion 2026-07-02 — Feature 27 sms_persistence
+
+# Sesion actual
+
+> Este archivo se vacia al cerrar cada sesion y se mueve a history.md.
+
+- **Inicio:** 2026-07-02
+- **Fin:** 2026-07-02
+- **Agente:** leader (deepseek-v4-pro)
+- **Feature en curso:** Feature #27 - sms_persistence
+- **Estado:** testing - pendiente de pruebas manuales
+
+---
+
+## Indice de features
+
+| ID | Nombre | Status |
+|----|--------|--------|
+| 27 | sms_persistence | testing |
+| 28 | ai_multi_turn | pending |
+| 26 | emergency_request_wrong_sms | triaged |
+| 24 | reset_individual_pesos | spec_ready |
+| 25 | virtual_scale | spec_ready |
+| 17 | frontend_analytics | pending |
+
+---
+
+## Resumen de la sesion
+
+- Bug #26 diagnosticado: causa raiz del LLM error + loop infinito en AI handler catch-all
+- Disenio de nueva arquitectura SMS dividida en 2 features:
+  - Feature 27 (sms_persistence): persistencia, dispatcher v2, cola asincrona
+  - Feature 28 (ai_multi_turn): multiturno AI con contexto de 10 exchanges
+- Feature 27 implementada y revisada. En testing esperando pruebas manuales
+
+## Pendiente para manana
+
+1. Desplegar codigo en EdgeBox (commit + git pull + restart sip-edge)
+2. Pruebas manuales de recepcion SMS:
+   - SMS entrante se persiste en sms_messages
+   - SMS de emergencia (manual on/off) se procesa correctamente
+   - SMS de password reset solo desde admin, sin auto-reset, max 3 intentos
+   - SMS no reconocido recibe respuesta de ayuda
+   - SMS del carrier (TIGO) se ignora sin respuesta
+3. Si pruebas pasan: autorizar cierre para release-manager
+4. Feature 28 (ai_multi_turn) queda pendiente para siguiente sesion
+
+
+
+---
+
+## Sesion 2026-07-03 — Features 24, 25 + Depuracion SMS
+
+**Agente:** leader (deepseek-v4-pro)
+
+### Logro principal
+- Feature 24 (reset_individual_pesos): **DONE** — spec → impl → review → testing → release
+- Feature 25 (virtual_scale): **TESTING** — spec → impl → review (3 rondas) → 47 tests
+- Depuracion de envio SMS: SMSC obligatorio, sintaxis mmcli corregida, script reparado
+
+### Detalle
+| Item | Estado | Notas |
+|------|--------|-------|
+| Feature 24 — reset_individual_pesos | done | 9 tasks, 2 bugs corregidos en testing |
+| Feature 25 — virtual_scale | testing | 22 tasks, 47 tests, pendiente HW |
+| Bug 26 — emergency_request_wrong_sms | triaged | Diagnosticado en sesion anterior |
+| Feature 27 — sms_persistence | testing | Bloqueado por EdgeBox offline |
+| Depuracion modem/SMS | Completado | SMSC + sintaxis mmcli + script reparado |
+
+### Archivos clave
+- harness/progress/closure-2026-07-03-features-24-25-sms.md — Cierre formal
+- docs/sms_mmcli_guide.md — Guia de envio SMS con mmcli
+- src/weighings.py, rontend/.../WeightField.svelte, rontend/.../KioskForm.svelte — Feature 24
+- src/tools/virtual_scale.py, scripts/generate_readings.py, data/readings/ — Feature 25

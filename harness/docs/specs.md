@@ -198,6 +198,30 @@ Ejemplo de impacto de feature 9 (emergency_mode) sobre feature 3 (user_managemen
 | Componente AdminUsers | frontend/... | Agregar columna "Teléfono" |
 `
 
+
+### Sección obligatoria: Análisis de impacto en features existentes
+
+TODA feature que modifique archivos existentes en `src/` o `tests/` DEBE incluir
+en `design.md` una sección `## Análisis de impacto en features existentes` que:
+
+1. Identifique TODAS las features que consumen los métodos/clases/archivos que
+   serán modificados. Para cada método modificado, **rastrear todos sus llamantes**
+   en el código fuente (grep del método en `src/`).
+2. Liste las features afectadas con su ID y nombre.
+3. Por cada feature afectada, declare:
+   - Los archivos específicos impactados.
+   - Si el cambio de interfaz rompe compatibilidad hacia atrás.
+   - Si se requiere actualizar tests existentes.
+   - El plan de mitigación (ej. mantener wrapper legacy, agregar adapter).
+4. Incluya las features que dependen transitivamente (dependencias indirectas).
+
+El spec-author DEBE ejecutar búsquedas en el código fuente (`grep`/`glob`) para
+encontrar todos los consumidores de cada método modificado. NO debe basarse
+únicamente en la lista `depends_on` de `feature_list.json`.
+
+El reviewer DEBE verificar que esta sección existe y que ningún consumidor fue
+omitido. Si falta, rechaza el spec.
+
 ## tasks.md â€” checklist ejecutable
 
 Pasos discretos en orden, cada uno con checkbox. Cada task referencia al
@@ -239,4 +263,5 @@ El `implementer` documenta el mapa en `progress/impl_<name>.md`:
 
 Las features con `"sdd": false` o sin el campo `sdd` (las legacy 1â€“6) NO
 tienen spec. SDD solo se aplica hacia adelante.
+
 

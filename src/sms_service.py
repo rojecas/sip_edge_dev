@@ -37,10 +37,19 @@ class SMSService:
         self._sent_today: set[str] = set()
         self._current_report_day: str = ""
         self._template_service = None  # Se inyecta externamente
+        self._persistence = None  # SmsPersistenceService, se inyecta externamente
 
     def set_template_service(self, template_service) -> None:
         """Inyecta el ReportTemplateService para reportes basados en plantillas."""
         self._template_service = template_service
+
+    def set_persistence_service(self, persistence) -> None:
+        """Inyecta el SmsPersistenceService para persistir mensajes SMS.
+
+        Feature 27 — sms_persistence.
+        Si no se inyecta, send_sms() funciona en modo legacy (sin persistencia).
+        """
+        self._persistence = persistence
 
     # ------------------------------------------------------------------
     # Envio individual
@@ -50,20 +59,118 @@ class SMSService:
         """Envia un SMS al numero indicado.
 
         En dev mode simula el envio con log. En prod ejecuta mmcli.
-        Devuelve True si el envio tuvo exito, False en caso de fallo
-        (el error se loggea internamente).
+        Si hay persistencia inyectada, registra el mensaje en sms_messages
+        antes de enviar y actualiza el status segun el resultado.
+
+        Returns:
+            True si el envio tuvo exito (dev mode siempre True),
+            False en caso de fallo (el error se loggea internamente).
         """
         if not phone or not message:
             logger.warning("send_sms llamado con phone o message vacio, omitiendo")
             return False
 
+        # R18: Persistir en sms_messages antes de enviar
+        persisted_msg_id = None
+        if self._persistence is not None:
+            try:
+                # Crear/recuperar conversacion
+                conv = self._persistence.get_or_create_active_conversation(
+                    peer_number=phone, workflow_type="unknown",
+                )
+                msg = self._persistence.create_message(
+                    conversation_id=conv.id,
+                    direction="sent",
+                    peer_number=phone,
+                    body=message,
+                    handler="sms_service",
+                    status="pending",
+                )
+                persisted_msg_id = msg.id
+            except Exception:
+                logger.exception("sms_service: error persistiendo mensaje SMS")
+
         if self._dev_mode:
             logger.info(
                 "[DEV_MODE] SMS simulado -> %s: %s", phone, message
             )
+            if persisted_msg_id and self._persistence is not None:
+                try:
+                    self._persistence.update_message_status(persisted_msg_id, "sent")
+                except Exception:
+                    logger.exception("sms_service: error actualizando status de mensaje")
             return True
 
-        return self._send_via_mmcli(phone, message)
+        success = self._send_via_mmcli(phone, message)
+
+        # R18: Actualizar status segun resultado
+        if persisted_msg_id and self._persistence is not None:
+            try:
+                new_status = "sent" if success else "failed"
+                self._persistence.update_message_status(
+                    persisted_msg_id, new_status,
+                    error_message=None if success else "mmcli send failed",
+                )
+            except Exception:
+                logger.exception("sms_service: error actualizando status de mensaje")
+
+        return success
+
+    def send_sms_sync(self, phone: str, message: str) -> bool:
+        """Envia un SMS de forma sincrona (bloqueante).
+
+        Para casos legacy que requieren confirmacion inmediata de entrega.
+        Persiste en sms_messages y ejecuta mmcli directamente sin pasar
+        por la cola asincrona.
+
+        Returns:
+            True si mmcli confirmo el envio, False si fallo.
+        """
+        if not phone or not message:
+            logger.warning("send_sms_sync llamado con phone o message vacio")
+            return False
+
+        # R18: Persistir antes de enviar
+        persisted_msg_id = None
+        if self._persistence is not None:
+            try:
+                conv = self._persistence.get_or_create_active_conversation(
+                    peer_number=phone, workflow_type="unknown",
+                )
+                msg = self._persistence.create_message(
+                    conversation_id=conv.id,
+                    direction="sent",
+                    peer_number=phone,
+                    body=message,
+                    handler="sms_service",
+                    status="pending",
+                )
+                persisted_msg_id = msg.id
+            except Exception:
+                logger.exception("sms_service: error persistiendo mensaje SMS (sync)")
+
+        if self._dev_mode:
+            logger.info("[DEV_MODE] SMS simulado (sync) -> %s: %s", phone, message)
+            if persisted_msg_id and self._persistence is not None:
+                try:
+                    self._persistence.update_message_status(persisted_msg_id, "sent")
+                except Exception:
+                    pass
+            return True
+
+        success = self._send_via_mmcli_sync(phone, message)
+
+        if persisted_msg_id and self._persistence is not None:
+            try:
+                new_status = "sent" if success else "failed"
+                self._persistence.update_message_status(
+                    persisted_msg_id, new_status,
+                    error_message=None if success else "mmcli send failed (sync)",
+                )
+            except Exception:
+                logger.exception("sms_service: error actualizando status de mensaje (sync)")
+
+        return success
 
     def _send_via_mmcli(self, phone: str, message: str) -> bool:
         """Envia un SMS usando mmcli. Retorna True si exitoso, False si falla.

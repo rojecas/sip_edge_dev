@@ -155,9 +155,11 @@ class EmergencyModeService:
         sms_service,
         modem_index: int = 0,
         dev_mode: bool = False,
+        sms_persistence=None,
     ) -> None:
         self._db_session_factory = db_session_factory
         self._sms_service = sms_service
+        self._sms_persistence = sms_persistence  # SmsPersistenceService (F27)
 
         self._active: bool = False
         self._expires_at: datetime | None = None
@@ -197,6 +199,8 @@ class EmergencyModeService:
         (valido o invalido), False si no coincide con ningun patron de
         emergencia y debe ser probado por otros handlers.
 
+        Feature 27: persiste el SMS entrante y vincula conversacion.
+
         Args:
             sender_phone: Numero de telefono del remitente.
             text: Texto completo del SMS.
@@ -204,8 +208,27 @@ class EmergencyModeService:
         # Parsear el texto para ver si es un comando de emergencia
         parsed = parse_emergency_sms(text)
         if parsed.action == "invalid":
-            # No coincide con ningun patron de emergencia → otro handler
+            # No coincide con ningun patron de emergencia -> otro handler
             return False
+
+        # R12: Persistir SMS entrante y crear/recuperar conversacion emergency
+        conversation_id = None
+        if self._sms_persistence is not None:
+            try:
+                conv = self._sms_persistence.get_or_create_active_conversation(
+                    peer_number=sender_phone, workflow_type="emergency",
+                )
+                conversation_id = conv.id
+                self._sms_persistence.create_message(
+                    conversation_id=conv.id,
+                    direction="received",
+                    peer_number=sender_phone,
+                    body=text.strip(),
+                    handler="emergency",
+                    status="received",
+                )
+            except Exception:
+                logger.exception("emergency_mode: error persistiendo SMS entrante")
 
         # Es un comando de emergencia: validar emisor
         db: Session = self._db_session_factory()
@@ -247,6 +270,7 @@ class EmergencyModeService:
                         cmd_raw=parsed.raw_text,
                         cmd_source="sms",
                         sender_phone=sender_phone,
+                        conversation_id=conversation_id,
                     )
                     # Verificar que la activacion realmente funciono
                     if not self._active:
@@ -403,6 +427,7 @@ class EmergencyModeService:
         cmd_raw: str,
         cmd_source: str,
         sender_phone: str = "",
+        conversation_id: int | None = None,
     ) -> None:
         """Activa el modo manual.
 
@@ -506,6 +531,48 @@ class EmergencyModeService:
                 expires_at.isoformat(),
                 duration_minutes,
             )
+
+            # R12: Persistir SMS de confirmacion y vincular conversation_id
+            if self._sms_persistence is not None:
+                try:
+                    conv_id_to_use = conversation_id
+                    if conv_id_to_use is None and sender_phone:
+                        conv = self._sms_persistence.get_or_create_active_conversation(
+                            peer_number=sender_phone, workflow_type="emergency",
+                        )
+                        conv_id_to_use = conv.id
+
+                    # Persistir SMS de confirmacion
+                    if conv_id_to_use and sender_phone:
+                        self._sms_persistence.create_message(
+                            conversation_id=conv_id_to_use,
+                            direction="sent",
+                            peer_number=sender_phone,
+                            body=(
+                                f"SIP-Edge: Modo manual ACTIVADO por "
+                                f"{duration_minutes} min. "
+                                f"Expira: {expires_at.strftime('%H:%M')}"
+                            ),
+                            handler="emergency",
+                            status="pending",
+                        )
+
+                    # Guardar request_id en metadata de la conversacion
+                    if conv_id_to_use:
+                        import json
+                        db2: Session = self._db_session_factory()
+                        try:
+                            from src.models import SmsConversation as SC
+                            conv = db2.query(SC).filter(SC.id == conv_id_to_use).first()
+                            if conv:
+                                conv.conv_metadata = json.dumps({
+                                    "request_id": activation.id,
+                                })
+                                db2.commit()
+                        finally:
+                            db2.close()
+                except Exception:
+                    logger.exception("emergency_mode: error persistiendo SMS de confirmacion")
         except Exception:
             logger.exception(
                 "BUG #23: activate() fallo con excepcion. "
@@ -572,6 +639,26 @@ class EmergencyModeService:
                 extra_minutes,
                 new_expires.isoformat(),
             )
+
+            # R12: Persistir SMS de notificacion
+            if self._sms_persistence is not None and sender_phone:
+                try:
+                    conv = self._sms_persistence.get_or_create_active_conversation(
+                        peer_number=sender_phone, workflow_type="emergency",
+                    )
+                    self._sms_persistence.create_message(
+                        conversation_id=conv.id,
+                        direction="sent",
+                        peer_number=sender_phone,
+                        body=(
+                            f"SIP-Edge: Modo manual extendido +{extra_minutes} min. "
+                            f"Nueva expiracion: {new_expires.strftime('%H:%M')}"
+                        ),
+                        handler="emergency",
+                        status="pending",
+                    )
+                except Exception:
+                    logger.exception("emergency_mode: error persistiendo SMS de extension")
         finally:
             db.close()
 
@@ -627,6 +714,28 @@ class EmergencyModeService:
                 reason,
                 supervisor_id,
             )
+
+            # R12: Persistir SMS de notificacion
+            if self._sms_persistence is not None and sender_phone:
+                try:
+                    conv = self._sms_persistence.get_or_create_active_conversation(
+                        peer_number=sender_phone, workflow_type="emergency",
+                    )
+                    reason_text = "desactivado" if reason == "manual_off" else "expirado"
+                    self._sms_persistence.create_message(
+                        conversation_id=conv.id,
+                        direction="sent",
+                        peer_number=sender_phone,
+                        body=f"SIP-Edge: Modo manual {reason_text}.",
+                        handler="emergency",
+                        status="pending",
+                    )
+                    if reason != "auto_expire":
+                        self._sms_persistence.update_conversation_status(
+                            conv.id, "completed",
+                        )
+                except Exception:
+                    logger.exception("emergency_mode: error persistiendo SMS de desactivacion")
         finally:
             db.close()
 

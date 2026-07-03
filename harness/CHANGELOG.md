@@ -1,4 +1,34 @@
-﻿
+﻿## [1.18.0] — 2026-07-02
+
+### Added
+- harness/AGENTS.md — Nueva regla dura "Deploy + smoke test post-implementacion".
+  El implementer DEBE reiniciar el servicio (Docker o EdgeBox), rebuildear el
+  frontend si aplica (npm run build + copy a src/static/), y verificar tablas
+  nuevas en BD antes de invocar al reviewer. El reviewer rechaza si no hay
+  evidencia de deploy.
+- harness/AGENTS.md — Nuevo paso 5.5 "Deploy + smoke test" en el flujo SDD
+  (seccion 4), entre implementer y reviewer. El flujo ahora es:
+  implementer -> deploy + smoke test -> reviewer.
+- harness/AGENTS.md — Paso de deploy anadido al flujo de bugs (seccion 4.1),
+  el bug-fixer DEBE reiniciar el servicio despues de implementar el fix.
+
+### Changed
+- harness/AGENTS.md — Diagrama de flujo SDD actualizado para reflejar el
+  nuevo paso de deploy + smoke test entre implementer y reviewer.
+## [1.17.0] — 2026-07-02
+
+### Added
+- harness/docs/specs.md — Nueva seccion obligatoria "Analisis de impacto en
+  features existentes" para design.md. Exige que el spec-author rastree
+  TODOS los consumidores de cada metodo/archivo modificado via grep en src/,
+  no solo la lista depends_on de feature_list.json. El reviewer debe verificar
+  que la seccion existe y cubre todos los consumidores; si falta, rechaza el spec.
+
+### Changed
+- harness/docs/specs.md — Seccion "Impacto en APIs existentes" renombrada,
+  ahora acompanada de la nueva seccion de analisis de impacto que cubre
+  cambios de interfaz interna (no solo API REST).
+
 ## [1.16.0] — 2026-07-01
 
 ### Added
@@ -484,4 +514,6 @@
 - `validate_features.py` â€” validador de `feature_list.json`
 - `CHECKPOINTS.md` (C1-C6) â€” criterios de evaluacion
 - Demo `notes-cli` con 7 features completadas y 27 tests
+
+
 

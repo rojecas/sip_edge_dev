@@ -6,7 +6,7 @@ from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Any, Generic, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import Session
@@ -68,6 +68,10 @@ class WeighingResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ResetFieldRequest(BaseModel):
+    step: Optional[str] = None
 
 
 class ResetResponse(BaseModel):
@@ -299,9 +303,23 @@ def get_weighing(
     return w
 
 
+VALID_RESET_STEPS = ["peso_muestra", "peso_mineral", "peso_vegetal_extrano"]
+
+
 @router.post("/reset", response_model=ResetResponse)
 def reset_weighing_form(
-    _: dict = Depends(check_inactivity),
-    __: dict = Depends(require_any_role("admin", "operator")),
+    body: Optional[ResetFieldRequest] = Body(None),
+    current_user: dict = Depends(check_inactivity),
+    _: dict = Depends(require_any_role("admin", "operator")),
 ):
+    if body is not None and body.step is not None:
+        if body.step not in VALID_RESET_STEPS:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"step inválido. Valores aceptados: "
+                    f"{', '.join(VALID_RESET_STEPS)}"
+                ),
+            )
+        return ResetResponse(mensaje=f"Campo {body.step} reiniciado")
     return ResetResponse()

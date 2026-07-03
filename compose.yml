@@ -44,6 +44,8 @@ services:
       - ./src:/app/src
       - ./tests:/app/tests
       - ./harness:/app/harness
+      - ./data:/app/data
+      - ./scripts:/app/scripts
     working_dir: /app
 
   phpmyadmin:

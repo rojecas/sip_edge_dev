@@ -96,9 +96,10 @@ class PasswordResetService:
     generacion de PIN de 4 digitos, verificacion, y cambio de contrasena.
     """
 
-    def __init__(self, db_session_factory, sms_service) -> None:
+    def __init__(self, db_session_factory, sms_service, sms_persistence=None) -> None:
         self._db_session_factory = db_session_factory
         self._sms_service = sms_service
+        self._sms_persistence = sms_persistence  # SmsPersistenceService (F27)
 
     # ------------------------------------------------------------------
     # Handler para IncomingSmsDispatcher
@@ -109,10 +110,48 @@ class PasswordResetService:
 
         Retorna True si el SMS fue reconocido como comando 'reset password',
         False en caso contrario.
+
+        Feature 27: valida rol admin del remitente, impide auto-reset,
+        y persiste SMS en sms_messages.
         """
         username = _parse_reset_command(text)
         if username is None:
             return False
+
+        # R13: Validar que sender_phone pertenece a usuario con rol admin
+        db: Session = self._db_session_factory()
+        try:
+            sender_user = (
+                db.query(User)
+                .filter(User.phone == sender_phone, User.is_active == True)
+                .first()
+            )
+
+            if sender_user is None or sender_user.role != "admin":
+                # R13: Remitente no admin
+                error_msg = (
+                    "Solo administradores pueden solicitar reset de contrasena"
+                )
+                self._sms_service.send_sms(sender_phone, f"SIP-Edge: {error_msg}")
+                logger.warning(
+                    "Password reset: no admin sender %s intento reset para '%s'",
+                    sender_phone, username,
+                )
+                return True  # Manejado (aunque rechazado)
+
+            # R14: Verificar que admin no resetea su propia contrasena
+            if sender_user.username.lower() == username.lower():
+                self._sms_service.send_sms(
+                    sender_phone,
+                    "SIP-Edge: No puede solicitar reset de su propia "
+                    "contrasena por SMS",
+                )
+                logger.warning(
+                    "Password reset: admin %s intento auto-reset", sender_phone,
+                )
+                return True  # Manejado (aunque rechazado)
+        finally:
+            db.close()
 
         self.generate_and_send_pin(username, sender_phone)
         return True
@@ -124,9 +163,13 @@ class PasswordResetService:
     def generate_and_send_pin(self, username: str, sender_phone: str) -> bool:
         """Genera un PIN de 4 digitos para el usuario y lo envia por SMS.
 
+        Feature 27:
+        - Si existe un PIN activo para el mismo usuario, invalida el anterior.
+        - Crea nueva conversacion y persiste SMS.
+
         Args:
             username: Nombre de usuario (case-insensitive).
-            sender_phone: Numero del remitente del SMS (para respuestas de error).
+            sender_phone: Numero del remitente del SMS (admin).
 
         Returns:
             True si el PIN fue generado y enviado exitosamente.
@@ -166,6 +209,35 @@ class PasswordResetService:
                 )
                 return False
 
+            # R16: Si ya existe un PIN activo, invalidarlo
+            if user.reset_pin is not None and user.reset_pin_expires_at is not None:
+                now = datetime.now(timezone.utc)
+                expires = user.reset_pin_expires_at
+                if expires.tzinfo is None:
+                    expires = expires.replace(tzinfo=timezone.utc)
+                if now < expires:
+                    # Invalidar PIN anterior
+                    logger.info(
+                        "Password reset: invalidando PIN anterior para '%s'",
+                        user.username,
+                    )
+                    # R16: Invalidar conversacion anterior si existe
+                    if self._sms_persistence is not None:
+                        try:
+                            import json
+                            prev_conv = self._sms_persistence.get_active_conversation_by_peer(
+                                peer_number=user.phone,
+                                workflow_type="password_reset",
+                            )
+                            if prev_conv:
+                                self._sms_persistence.update_conversation_status(
+                                    prev_conv.id, "cancelled",
+                                )
+                        except Exception:
+                            logger.exception(
+                                "password_reset: error cancelando conversacion anterior"
+                            )
+
             # Generar PIN aleatorio de 4 digitos (1000-9999)
             pin = str(random.randint(1000, 9999))
             pin_hash = hash_password(pin)
@@ -177,6 +249,44 @@ class PasswordResetService:
             user.force_password_change = True
             db.commit()
 
+            # R16: Notificar al admin que el PIN anterior ya no es valido
+            old_pin_invalidated = False
+            if self._sms_persistence is not None:
+                try:
+                    prev_conv = self._sms_persistence.get_active_conversation_by_peer(
+                        peer_number=user.phone,
+                        workflow_type="password_reset",
+                    )
+                    if prev_conv and prev_conv.id:
+                        # Ya cancelamos arriba, pero verificamos
+                        old_pin_invalidated = True
+                except Exception:
+                    pass
+
+            # Crear/recuperar conversacion password_reset
+            if self._sms_persistence is not None:
+                try:
+                    conv = self._sms_persistence.get_or_create_active_conversation(
+                        peer_number=user.phone,
+                        workflow_type="password_reset",
+                    )
+                    # Inicializar contador de intentos en metadata
+                    import json
+                    conv.conv_metadata = json.dumps({"pin_attempts": 0})
+                    db2: Session = self._db_session_factory()
+                    try:
+                        from src.models import SmsConversation as SC
+                        conv_db = db2.query(SC).filter(SC.id == conv.id).first()
+                        if conv_db:
+                            conv_db.conv_metadata = json.dumps({"pin_attempts": 0})
+                            db2.commit()
+                    finally:
+                        db2.close()
+                except Exception:
+                    logger.exception(
+                        "password_reset: error creando conversacion"
+                    )
+
             # Enviar PIN por SMS al usuario
             sms_text = (
                 f"SIP-Edge: Su PIN de restablecimiento es {pin}. "
@@ -184,7 +294,33 @@ class PasswordResetService:
                 "Ingrese a la pantalla de login y use 'Olvido su "
                 "contrasena' para cambiar su clave."
             )
+
+            # R17: Persistir SMS de PIN
+            if self._sms_persistence is not None and user.phone:
+                try:
+                    conv = self._sms_persistence.get_or_create_active_conversation(
+                        peer_number=user.phone,
+                        workflow_type="password_reset",
+                    )
+                    self._sms_persistence.create_message(
+                        conversation_id=conv.id,
+                        direction="sent",
+                        peer_number=user.phone,
+                        body=sms_text,
+                        handler="password_reset",
+                        status="pending",
+                    )
+                except Exception:
+                    logger.exception("password_reset: error persistiendo SMS de PIN")
+
             self._sms_service.send_sms(user.phone, sms_text)
+
+            if old_pin_invalidated:
+                self._sms_service.send_sms(
+                    sender_phone,
+                    f"SIP-Edge: Nuevo PIN generado para '{user.username}'. "
+                    "El PIN anterior ya no es valido.",
+                )
 
             logger.info(
                 "Password reset: PIN generado para '%s', "
@@ -242,6 +378,47 @@ class PasswordResetService:
             # Verificar PIN contra hash
             from src.auth import verify_password
             if not verify_password(pin, user.reset_pin):
+                # R15: Incrementar contador de intentos fallidos
+                if self._sms_persistence is not None:
+                    try:
+                        conv = self._sms_persistence.get_active_conversation_by_peer(
+                            peer_number=user.phone,
+                            workflow_type="password_reset",
+                        )
+                        if conv:
+                            import json
+                            meta = {}
+                            if conv.conv_metadata:
+                                try:
+                                    meta = json.loads(conv.conv_metadata)
+                                except (json.JSONDecodeError, TypeError):
+                                    pass
+                            attempts = meta.get("pin_attempts", 0) + 1
+                            meta["pin_attempts"] = attempts
+
+                            db2: Session = self._db_session_factory()
+                            try:
+                                from src.models import SmsConversation as SC
+                                conv_db = db2.query(SC).filter(SC.id == conv.id).first()
+                                if conv_db:
+                                    conv_db.conv_metadata = json.dumps(meta)
+                                    if attempts >= 3:
+                                        conv_db.status = "cancelled"
+                                        # Invalidar el PIN
+                                        user.reset_pin = None
+                                        user.reset_pin_expires_at = None
+                                        db.commit()
+                                        logger.warning(
+                                            "Password reset: 3 intentos fallidos para '%s', "
+                                            "PIN invalidado", user.username,
+                                        )
+                                    db2.commit()
+                            finally:
+                                db2.close()
+                    except Exception:
+                        logger.exception(
+                            "password_reset: error actualizando intentos de PIN"
+                        )
                 raise InvalidPinError("Invalid username or PIN")
 
             # Invalidar PIN (single-use)

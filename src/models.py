@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models for SIP-Edge."""
 
-from sqlalchemy import BigInteger, Boolean, Column, Date, Enum, ForeignKey, Index, Integer, Numeric, String, Text, Time, TIMESTAMP, UniqueConstraint, func, text
+from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, Enum, ForeignKey, Index, Integer, JSON, Numeric, String, Text, Time, TIMESTAMP, UniqueConstraint, func, text
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -226,5 +226,76 @@ class AnomalyLog(Base):
         Index("idx_al_record", "record_id"),
         Index("idx_al_layer", "layer"),
         Index("idx_al_created", "created_at"),
+        {"sqlite_autoincrement": True},
+    )
+
+
+class SmsConversation(Base):
+    """Conversacion SMS entre el sistema y un peer_number.
+
+    Agrupa mensajes relacionados bajo un mismo workflow_type
+    (emergency, password_reset, ai_query, unknown).
+    """
+
+    __tablename__ = "sms_conversations"
+
+    id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
+    peer_number = Column(String(20), nullable=False)
+    workflow_type = Column(
+        Enum("emergency", "password_reset", "ai_query", "unknown"),
+        nullable=False,
+    )
+    status = Column(
+        Enum("active", "completed", "expired", "cancelled", "failed"),
+        nullable=False,
+        default="active",
+    )
+    started_at = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp())
+    last_activity = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp())
+    expires_at = Column(TIMESTAMP, nullable=True, default=None)
+    conv_metadata = Column("metadata", JSON, nullable=True, default=None)
+
+    __table_args__ = (
+        Index("idx_peer_status", "peer_number", "status"),
+        Index("idx_expires", "status", "expires_at"),
+        {"sqlite_autoincrement": True},
+    )
+
+
+class SmsMessage(Base):
+    """Mensaje SMS individual enviado o recibido por el sistema."""
+
+    __tablename__ = "sms_messages"
+
+    id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
+    conversation_id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("sms_conversations.id"),
+        nullable=False,
+    )
+    direction = Column(Enum("sent", "received"), nullable=False)
+    peer_number = Column(String(20), nullable=False)
+    body = Column(Text, nullable=False)
+    handler = Column(String(32), nullable=True, default=None)
+    status = Column(
+        Enum("pending", "sent", "failed", "timeout", "delivered", "received"),
+        nullable=False,
+        default="pending",
+    )
+    error_message = Column(Text, nullable=True, default=None)
+    modem_sms_id = Column(Integer, nullable=True, default=None)
+    created_at = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp())
+
+    __table_args__ = (
+        Index("idx_conv_id", "conversation_id"),
+        Index("idx_direction_status", "direction", "status"),
         {"sqlite_autoincrement": True},
     )

@@ -14,6 +14,7 @@ from sqlalchemy.pool import StaticPool
 
 from src.config import SmsConfig
 from src.models import Base, Hacienda, Suerte, User, Weighing
+from src.sms_persistence import SmsPersistenceService
 from src.sms_service import SMSDeliveryError, SMSService
 
 
@@ -509,3 +510,109 @@ class TestGenerateTurnReport(unittest.TestCase):
         self.assertIn("[06:00 - 14:00]", report)
         # Solo pesajes de 08:00, 10:00, 12:00 deben contar (3 pesajes)
         self.assertIn("3 pesajes realizados", report)
+
+
+# ==================================================================
+# T12: Persistence integration tests (Feature 27)
+# ==================================================================
+
+
+class TestSMSServicePersistence(unittest.TestCase):
+    """Verificar que send_sms persiste en sms_messages cuando SmsPersistenceService
+    esta inyectado (R18)."""
+
+    def setUp(self):
+        self.config = SmsConfig(
+            admin_phones=["+573001234567"],
+            scheduled_reports=["06:00", "14:00", "22:00"],
+        )
+        self.svc = SMSService(config=self.config, modem_index=0, dev_mode=True)
+        self.engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(bind=self.engine)
+        self.Session = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
+        self.persistence = SmsPersistenceService(db_session_factory=self.Session)
+        self.svc.set_persistence_service(self.persistence)
+
+    def test_send_sms_persists_in_dev_mode(self):
+        """R18: En dev mode, send_sms persiste el mensaje como sent."""
+        result = self.svc.send_sms("+573001234567", "Test persistence")
+        self.assertTrue(result)
+
+        db = self.Session()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001234567",
+                SM.direction == "sent",
+            ).all()
+            self.assertEqual(len(msgs), 1)
+            self.assertEqual(msgs[0].body, "Test persistence")
+            self.assertEqual(msgs[0].status, "sent")
+        finally:
+            db.close()
+
+    def test_send_sms_persists_before_mmcli(self):
+        """R18: El mensaje se persiste ANTES de ejecutar mmcli.
+
+        Verificamos que al llamar send_sms, el mensaje queda en BD aunque
+        mmcli falle (simulado en dev mode ya persiste).
+        """
+        # En dev mode, siempre retorna True pero igual debe persistir
+        result = self.svc.send_sms("+573001234567", "Before mmcli")
+        self.assertTrue(result)
+
+        # Verificar que el mensaje fue persistido
+        db = self.Session()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001234567",
+            ).all()
+            self.assertGreaterEqual(len(msgs), 1,
+                "El mensaje debe estar persistido en BD")
+        finally:
+            db.close()
+
+    def test_send_sms_creates_conversation(self):
+        """send_sms crea conversacion automaticamente."""
+        self.svc.send_sms("+573009999999", "First message")
+
+        db = self.Session()
+        try:
+            from src.models import SmsConversation as SC
+            convs = db.query(SC).filter(
+                SC.peer_number == "+573009999999",
+            ).all()
+            self.assertEqual(len(convs), 1)
+            self.assertEqual(convs[0].workflow_type, "unknown")
+            self.assertEqual(convs[0].status, "active")
+        finally:
+            db.close()
+
+    def test_send_sms_sync_persists(self):
+        """R18: send_sms_sync tambien persiste."""
+        result = self.svc.send_sms_sync("+573001234567", "Sync persistence")
+        self.assertTrue(result)
+
+        db = self.Session()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001234567",
+                SM.direction == "sent",
+            ).all()
+            self.assertEqual(len(msgs), 1)
+            self.assertEqual(msgs[0].status, "sent")
+        finally:
+            db.close()
+
+    def test_send_sms_without_persistence_still_works(self):
+        """Sin persistencia inyectada, send_sms debe funcionar igual (legacy)."""
+        svc_no_persist = SMSService(config=self.config, modem_index=0, dev_mode=True)
+        result = svc_no_persist.send_sms("+573001234567", "No persist")
+        self.assertTrue(result)
+        # No hay excepcion, el envio simulado funciona

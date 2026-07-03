@@ -23,6 +23,7 @@ from src.password_reset import (
     _parse_reset_command,
 )
 from src.sms_incoming import IncomingSmsDispatcher
+from src.sms_persistence import SmsPersistenceService
 
 
 # ==================================================================
@@ -979,6 +980,191 @@ class TestPasswordResetModels(unittest.TestCase):
 # ==================================================================
 # T20: Login page HTML tests (R15, R16)
 # ==================================================================
+
+
+# ==================================================================
+# T16: Feature 27 persistence tests (R13, R14, R15, R16, R17)
+# ==================================================================
+
+
+class TestPasswordResetPersistence(unittest.TestCase):
+    """Tests de persistencia SMS y validaciones de Feature 27."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._engine = _build_test_db_engine()
+        cls._SessionLocal = sessionmaker(bind=cls._engine)
+
+    def setUp(self):
+        """Crea usuarios de prueba y servicios con persistencia."""
+        db = self._SessionLocal()
+        try:
+            db.query(User).delete()
+            from src.models import SmsConversation, SmsMessage
+            db.query(SmsMessage).delete()
+            db.query(SmsConversation).delete()
+            db.commit()
+        finally:
+            db.close()
+
+        db = self._SessionLocal()
+        try:
+            self.admin, self.operator, self.no_phone = _create_test_users(db)
+            # Add a second admin
+            self.admin2 = User(
+                username="admin2",
+                password_hash=hash_password("admin2pass"),
+                role="admin",
+                full_name="Admin Dos",
+                is_active=True,
+                phone="+573009999999",
+            )
+            db.add(self.admin2)
+            db.commit()
+            db.refresh(self.admin2)
+        finally:
+            db.close()
+
+        self.sms_mock = mock.MagicMock()
+        self.sms_mock.send_sms.return_value = True
+        self.persistence = SmsPersistenceService(
+            db_session_factory=self._SessionLocal,
+        )
+        self.svc = PasswordResetService(
+            db_session_factory=self._SessionLocal,
+            sms_service=self.sms_mock,
+            sms_persistence=self.persistence,
+        )
+
+    # ==================================================================
+    # R13: Non-admin rejected
+    # ==================================================================
+
+    def test_non_admin_rejected(self):
+        """R13: remitente no admin recibe error."""
+        # operator tiene phone +573002222222
+        result = self.svc.handle_incoming_sms("+573002222222", "reset password admin")
+        self.assertTrue(result, "SMS debe ser manejado (rechazado)")
+        self.sms_mock.send_sms.assert_called()
+        call_args = self.sms_mock.send_sms.call_args
+        self.assertIn("Solo administradores", call_args[0][1])
+
+    def test_unknown_phone_rejected(self):
+        """R13: remitente desconocido recibe error de no admin."""
+        result = self.svc.handle_incoming_sms("+579999999999", "reset password admin")
+        self.assertTrue(result)
+        self.sms_mock.send_sms.assert_called()
+        call_args = self.sms_mock.send_sms.call_args
+        self.assertIn("Solo administradores", call_args[0][1])
+
+    # ==================================================================
+    # R14: Self-reset rejected
+    # ==================================================================
+
+    def test_self_reset_rejected(self):
+        """R14: admin no puede resetear su propia contrasena."""
+        # admin tiene phone +573001111111, username admin
+        result = self.svc.handle_incoming_sms("+573001111111", "reset password admin")
+        self.assertTrue(result, "SMS debe ser manejado (rechazado)")
+        self.sms_mock.send_sms.assert_called()
+        call_args = self.sms_mock.send_sms.call_args
+        self.assertIn("propia", call_args[0][1].lower())
+
+    def test_admin_can_reset_other_user(self):
+        """Admin puede resetear contrasena de otro usuario."""
+        self.sms_mock.reset_mock()
+        # admin (phone +573001111111) resetea a operator1
+        result = self.svc.handle_incoming_sms("+573001111111", "reset password operator1")
+        self.assertTrue(result)
+        self.sms_mock.send_sms.assert_called()
+        # Debe enviar PIN al operador, no mensaje de error
+        call_args_list = self.sms_mock.send_sms.call_args_list
+        has_pin_msg = any(
+            "PIN" in str(call) for call in call_args_list
+        )
+        self.assertTrue(has_pin_msg,
+            f"Expected PIN SMS, got: {call_args_list}")
+
+    # ==================================================================
+    # R15: Max 3 PIN attempts
+    # ==================================================================
+
+    def test_max_pin_attempts_cancels_conversation(self):
+        """R15: 3 intentos fallidos cancela conversacion."""
+        # Primero generar un PIN
+        self.svc.handle_incoming_sms("+573001111111", "reset password operator1")
+
+        db = self._SessionLocal()
+        try:
+            user = db.query(User).filter(User.username == "operator1").first()
+            self.assertIsNotNone(user.reset_pin)
+        finally:
+            db.close()
+
+        # Intentar verificar con PINs incorrectos 3 veces
+        for i in range(3):
+            try:
+                self.svc.verify_pin("operator1", "0000")
+            except InvalidPinError:
+                pass
+
+        # Despues de 3 intentos, el PIN debe estar invalidado
+        db = self._SessionLocal()
+        try:
+            user = db.query(User).filter(User.username == "operator1").first()
+            self.assertIsNone(user.reset_pin,
+                "PIN debe ser None tras 3 intentos fallidos")
+        finally:
+            db.close()
+
+    # ==================================================================
+    # R16: New request invalidates old PIN
+    # ==================================================================
+
+    def test_new_request_invalidates_old_pin(self):
+        """R16: nuevo PIN invalida el anterior."""
+        # Generar primer PIN
+        self.svc.handle_incoming_sms("+573001111111", "reset password operator1")
+        db = self._SessionLocal()
+        try:
+            user = db.query(User).filter(User.username == "operator1").first()
+            first_pin_hash = user.reset_pin
+            self.assertIsNotNone(first_pin_hash)
+        finally:
+            db.close()
+
+        # Generar segundo PIN para el mismo usuario
+        self.svc.handle_incoming_sms("+573001111111", "reset password operator1")
+        db = self._SessionLocal()
+        try:
+            user = db.query(User).filter(User.username == "operator1").first()
+            second_pin_hash = user.reset_pin
+            self.assertIsNotNone(second_pin_hash)
+            # El hash debe ser diferente (nuevo PIN)
+            self.assertNotEqual(first_pin_hash, second_pin_hash)
+        finally:
+            db.close()
+
+    # ==================================================================
+    # R17: PIN SMS persisted
+    # ==================================================================
+
+    def test_pin_sms_persisted(self):
+        """R17: SMS de PIN se persiste en sms_messages."""
+        self.svc.handle_incoming_sms("+573001111111", "reset password operator1")
+
+        db = self._SessionLocal()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.handler == "password_reset",
+                SM.direction == "sent",
+            ).all()
+            self.assertGreaterEqual(len(msgs), 1,
+                "SMS de PIN debe persistirse en sms_messages")
+            self.assertIn("PIN", msgs[0].body)
+        finally:
+            db.close()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,273 @@
+"""Tests for IncomingSmsDispatcherV2: persistence before dispatch,
+unknown SMS help response, carrier SMS handling, and conversation creation.
+
+Feature 27 — sms_persistence.
+"""
+
+import unittest
+from unittest import mock
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from src.models import Base, SmsConversation, SmsMessage
+from src.sms_persistence import SmsPersistenceService
+from src.sms_dispatcher_v2 import IncomingSmsDispatcherV2
+
+
+def _build_test_db_engine():
+    """Crea un engine SQLite en memoria para tests."""
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(bind=engine)
+    return engine
+
+
+class TestSmsDispatcherV2(unittest.TestCase):
+    """Tests del dispatcher v2 con persistencia."""
+
+    def setUp(self):
+        """Configura persistence y dispatcher v2."""
+        self.engine = _build_test_db_engine()
+        self.Session = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
+        self.persistence = SmsPersistenceService(db_session_factory=self.Session)
+
+        self.dispatcher = IncomingSmsDispatcherV2(
+            modem_index=0,
+            dev_mode=True,
+            persistence=self.persistence,
+        )
+
+    # ==================================================================
+    # R3: Persist before dispatch
+    # ==================================================================
+
+    def test_persist_before_dispatch(self):
+        """R3: verificar que el SMS esta en BD antes de llamar al handler."""
+        handler_called = []
+
+        def my_handler(sender_phone, text):
+            # Verificar que el SMS ya esta en BD
+            db = self.Session()
+            try:
+                msgs = (
+                    db.query(SmsMessage)
+                    .filter(SmsMessage.peer_number == sender_phone)
+                    .all()
+                )
+                handler_called.append(len(msgs))
+                # Debe haber al menos un mensaje (el entrante)
+                self.assertGreater(len(msgs), 0)
+            finally:
+                db.close()
+            return True
+
+        self.dispatcher.register_handler(my_handler, workflow_type="test")
+        self.dispatcher._dispatch("+573001234567", "hello")
+
+        # Verificar que el handler fue llamado
+        self.assertEqual(len(handler_called), 1)
+        self.assertGreater(handler_called[0], 0,
+            "El SMS entrante deberia estar persistido ANTES de llamar al handler")
+
+    def test_persist_before_dispatch_message_exists(self):
+        """R3: El mensaje existe en BD con status='received' despues de dispatch."""
+        handled = []
+        self.dispatcher.register_handler(
+            lambda p, t: handled.append(True) or True, workflow_type="test",
+        )
+        self.dispatcher._dispatch("+573001234567", "test message")
+
+        db = self.Session()
+        try:
+            msgs = (
+                db.query(SmsMessage)
+                .filter(SmsMessage.peer_number == "+573001234567")
+                .all()
+            )
+            self.assertEqual(len(msgs), 1, "Deberia haber 1 mensaje persistido")
+            self.assertEqual(msgs[0].direction, "received")
+            self.assertEqual(msgs[0].status, "received")
+            self.assertEqual(msgs[0].body, "test message")
+        finally:
+            db.close()
+
+    # ==================================================================
+    # R4: Conversation created on first message
+    # ==================================================================
+
+    def test_conversation_created_on_first_message(self):
+        """R4: primer SMS crea conversacion."""
+        self.dispatcher.register_handler(
+            lambda p, t: True, workflow_type="test",
+        )
+        self.dispatcher._dispatch("+573009999999", "first message")
+
+        db = self.Session()
+        try:
+            convs = (
+                db.query(SmsConversation)
+                .filter(SmsConversation.peer_number == "+573009999999")
+                .all()
+            )
+            self.assertEqual(len(convs), 1, "Deberia crearse una conversacion")
+            self.assertEqual(convs[0].status, "active")
+        finally:
+            db.close()
+
+    # ==================================================================
+    # R5: No catch-all AI handler
+    # ==================================================================
+
+    def test_no_catchall_ai_handler(self):
+        """R5: verificar que NO hay handler catch-all de AI.
+
+        Un SMS que no matchea ningun handler NO debe ser enviado al AI.
+        En su lugar, debe recibir el texto de ayuda.
+        """
+        # Registrar un handler que siempre retorna False (no maneja)
+        self.dispatcher.register_handler(
+            lambda p, t: False, workflow_type="emergency",
+        )
+        self.dispatcher._dispatch("+573001234567", "cualquier cosa random")
+
+        db = self.Session()
+        try:
+            msgs = (
+                db.query(SmsMessage)
+                .filter(SmsMessage.peer_number == "+573001234567")
+                .order_by(SmsMessage.created_at.asc())
+                .all()
+            )
+            # Debe haber 2 mensajes: el recibido y la respuesta de ayuda
+            self.assertEqual(len(msgs), 2)
+            # El segundo debe ser la respuesta de ayuda
+            self.assertEqual(msgs[1].direction, "sent")
+            self.assertIn("Comando no reconocido", msgs[1].body)
+        finally:
+            db.close()
+
+    # ==================================================================
+    # R6: Unknown SMS help response
+    # ==================================================================
+
+    def test_unknown_sms_help_response(self):
+        """R6: SMS no reconocido recibe texto de ayuda."""
+        # Sin handlers registrados — dispatch sin handlers
+        self.dispatcher._dispatch("+573001234567", "cualquier mensaje no reconocido")
+
+        db = self.Session()
+        try:
+            msgs = (
+                db.query(SmsMessage)
+                .filter(SmsMessage.peer_number == "+573001234567")
+                .order_by(SmsMessage.created_at.asc())
+                .all()
+            )
+            self.assertGreaterEqual(len(msgs), 2,
+                "Debe haber al menos el SMS recibido y la respuesta de ayuda")
+
+            # Buscar el mensaje de respuesta
+            sent_msgs = [m for m in msgs if m.direction == "sent"]
+            self.assertGreaterEqual(len(sent_msgs), 1,
+                "Debe haber al menos un mensaje de respuesta")
+            self.assertIn("Comando no reconocido", sent_msgs[0].body)
+            self.assertIn("manual on", sent_msgs[0].body.lower())
+            self.assertIn("manual off", sent_msgs[0].body.lower())
+            self.assertIn("reset password", sent_msgs[0].body.lower())
+        finally:
+            db.close()
+
+    def test_unknown_sms_conversation_completed(self):
+        """R6: conversacion de SMS no reconocido se marca completed."""
+        self.dispatcher._dispatch("+573001234567", "no reconocido")
+
+        db = self.Session()
+        try:
+            conv = (
+                db.query(SmsConversation)
+                .filter(SmsConversation.peer_number == "+573001234567")
+                .first()
+            )
+            self.assertIsNotNone(conv)
+            self.assertEqual(conv.status, "completed",
+                "Conversacion de SMS no reconocido debe marcarse completed")
+        finally:
+            db.close()
+
+    # ==================================================================
+    # R7: Carrier SMS no response
+    # ==================================================================
+
+    def test_carrier_sms_no_response(self):
+        """R7: SMS de carrier se persiste sin respuesta."""
+        # Numero corto (< 6 digitos) = carrier
+        self.dispatcher._dispatch("369", "Tigo: Tienes $5000 de saldo")
+
+        db = self.Session()
+        try:
+            msgs = (
+                db.query(SmsMessage)
+                .filter(SmsMessage.peer_number == "369")
+                .all()
+            )
+            # Solo debe haber el SMS recibido, NO respuesta
+            self.assertEqual(len(msgs), 1)
+            self.assertEqual(msgs[0].direction, "received")
+            self.assertEqual(msgs[0].handler, "carrier")
+
+            conv = (
+                db.query(SmsConversation)
+                .filter(SmsConversation.peer_number == "369")
+                .first()
+            )
+            self.assertIsNotNone(conv)
+            self.assertEqual(conv.workflow_type, "unknown")
+            self.assertEqual(conv.status, "completed")
+        finally:
+            db.close()
+
+    def test_carrier_number_detection(self):
+        """Verificar deteccion de numeros de carrier."""
+        self.assertTrue(self.dispatcher._is_carrier_number("369"))
+        self.assertTrue(self.dispatcher._is_carrier_number("888"))
+        self.assertTrue(self.dispatcher._is_carrier_number("12345"))
+        self.assertFalse(self.dispatcher._is_carrier_number("123456"))
+        self.assertFalse(self.dispatcher._is_carrier_number("+573001234567"))
+
+    # ==================================================================
+    # Handler ordering
+    # ==================================================================
+
+    def test_handler_order_matters(self):
+        """Verificar que los handlers se ejecutan en orden de registro."""
+        execution_order = []
+
+        def handler_a(p, t):
+            execution_order.append("A")
+            return False
+
+        def handler_b(p, t):
+            execution_order.append("B")
+            return True
+
+        def handler_c(p, t):
+            execution_order.append("C")
+            return True
+
+        self.dispatcher.register_handler(handler_a, workflow_type="a")
+        self.dispatcher.register_handler(handler_b, workflow_type="b")
+        self.dispatcher.register_handler(handler_c, workflow_type="c")
+
+        self.dispatcher._dispatch("+573001234567", "test")
+
+        # handler_b retorno True, asi que handler_c no deberia ejecutarse
+        self.assertEqual(execution_order, ["A", "B"])
+
+
+if __name__ == "__main__":
+    unittest.main()
