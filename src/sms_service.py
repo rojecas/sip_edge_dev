@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 import re
 import subprocess
 from datetime import datetime, timezone
@@ -195,7 +196,8 @@ class SMSService:
         modem_arg = str(self._modem_index)
 
         escaped = message.replace("'", "")
-        props = f"number='{phone}',text='{escaped}'"
+        smsc = os.getenv("MMCLI_SMSC", "+573003690025")
+        props = f"number='{phone}',text='{escaped}',smsc='{smsc}'"
 
         # Paso 1: crear el SMS
         create_args = [

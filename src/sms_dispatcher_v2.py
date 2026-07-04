@@ -145,7 +145,7 @@ class IncomingSmsDispatcherV2:
             messages.extend(mmcli_msgs)
 
         for sender_phone, text in messages:
-            self._dispatch(sender_phone, text)
+            await asyncio.to_thread(self._dispatch, sender_phone, text)
 
     async def _fetch_mmcli_sms(self) -> list[tuple[str, str]]:
         """Consulta mmcli para listar y leer SMS entrantes."""
