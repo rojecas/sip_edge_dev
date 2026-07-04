@@ -230,15 +230,44 @@ async def lifespan(app: FastAPI):
         sms_persistence=app.state.sms_persistence,
     )
 
-    # Inicializar LlamaClient
+    # Inicializar clientes LLM dual (local + remote DeepSeek)
     agent_config: AgentConfig = app.state.agent_config
-    from src.llm_client import LlamaClient
-    app.state.llm_client = LlamaClient(
+    from src.llm_client import LlamaClient, DualBackendClient
+
+    # Cliente local (llama.cpp)
+    local_client = LlamaClient(
         base_url=agent_config.llm_url,
         model=agent_config.llm_model,
         timeout=agent_config.llm_timeout,
         dev_mode=dev_mode,
     )
+
+    # Cliente remoto (DeepSeek)
+    deepseek_model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+    deepseek_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
+    deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "")
+    remote_client = LlamaClient(
+        base_url=deepseek_url,
+        model=deepseek_model,
+        timeout=20,
+        dev_mode=False,
+        api_key=deepseek_api_key,
+    )
+
+    # DualBackendClient con circuit breaker
+    ai_primary_backend = os.getenv("AI_PRIMARY_BACKEND", "local")
+    if ai_primary_backend == "remote":
+        app.state.llm_client = DualBackendClient(
+            primary=remote_client,
+            secondary=local_client,
+            cooldown=30,
+        )
+    else:
+        app.state.llm_client = DualBackendClient(
+            primary=local_client,
+            secondary=remote_client,
+            cooldown=30,
+        )
 
     # Inicializar SqlTools
     from src.sql_tools import SqlTools
@@ -271,12 +300,11 @@ async def lifespan(app: FastAPI):
         app.state.password_reset_service.handle_incoming_sms,
         workflow_type="password_reset",
     )
-    # 3. AI query — workflow_type='ai_query' (EXPLICITO, no catch-all)
+    # 3. AI query — retorna False si falla, no es catch-all
     app.state.sms_dispatcher.register_handler(
-        _build_ai_sms_handler(app.state.agent_orchestrator),
+        lambda phone, text: app.state.agent_orchestrator.handle_sms_query(phone, text),
         workflow_type="ai_query",
     )
-
     # Iniciar dispatcher v2 de SMS entrantes (el v1 NO se inicia)
     await app.state.sms_dispatcher.start()
 
@@ -318,20 +346,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
-def _build_ai_sms_handler(agent_orchestrator):
-    """Construye un handler de SMS para consultas AI como fallback.
-
-    Retorna una funcion compatible con el protocolo SmsHandler
-    que procesa SMS no manejados por otros modulos como consultas
-    de lenguaje natural al agente inteligente.
-    """
-    def handler(sender_phone: str, text: str) -> bool:
-        logger.info("AI SMS handler recibiendo: %s de %s", text[:80], sender_phone)
-        agent_orchestrator.handle_sms_query(sender_phone, text)
-        return True  # Siempre procesa como fallback
-
-    return handler
 
 app.include_router(users_router)
 app.include_router(haciendas_router)

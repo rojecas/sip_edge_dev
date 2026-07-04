@@ -23,6 +23,15 @@ SYSTEM_PROMPT = (
     "Cuando uses herramientas, espera los resultados antes de responder. "
     "Si no hay datos disponibles para el periodo consultado, informa claramente. "
     "Responde siempre en espanol, en formato conciso para SMS (max 160 caracteres)."
+    "\n\n"
+    "COMANDOS RECONOCIDOS POR EL SISTEMA (NO son consultas de datos):\n"
+    "- manual on [N{h|m}]: activar modo manual de emergencia\n"
+    "- manual on ext N{h|m}: extender tiempo de modo manual\n"
+    "- manual off: desactivar modo manual\n"
+    "- reset password <usuario>: restablecer contrasena de usuario\n\n"
+    "Si el usuario envia uno de estos comandos (incluso con errores de ortografia), "
+    "NO intentes procesarlo como consulta de datos. Responde unicamente indicando "
+    "que es un comando del sistema y cual es la sintaxis correcta."
 )
 
 ANOMALY_SYSTEM_PROMPT = (
@@ -151,7 +160,7 @@ class AgentOrchestrator:
     # Manejo de consultas SMS (T19)
     # ------------------------------------------------------------------
 
-    def handle_sms_query(self, sender_phone: str, text: str) -> None:
+    def handle_sms_query(self, sender_phone: str, text: str) -> bool:
         """Procesa consulta SMS: LLM → tool_calls → ejecucion → respuesta SMS.
 
         Flujo:
@@ -174,12 +183,12 @@ class AgentOrchestrator:
                 sender_phone,
                 "Lo siento, el sistema de analisis no esta disponible en este momento.",
             )
-            return
+            return False
 
         choices = response.get("choices", [])
         if not choices:
             self._sms.send_sms(sender_phone, "No se pudo procesar la consulta.")
-            return
+            return True
 
         msg = choices[0].get("message", {})
         tool_calls = msg.get("tool_calls", [])
@@ -191,7 +200,7 @@ class AgentOrchestrator:
                 self._sms.send_sms(sender_phone, self._truncate_for_sms(direct_response))
             else:
                 self._sms.send_sms(sender_phone, "No se pudo procesar la consulta.")
-            return
+            return True
 
         # Anadir respuesta del asistente con tool_calls al historial
         messages.append({
@@ -233,7 +242,7 @@ class AgentOrchestrator:
                 sender_phone,
                 "No hay datos disponibles para el periodo o filtros solicitados.",
             )
-            return
+            return True
 
         # Segunda vuelta: LLM parafrasea los resultados
         try:
@@ -244,16 +253,17 @@ class AgentOrchestrator:
                 sender_phone,
                 self._format_crude_results(messages),
             )
-            return
+            return True
 
         final_choices = final_response.get("choices", [])
         if final_choices:
             final_text = final_choices[0].get("message", {}).get("content", "")
             if final_text:
                 self._sms.send_sms(sender_phone, self._truncate_for_sms(final_text))
-                return
+                return True
 
         self._sms.send_sms(sender_phone, "No se pudo generar una respuesta.")
+        return True
 
     # ------------------------------------------------------------------
     # Helpers

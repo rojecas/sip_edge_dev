@@ -20,15 +20,18 @@ class LlamaClient:
     En dev_mode, retorna respuestas simuladas sin conexion real.
     """
 
-    def __init__(self, base_url: str, model: str, timeout: int, dev_mode: bool) -> None:
+    def __init__(self, base_url: str, model: str, timeout: int, dev_mode: bool, api_key: str | None = None) -> None:
         self._base_url = base_url.rstrip("/")
         self._model = model
         self._timeout = timeout
         self._dev_mode = dev_mode
         self._client: httpx.Client | None = None
+        self._headers: dict[str, str] = {}
 
         if not dev_mode:
             self._client = httpx.Client(timeout=httpx.Timeout(timeout))
+            if api_key:
+                self._headers = {"Authorization": f"Bearer {api_key}"}
         logger.info(
             "LlamaClient inicializado: base_url=%s model=%s dev_mode=%s",
             base_url, model, dev_mode,
@@ -65,7 +68,7 @@ class LlamaClient:
             payload["tool_choice"] = "auto"
 
         try:
-            response = self._client.post(url, json=payload)
+            response = self._client.post(url, json=payload, headers=self._headers)
             response.raise_for_status()
             return response.json()
         except httpx.TimeoutException:
@@ -158,3 +161,56 @@ class LlamaClient:
                 },
             }],
         }
+
+
+class DualBackendClient:
+    """Cliente LLM con backend dual y circuit breaker con exponential backoff."""
+
+    def __init__(self, primary, secondary, cooldown=30):
+        self._primary = primary
+        self._secondary = secondary
+        self._state = "OK"
+        self._cooldown = cooldown
+        self._backoff = cooldown
+        self._last_failure = 0.0
+
+    def chat_completion(self, messages, tools=None):
+        now = time.time()
+        if self._state == "FALLBACK" and (now - self._last_failure) >= self._backoff:
+            self._state = "PROBING"
+            logger.info("DualBackend: probing primary after cooldown=%ds", self._backoff)
+
+        if self._state in ("OK", "PROBING"):
+            try:
+                result = self._primary.chat_completion(messages, tools)
+                self._on_success()
+                return result
+            except LlamaConnectionError as e:
+                logger.warning("DualBackend: primary failed: %s", e)
+                self._on_primary_failure()
+
+        try:
+            result = self._secondary.chat_completion(messages, tools)
+            self._on_success()
+            return result
+        except LlamaConnectionError as e:
+            logger.error("DualBackend: both backends failed")
+            raise LlamaConnectionError("Both LLM backends unavailable") from e
+
+    def _on_success(self):
+        if self._state != "OK":
+            logger.info("DualBackend: primary recovered, returning to OK")
+        self._state = "OK"
+        self._backoff = self._cooldown
+        self._last_failure = 0.0
+
+    def _on_primary_failure(self):
+        self._last_failure = time.time()
+        if self._state == "PROBING":
+            self._backoff = min(self._backoff * 2, 300)
+            logger.info("DualBackend: backoff doubled to %ds", self._backoff)
+        self._state = "FALLBACK"
+
+    def close(self):
+        self._primary.close()
+        self._secondary.close()
