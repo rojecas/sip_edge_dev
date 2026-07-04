@@ -200,6 +200,57 @@ class TestSmsDispatcherV2(unittest.TestCase):
             db.close()
 
     # ==================================================================
+    # Bug 26 regression: handler catch-all NO debe existir
+    # ==================================================================
+
+    def test_no_catchall_handler_bug26_regression(self):
+        """Bug 26: handler que siempre retorna True (catch-all) no debe estar registrado.
+
+        Escenario de reproduccion:
+        1. Se registra handler_emergency que solo retorna True para 'manual on'
+        2. Se registra handler_password_reset que solo retorna True para 'reset password'
+        3. Se envia SMS 'hola' (no reconocido)
+        4. Ningun handler retorna True → dispatcher debe responder con HELP_RESPONSE
+
+        Con el bug, _build_ai_sms_handler retornaba True siempre,
+        impidiendo que el dispatcher enviara la respuesta de ayuda.
+        """
+        def emergency_handler(sender_phone, text):
+            if "manual on" in text.lower():
+                return True
+            return False
+
+        def password_reset_handler(sender_phone, text):
+            if "reset password" in text.lower():
+                return True
+            return False
+
+        self.dispatcher.register_handler(emergency_handler, workflow_type="emergency")
+        self.dispatcher.register_handler(password_reset_handler, workflow_type="password_reset")
+
+        # Enviar SMS no reconocido (como 'hola' del Bug 26)
+        self.dispatcher._dispatch("+573001111111", "hola")
+
+        db = self.Session()
+        try:
+            msgs = (
+                db.query(SmsMessage)
+                .filter(SmsMessage.peer_number == "+573001111111")
+                .order_by(SmsMessage.created_at.asc())
+                .all()
+            )
+            # Debe haber 2 mensajes: el recibido y la respuesta de ayuda
+            self.assertGreaterEqual(len(msgs), 2,
+                "Debe haber SMS recibido + respuesta de ayuda")
+            sent_msgs = [m for m in msgs if m.direction == "sent"]
+            self.assertGreaterEqual(len(sent_msgs), 1,
+                "Debe haber respuesta de ayuda para SMS no reconocido")
+            self.assertIn("Comando no reconocido", sent_msgs[0].body,
+                "Debe responder 'Comando no reconocido' en vez de mensaje del LLM")
+        finally:
+            db.close()
+
+    # ==================================================================
     # R7: Carrier SMS no response
     # ==================================================================
 
