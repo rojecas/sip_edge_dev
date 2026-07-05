@@ -3,6 +3,7 @@ scheduler behavior, and turn report generation."""
 
 import asyncio
 import logging
+import os
 import subprocess
 import unittest
 from datetime import datetime, timezone
@@ -138,23 +139,31 @@ class TestSMSServiceErrorHandling(unittest.TestCase):
             )
 
     def test_send_sms_returns_false_when_send_fails(self):
-        """R8: Si mmcli falla al enviar SMS, retorna False y loggea error."""
+        """R8: Si mmcli falla al enviar SMS, retorna False y loggea error.
+        B1: Verifica que se elimina el SMS huerfano del modem."""
         create_stdout = (
             "Successfully created new SMS: "
             "/org/freedesktop/ModemManager1/SMS/5\n"
         )
 
-        call_count = 0
+        call_log = []
 
         def fake_run(args, **_kwargs):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
+            call_log.append(args)
+            if "--messaging-create-sms" in args:
                 return subprocess.CompletedProcess(
                     args=args, returncode=0, stdout=create_stdout, stderr=""
                 )
+            if "--send" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=1, stdout="", stderr="Send failed"
+                )
+            if "--messaging-delete-sms" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout="", stderr=""
+                )
             return subprocess.CompletedProcess(
-                args=args, returncode=1, stdout="", stderr="Send failed"
+                args=args, returncode=1, stdout="", stderr="unknown subcommand"
             )
 
         with mock.patch("subprocess.run", side_effect=fake_run):
@@ -164,6 +173,16 @@ class TestSMSServiceErrorHandling(unittest.TestCase):
             self.assertTrue(
                 any("mmcli fallo al enviar SMS" in msg for msg in log_ctx.output),
                 f"Expected send error log, got: {log_ctx.output}",
+            )
+            # B1: Verificar que se llamo a --messaging-delete-sms con el indice correcto
+            delete_calls = [
+                a for a in call_log if any("--messaging-delete-sms" in str(arg) for arg in a)
+            ]
+            self.assertEqual(len(delete_calls), 1,
+                "Debe llamar a mmcli --messaging-delete-sms exactamente una vez")
+            self.assertTrue(
+                any("=5" in str(arg) for arg in delete_calls[0]),
+                "El indice del SMS a eliminar debe ser 5"
             )
 
     def test_send_sms_returns_false_when_no_sms_index_in_output(self):
@@ -616,3 +635,106 @@ class TestSMSServicePersistence(unittest.TestCase):
         result = svc_no_persist.send_sms("+573001234567", "No persist")
         self.assertTrue(result)
         # No hay excepcion, el envio simulado funciona
+
+
+class TestSMSServiceDryRun(unittest.TestCase):
+    """Verificar que SMS_DRY_RUN=true bloquea envios reales (B3)."""
+
+    def setUp(self):
+        self.config = SmsConfig(
+            admin_phones=["+573001234567"],
+            scheduled_reports=["06:00", "14:00", "22:00"],
+        )
+        self.svc = SMSService(config=self.config, modem_index=0, dev_mode=False)
+
+    def test_send_sms_dry_run_logs_and_returns_true(self):
+        """B3: Con SMS_DRY_RUN=true, send_sms loggea DRY_RUN y retorna True sin mmcli."""
+        with mock.patch.dict(os.environ, {"SMS_DRY_RUN": "true"}):
+            with mock.patch("subprocess.run") as mock_run:
+                with self.assertLogs("src.sms_service", level="INFO") as log_ctx:
+                    result = self.svc.send_sms("+573001234567", "Test dry run")
+                self.assertTrue(result)
+                mock_run.assert_not_called()
+                self.assertTrue(
+                    any("[DRY_RUN]" in msg for msg in log_ctx.output),
+                    f"Expected DRY_RUN log, got: {log_ctx.output}",
+                )
+
+    def test_send_sms_dry_run_1_triggers(self):
+        """B3: SMS_DRY_RUN=1 tambien activa el modo dry run."""
+        with mock.patch.dict(os.environ, {"SMS_DRY_RUN": "1"}):
+            with mock.patch("subprocess.run") as mock_run:
+                result = self.svc.send_sms("+573001234567", "Test 1")
+                self.assertTrue(result)
+                mock_run.assert_not_called()
+
+    def test_send_sms_dry_run_false_sends_normally(self):
+        """B3: SMS_DRY_RUN=false no bloquea el envio."""
+        create_stdout = (
+            "Successfully created new SMS: "
+            "/org/freedesktop/ModemManager1/SMS/3\n"
+        )
+        send_stdout = "successfully sent the SMS\n"
+        call_log = []
+
+        def fake_run(args, **_kwargs):
+            call_log.append(args)
+            if "--messaging-create-sms" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout=create_stdout, stderr=""
+                )
+            if "--send" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout=send_stdout, stderr=""
+                )
+            return subprocess.CompletedProcess(
+                args=args, returncode=1, stdout="", stderr="unknown"
+            )
+
+        with mock.patch.dict(os.environ, {"SMS_DRY_RUN": "false"}):
+            with mock.patch("subprocess.run", side_effect=fake_run):
+                result = self.svc.send_sms("+573001234567", "Test real")
+                self.assertTrue(result)
+                # Debe haber llamado a mmcli al menos 2 veces (create + send)
+                self.assertGreaterEqual(len(call_log), 2)
+
+    def test_send_sms_sync_dry_run_logs_and_returns_true(self):
+        """B3: send_sms_sync con SMS_DRY_RUN=true no ejecuta mmcli."""
+        with mock.patch.dict(os.environ, {"SMS_DRY_RUN": "true"}):
+            with mock.patch("subprocess.run") as mock_run:
+                with self.assertLogs("src.sms_service", level="INFO") as log_ctx:
+                    result = self.svc.send_sms_sync("+573001234567", "Sync dry run")
+                self.assertTrue(result)
+                mock_run.assert_not_called()
+                self.assertTrue(
+                    any("[DRY_RUN]" in msg for msg in log_ctx.output),
+                    f"Expected DRY_RUN log, got: {log_ctx.output}",
+                )
+
+    def test_send_sms_dry_run_persists_message(self):
+        """B3: En dry run, el mensaje se persiste en BD si hay persistencia."""
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(bind=engine)
+        Session = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+        persistence = SmsPersistenceService(db_session_factory=Session)
+        self.svc.set_persistence_service(persistence)
+
+        with mock.patch.dict(os.environ, {"SMS_DRY_RUN": "true"}):
+            result = self.svc.send_sms("+573001234567", "Dry run with persist")
+            self.assertTrue(result)
+
+        db = Session()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001234567",
+                SM.direction == "sent",
+            ).all()
+            self.assertEqual(len(msgs), 1, "El dry run debe persistir el mensaje")
+            self.assertEqual(msgs[0].body, "Dry run with persist")
+        finally:
+            db.close()

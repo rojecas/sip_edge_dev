@@ -183,7 +183,9 @@ class IncomingSmsDispatcherV2:
                         continue
 
                     status = _extract_sms_field(read.stdout, "state")
-                    if status and status.lower() != "received":
+                    # B2: Si no se puede determinar el estado O no es "received",
+                    # eliminar y saltar para evitar loops con SMS huerfanos
+                    if not status or status.lower() != "received":
                         await self._delete_sms(sms_id)
                         continue
 

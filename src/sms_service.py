@@ -56,6 +56,41 @@ class SMSService:
     # Envio individual
     # ------------------------------------------------------------------
 
+    def _persist_sms(self, phone: str, message: str) -> int | None:
+        """Persiste un SMS en sms_messages (helper reutilizable).
+
+        Crea/recupera conversacion y crea el mensaje con status='pending'.
+        Retorna el id del mensaje persistido, o None si falla o no hay
+        servicio de persistencia inyectado.
+        """
+        if self._persistence is None:
+            return None
+        try:
+            conv = self._persistence.get_or_create_active_conversation(
+                peer_number=phone, workflow_type="unknown",
+            )
+            msg = self._persistence.create_message(
+                conversation_id=conv.id,
+                direction="sent",
+                peer_number=phone,
+                body=message,
+                handler="sms_service",
+                status="pending",
+            )
+            return msg.id
+        except Exception:
+            logger.exception("sms_service: error persistiendo mensaje SMS")
+            return None
+
+    def _update_persisted_status(self, msg_id: int | None, status: str, error_message: str | None = None) -> None:
+        """Actualiza el status de un mensaje persistido (helper reutilizable)."""
+        if msg_id is None or self._persistence is None:
+            return
+        try:
+            self._persistence.update_message_status(msg_id, status, error_message=error_message)
+        except Exception:
+            logger.exception("sms_service: error actualizando status de mensaje")
+
     def send_sms(self, phone: str, message: str) -> bool:
         """Envia un SMS al numero indicado.
 
@@ -63,57 +98,41 @@ class SMSService:
         Si hay persistencia inyectada, registra el mensaje en sms_messages
         antes de enviar y actualiza el status segun el resultado.
 
+        B3: Si SMS_DRY_RUN=true, simula exito sin tocar el modem.
+
         Returns:
             True si el envio tuvo exito (dev mode siempre True),
             False en caso de fallo (el error se loggea internamente).
         """
+        # B3: SMS_DRY_RUN bloquea envios reales
+        dry_run = os.getenv("SMS_DRY_RUN", "false").lower() in ("true", "1", "yes")
+        if dry_run:
+            logger.info("[DRY_RUN] SMS bloqueado -> %s: %s", phone, message)
+            self._persist_sms(phone, message)
+            return True
+
         if not phone or not message:
             logger.warning("send_sms llamado con phone o message vacio, omitiendo")
             return False
 
         # R18: Persistir en sms_messages antes de enviar
-        persisted_msg_id = None
-        if self._persistence is not None:
-            try:
-                # Crear/recuperar conversacion
-                conv = self._persistence.get_or_create_active_conversation(
-                    peer_number=phone, workflow_type="unknown",
-                )
-                msg = self._persistence.create_message(
-                    conversation_id=conv.id,
-                    direction="sent",
-                    peer_number=phone,
-                    body=message,
-                    handler="sms_service",
-                    status="pending",
-                )
-                persisted_msg_id = msg.id
-            except Exception:
-                logger.exception("sms_service: error persistiendo mensaje SMS")
+        persisted_msg_id = self._persist_sms(phone, message)
 
         if self._dev_mode:
             logger.info(
                 "[DEV_MODE] SMS simulado -> %s: %s", phone, message
             )
-            if persisted_msg_id and self._persistence is not None:
-                try:
-                    self._persistence.update_message_status(persisted_msg_id, "sent")
-                except Exception:
-                    logger.exception("sms_service: error actualizando status de mensaje")
+            self._update_persisted_status(persisted_msg_id, "sent")
             return True
 
         success = self._send_via_mmcli(phone, message)
 
         # R18: Actualizar status segun resultado
-        if persisted_msg_id and self._persistence is not None:
-            try:
-                new_status = "sent" if success else "failed"
-                self._persistence.update_message_status(
-                    persisted_msg_id, new_status,
-                    error_message=None if success else "mmcli send failed",
-                )
-            except Exception:
-                logger.exception("sms_service: error actualizando status de mensaje")
+        new_status = "sent" if success else "failed"
+        self._update_persisted_status(
+            persisted_msg_id, new_status,
+            error_message=None if success else "mmcli send failed",
+        )
 
         return success
 
@@ -124,52 +143,37 @@ class SMSService:
         Persiste en sms_messages y ejecuta mmcli directamente sin pasar
         por la cola asincrona.
 
+        B3: Si SMS_DRY_RUN=true, simula exito sin tocar el modem.
+
         Returns:
             True si mmcli confirmo el envio, False si fallo.
         """
+        # B3: SMS_DRY_RUN bloquea envios reales
+        dry_run = os.getenv("SMS_DRY_RUN", "false").lower() in ("true", "1", "yes")
+        if dry_run:
+            logger.info("[DRY_RUN] SMS bloqueado (sync) -> %s: %s", phone, message)
+            self._persist_sms(phone, message)
+            return True
+
         if not phone or not message:
             logger.warning("send_sms_sync llamado con phone o message vacio")
             return False
 
         # R18: Persistir antes de enviar
-        persisted_msg_id = None
-        if self._persistence is not None:
-            try:
-                conv = self._persistence.get_or_create_active_conversation(
-                    peer_number=phone, workflow_type="unknown",
-                )
-                msg = self._persistence.create_message(
-                    conversation_id=conv.id,
-                    direction="sent",
-                    peer_number=phone,
-                    body=message,
-                    handler="sms_service",
-                    status="pending",
-                )
-                persisted_msg_id = msg.id
-            except Exception:
-                logger.exception("sms_service: error persistiendo mensaje SMS (sync)")
+        persisted_msg_id = self._persist_sms(phone, message)
 
         if self._dev_mode:
             logger.info("[DEV_MODE] SMS simulado (sync) -> %s: %s", phone, message)
-            if persisted_msg_id and self._persistence is not None:
-                try:
-                    self._persistence.update_message_status(persisted_msg_id, "sent")
-                except Exception:
-                    pass
+            self._update_persisted_status(persisted_msg_id, "sent")
             return True
 
         success = self._send_via_mmcli_sync(phone, message)
 
-        if persisted_msg_id and self._persistence is not None:
-            try:
-                new_status = "sent" if success else "failed"
-                self._persistence.update_message_status(
-                    persisted_msg_id, new_status,
-                    error_message=None if success else "mmcli send failed (sync)",
-                )
-            except Exception:
-                logger.exception("sms_service: error actualizando status de mensaje (sync)")
+        new_status = "sent" if success else "failed"
+        self._update_persisted_status(
+            persisted_msg_id, new_status,
+            error_message=None if success else "mmcli send failed (sync)",
+        )
 
         return success
 
@@ -189,6 +193,23 @@ class SMSService:
         except RuntimeError:
             # No hay event loop: ejecutar sincrono
             return self._send_via_mmcli_sync(phone, message)
+
+    def _delete_orphan_sms(self, sms_index: str) -> None:
+        """Elimina un SMS huerfano del modem tras un fallo de envio (B1).
+
+        Si mmcli creo el objeto SMS pero --send fallo, el objeto queda
+        en el modem. El dispatcher lo detectaria como SMS entrante en
+        el siguiente ciclo, creando un loop infinito.
+        """
+        try:
+            subprocess.run(
+                ["sudo", "-n", "mmcli", "-m", str(self._modem_index),
+                 f"--messaging-delete-sms={sms_index}"],
+                capture_output=True, timeout=10,
+            )
+            logger.info("SMS huerfano %s eliminado del modem tras fallo de envio", sms_index)
+        except Exception:
+            logger.warning("No se pudo eliminar SMS huerfano %s del modem", sms_index)
 
     def _send_via_mmcli_sync(self, phone: str, message: str) -> bool:
         """Version sincrona de _send_via_mmcli (se ejecuta en un thread)."""
@@ -245,14 +266,20 @@ class SMSService:
             )
         except subprocess.TimeoutExpired:
             logger.error("Timeout al enviar SMS %s para %s", sms_index, phone)
+            # B1: Limpiar SMS huerfano del modem
+            self._delete_orphan_sms(sms_index)
             return False
         except OSError as exc:
             logger.error("Error de SO al ejecutar mmcli (enviar SMS): %s", exc)
+            # B1: Limpiar SMS huerfano del modem
+            self._delete_orphan_sms(sms_index)
             return False
 
         if result.returncode != 0:
             stderr = result.stderr.strip() if result.stderr else "unknown error"
             logger.error("mmcli fallo al enviar SMS %s (exit %d): %s", sms_index, result.returncode, stderr)
+            # B1: Limpiar SMS huerfano del modem
+            self._delete_orphan_sms(sms_index)
             return False
 
         logger.info("SMS enviado correctamente a %s", phone)

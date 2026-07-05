@@ -4,6 +4,8 @@ unknown SMS help response, carrier SMS handling, and conversation creation.
 Feature 27 — sms_persistence.
 """
 
+import asyncio
+import subprocess
 import unittest
 from unittest import mock
 
@@ -318,6 +320,111 @@ class TestSmsDispatcherV2(unittest.TestCase):
 
         # handler_b retorno True, asi que handler_c no deberia ejecutarse
         self.assertEqual(execution_order, ["A", "B"])
+
+
+# ==================================================================
+# B2: SMS con state=None se elimina (no se procesa como entrante)
+# ==================================================================
+
+
+class TestSmsDispatcherV2B2(unittest.TestCase):
+    """B2: SMS huerfanos sin estado ('state' ausente) se eliminan del modem."""
+
+    def setUp(self):
+        self.engine = _build_test_db_engine()
+        self.Session = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
+        self.persistence = SmsPersistenceService(db_session_factory=self.Session)
+
+        self.dispatcher = IncomingSmsDispatcherV2(
+            modem_index=0,
+            dev_mode=False,
+            persistence=self.persistence,
+        )
+
+    def test_sms_without_state_is_deleted_and_not_processed(self):
+        """B2: SMS sin campo 'state' se elimina y no se agrega a messages."""
+        call_log = []
+
+        def fake_run(args, **_kwargs):
+            call_log.append(args)
+            if "--messaging-list-sms" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0,
+                    stdout="/org/freedesktop/ModemManager1/SMS/99\n",
+                    stderr="",
+                )
+            if "-s" in args and "--messaging-delete-sms" not in " ".join(args) and "--send" not in args:
+                # Read SMS: devuelve output SIN campo 'state' (simula SMS huerfano)
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0,
+                    stdout=(
+                        "  SMS | /org/freedesktop/ModemManager1/SMS/99\n"
+                        "    | number: +573009999999\n"
+                        "    | text: hola\n"
+                    ),
+                    stderr="",
+                )
+            if "--messaging-delete-sms" in " ".join(args):
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout="", stderr="",
+                )
+            return subprocess.CompletedProcess(
+                args=args, returncode=0, stdout="", stderr="",
+            )
+
+        with mock.patch("subprocess.run", side_effect=fake_run):
+            messages = asyncio.run(self.dispatcher._fetch_mmcli_sms())
+
+        # Verificar que NO se devolvio ningun mensaje
+        self.assertEqual(len(messages), 0,
+            "SMS sin estado no debe ser devuelto como mensaje entrante")
+
+        # Verificar que se llamo a delete-sms para el SMS huerfano
+        delete_calls = [
+            a for a in call_log
+            if any("--messaging-delete-sms" in str(arg) for arg in a)
+        ]
+        self.assertGreaterEqual(len(delete_calls), 1,
+            "Debe llamar a --messaging-delete-sms para el SMS huerfano")
+
+    def test_sms_with_received_state_is_processed(self):
+        """B2: SMS con state='received' se procesa normalmente."""
+        call_log = []
+
+        def fake_run(args, **_kwargs):
+            call_log.append(args)
+            if "--messaging-list-sms" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0,
+                    stdout="/org/freedesktop/ModemManager1/SMS/88\n",
+                    stderr="",
+                )
+            if "-s" in args and "--messaging-delete-sms" not in " ".join(args) and "--send" not in args:
+                # Read SMS: devuelve state='received' en formato pipe (mmcli real)
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0,
+                    stdout=(
+                        "  SMS | /org/freedesktop/ModemManager1/SMS/88\n"
+                        "    | state: received\n"
+                        "    | number: +573001111111\n"
+                        "    | text: test message\n"
+                    ),
+                    stderr="",
+                )
+            if "--messaging-delete-sms" in " ".join(args):
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout="", stderr="",
+                )
+            return subprocess.CompletedProcess(
+                args=args, returncode=0, stdout="", stderr="",
+            )
+
+        with mock.patch("subprocess.run", side_effect=fake_run):
+            messages = asyncio.run(self.dispatcher._fetch_mmcli_sms())
+
+        # Verificar que se devolvio el mensaje correctamente
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(messages[0], ("+573001111111", "test message"))
 
 
 if __name__ == "__main__":
