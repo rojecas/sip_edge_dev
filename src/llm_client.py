@@ -65,7 +65,7 @@ class LlamaClient:
         }
         if tools:
             payload["tools"] = tools
-            payload["tool_choice"] = "auto"
+            payload["tool_choice"] = "required"
 
         try:
             response = self._client.post(url, json=payload, headers=self._headers)
