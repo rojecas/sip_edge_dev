@@ -295,9 +295,11 @@ class IncomingSmsDispatcherV2:
             try:
                 if handler(sender_phone, trimmed_text):
                     handled = True
-                    logger.debug(
-                        "DispatcherV2: SMS manejado por %s (workflow=%s)",
-                        handler, workflow_type,
+                    logger.info(
+                        "DispatcherV2: SMS de %s delegado a %s (workflow=%s)",
+                        sender_phone,
+                        handler.__name__ if hasattr(handler, '__name__') else str(handler),
+                        workflow_type,
                     )
                     break
             except Exception:

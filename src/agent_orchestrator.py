@@ -206,18 +206,25 @@ class AgentOrchestrator:
             {"role": "user", "content": text},
         ]
 
+        logger.info(
+            "LLM: consulta SMS de %s: '%s'", sender_phone, text[:100],
+        )
+
         try:
             # Primera vuelta: LLM decide que tools llamar
             response = self._llm.chat_completion(messages, tools=TOOL_DEFINITIONS)
         except LlamaConnectionError:
-            self._sms.send_sms(
-                sender_phone,
-                "Lo siento, el sistema de analisis no esta disponible en este momento.",
-            )
+            error_text = "Lo siento, el sistema de analisis no esta disponible en este momento."
+            logger.info("LLM: respuesta enviada a %s: '%s'", sender_phone, error_text[:100])
+            self._sms.send_sms(sender_phone, error_text)
             return False
 
         choices = response.get("choices", [])
         if not choices:
+            logger.info(
+                "LLM: respuesta enviada a %s: '%s'",
+                sender_phone, "No se pudo procesar la consulta.",
+            )
             self._sms.send_sms(sender_phone, "No se pudo procesar la consulta.")
             return True
 
@@ -228,8 +235,16 @@ class AgentOrchestrator:
             # LLM respondio directamente sin tools
             direct_response = msg.get("content", "")
             if direct_response:
-                self._sms.send_sms(sender_phone, self._truncate_for_sms(direct_response))
+                response_text = self._truncate_for_sms(direct_response)
+                logger.info(
+                    "LLM: respuesta enviada a %s: '%s'", sender_phone, response_text[:100],
+                )
+                self._sms.send_sms(sender_phone, response_text)
             else:
+                logger.info(
+                    "LLM: respuesta enviada a %s: '%s'",
+                    sender_phone, "No se pudo procesar la consulta.",
+                )
                 self._sms.send_sms(sender_phone, "No se pudo procesar la consulta.")
             return True
 
@@ -262,6 +277,11 @@ class AgentOrchestrator:
                 "content": json.dumps(result, ensure_ascii=False, default=str),
             })
 
+        logger.info(
+            "LLM: tools ejecutadas para %s: %d tool_calls, %d mensajes en historial",
+            sender_phone, len(tool_calls), len(messages),
+        )
+
         # Segunda vuelta: LLM parafrasea los resultados
         # NOTA: tools=None para NO forzar tool_calls. El LLM debe generar
         # texto natural parafraseando los tool_results ya inyectados.
@@ -269,19 +289,28 @@ class AgentOrchestrator:
             final_response = self._llm.chat_completion(messages, tools=None)
         except LlamaConnectionError:
             # Sin LLM, enviar resumen crudo
-            self._sms.send_sms(
-                sender_phone,
-                self._format_crude_results(messages),
+            crude_text = self._format_crude_results(messages)
+            logger.info(
+                "LLM: respuesta enviada a %s: '%s'", sender_phone, crude_text[:100],
             )
+            self._sms.send_sms(sender_phone, crude_text)
             return True
 
         final_choices = final_response.get("choices", [])
         if final_choices:
             final_text = final_choices[0].get("message", {}).get("content", "")
             if final_text:
-                self._sms.send_sms(sender_phone, self._truncate_for_sms(final_text))
+                response_text = self._truncate_for_sms(final_text)
+                logger.info(
+                    "LLM: respuesta enviada a %s: '%s'", sender_phone, response_text[:100],
+                )
+                self._sms.send_sms(sender_phone, response_text)
                 return True
 
+        logger.info(
+            "LLM: respuesta enviada a %s: '%s'",
+            sender_phone, "No se pudo generar una respuesta.",
+        )
         self._sms.send_sms(sender_phone, "No se pudo generar una respuesta.")
         return True
 

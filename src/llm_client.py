@@ -75,10 +75,30 @@ class LlamaClient:
             payload["tools"] = tools
             payload["tool_choice"] = tool_choice if tool_choice is not None else "required"
 
+        logger.info(
+            "LLM request: model=%s tools=%s tool_choice=%s messages=%d",
+            self._model,
+            "yes" if payload.get("tools") else "no",
+            payload.get("tool_choice", "none"),
+            len(payload["messages"]),
+        )
+
         try:
             response = self._client.post(url, json=payload, headers=self._headers)
             response.raise_for_status()
-            return response.json()
+            data = response.json()
+            choices = data.get("choices", [])
+            if choices:
+                msg = choices[0].get("message", {})
+                has_tools = "yes" if msg.get("tool_calls") else "no"
+                content_preview = (msg.get("content") or "")[:80]
+                logger.info(
+                    "LLM response: tool_calls=%s finish_reason=%s content='%s'",
+                    has_tools,
+                    choices[0].get("finish_reason", "?"),
+                    content_preview,
+                )
+            return data
         except httpx.TimeoutException:
             logger.error("Timeout conectando a llama-server en %s", url)
             raise LlamaConnectionError(f"Timeout conectando a llama-server: {url}")
@@ -218,6 +238,11 @@ class DualBackendClient:
             logger.info("DualBackend: probing primary after cooldown=%ds", self._backoff)
 
         if self._state in ("OK", "PROBING"):
+            logger.info(
+                "DualBackend: state=%s backend=%s",
+                self._state,
+                "primary" if self._state in ("OK", "PROBING") else "secondary",
+            )
             try:
                 result = self._primary.chat_completion(messages, tools, tool_choice)
                 self._on_success()
