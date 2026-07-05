@@ -3,6 +3,7 @@
 Feature 27 — sms_persistence.
 """
 
+import os
 import time
 import unittest
 from unittest import mock
@@ -77,9 +78,9 @@ class TestSmsSendQueue(unittest.TestCase):
         # Procesar mensaje manualmente (sin iniciar el thread)
         self.queue._process_pending_messages()
 
-        # Verificar que se llamo a mmcli
+        # Verificar que se llamo a mmcli con message_id
         self.sms_service._send_via_mmcli_sync.assert_called_once_with(
-            msg.peer_number, msg.body,
+            msg.peer_number, msg.body, message_id=msg.id,
         )
 
         # Verificar que el mensaje se marco como sent
@@ -108,7 +109,7 @@ class TestSmsSendQueue(unittest.TestCase):
         """R10: exito en segundo intento."""
         call_count = [0]
 
-        def side_effect(phone, body):
+        def side_effect(phone, body, **kwargs):
             call_count[0] += 1
             if call_count[0] < 2:
                 return False
@@ -194,6 +195,79 @@ class TestSmsSendQueue(unittest.TestCase):
         time.sleep(0.1)
         self.queue.stop()
         self.assertFalse(self.queue.is_running())
+
+
+# ==================================================================
+# Fix 1: DRY_RUN in _send_with_retry
+# ==================================================================
+
+
+class TestSmsSendQueueDryRun(unittest.TestCase):
+    """Fix 1: Verificar que SMS_DRY_RUN=true skips mmcli en SmsSendQueue."""
+
+    def setUp(self):
+        self.engine = _build_test_db_engine()
+        self.Session = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
+        self.persistence = SmsPersistenceService(db_session_factory=self.Session)
+
+        self.sms_service = mock.MagicMock()
+        self.sms_service._send_via_mmcli_sync.return_value = True
+
+        self.queue = SmsSendQueue(
+            persistence=self.persistence,
+            sms_service=self.sms_service,
+            modem_index=0,
+            timeout_seconds=20,
+            poll_interval=0.1,
+        )
+
+    def _create_pending_message(self, peer_number="+573001234567", body="Test"):
+        conv = self.persistence.create_conversation(
+            peer_number=peer_number, workflow_type="emergency",
+        )
+        return self.persistence.create_message(
+            conversation_id=conv.id,
+            direction="sent",
+            peer_number=peer_number,
+            body=body,
+            status="pending",
+        )
+
+    def test_dry_run_does_not_call_mmcli(self):
+        """Fix 1: Con SMS_DRY_RUN=true, _send_with_retry NO llama a mmcli."""
+        msg = self._create_pending_message()
+
+        with mock.patch.dict(os.environ, {"SMS_DRY_RUN": "true"}):
+            result = self.queue._send_with_retry(msg)
+
+        self.assertTrue(result)
+        self.sms_service._send_via_mmcli_sync.assert_not_called()
+
+        # El mensaje debe marcarse como sent
+        updated = self.persistence.get_message(msg.id)
+        self.assertEqual(updated.status, "sent")
+
+    def test_dry_run_skip_rate_limiting(self):
+        """Fix 1: Con DRY_RUN, no se espera el rate limit."""
+        self.queue._min_send_interval = 9999  # Muy largo — no debe afectar
+
+        msg = self._create_pending_message()
+
+        with mock.patch.dict(os.environ, {"SMS_DRY_RUN": "true"}):
+            result = self.queue._send_with_retry(msg)
+
+        self.assertTrue(result)
+        self.sms_service._send_via_mmcli_sync.assert_not_called()
+
+    def test_dry_run_false_calls_mmcli_normally(self):
+        """Fix 1: Con SMS_DRY_RUN=false, se llama a mmcli."""
+        msg = self._create_pending_message()
+
+        with mock.patch.dict(os.environ, {"SMS_DRY_RUN": "false"}):
+            result = self.queue._send_with_retry(msg)
+
+        self.assertTrue(result)
+        self.sms_service._send_via_mmcli_sync.assert_called_once()
 
 
 if __name__ == "__main__":

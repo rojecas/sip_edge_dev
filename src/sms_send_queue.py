@@ -5,6 +5,7 @@ Elimina el bloqueo del event loop de uvicorn y del watchdog de systemd.
 """
 
 import logging
+import os
 import threading
 import time as time_module
 
@@ -129,6 +130,16 @@ class SmsSendQueue:
         Returns:
             True si el envio fue exitoso, False si fallo tras todos los intentos.
         """
+        # B3: DRY_RUN - no enviar realmente
+        dry_run = os.getenv("SMS_DRY_RUN", "false").lower() in ("true", "1", "yes")
+        if dry_run:
+            self._persistence.update_message_status(msg.id, "sent")
+            logger.info(
+                "[DRY_RUN] SendQueue salta mensaje %s a %s",
+                msg.id, msg.peer_number,
+            )
+            return True
+
         now = time_module.time()
         last = self._last_send_times.get(msg.peer_number, 0.0)
         elapsed = now - last
@@ -142,7 +153,7 @@ class SmsSendQueue:
                     msg.id, msg.peer_number, attempt, self.MAX_RETRIES,
                 )
                 success = self._sms_service._send_via_mmcli_sync(
-                    msg.peer_number, msg.body,
+                    msg.peer_number, msg.body, message_id=msg.id,
                 )
                 if success:
                     self._persistence.update_message_status(msg.id, "sent")

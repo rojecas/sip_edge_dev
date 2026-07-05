@@ -211,8 +211,15 @@ class SMSService:
         except Exception:
             logger.warning("No se pudo eliminar SMS huerfano %s del modem", sms_index)
 
-    def _send_via_mmcli_sync(self, phone: str, message: str) -> bool:
-        """Version sincrona de _send_via_mmcli (se ejecuta en un thread)."""
+    def _send_via_mmcli_sync(self, phone: str, message: str, message_id: int | None = None) -> bool:
+        """Version sincrona de _send_via_mmcli (se ejecuta en un thread).
+
+        Args:
+            phone: Numero de telefono destino.
+            message: Texto del mensaje.
+            message_id: ID del mensaje en sms_messages para persistir modem_sms_id.
+                Solo se pasa desde SmsSendQueue (cola asincrona).
+        """
         mmcli_path = "sudo"
         modem_arg = str(self._modem_index)
 
@@ -282,7 +289,19 @@ class SMSService:
             self._delete_orphan_sms(sms_index)
             return False
 
-        logger.info("SMS enviado correctamente a %s", phone)
+        # Fix 2: Persistir modem_sms_id si se proporciono message_id
+        if message_id is not None and self._persistence is not None:
+            try:
+                self._persistence.update_message_status(
+                    message_id, "sent",
+                    modem_sms_id=int(sms_index),
+                )
+            except Exception:
+                logger.exception(
+                    "Error guardando modem_sms_id para msg %s", message_id,
+                )
+
+        logger.info("SMS enviado correctamente a %s (modem_id=%s)", phone, sms_index)
         return True
 
     # ------------------------------------------------------------------

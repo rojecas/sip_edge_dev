@@ -258,6 +258,50 @@ class TestSmsPersistence(unittest.TestCase):
         finally:
             db.close()
 
+    # ==================================================================
+    # Message exists by modem_sms_id (Fix 3)
+    # ==================================================================
+
+    def test_message_exists_by_modem_id_returns_true_when_exists(self):
+        """message_exists_by_modem_id retorna True si el modem_sms_id existe."""
+        conv = self.svc.create_conversation(
+            peer_number="+573001234567", workflow_type="emergency",
+        )
+        msg = self.svc.create_message(
+            conversation_id=conv.id,
+            direction="sent",
+            peer_number="+573001234567",
+            body="Test",
+            status="sent",
+        )
+        # Asignar modem_sms_id manualmente
+        self.svc.update_message_status(msg.id, "sent", modem_sms_id=42)
+
+        result = self.svc.message_exists_by_modem_id(42)
+        self.assertTrue(result)
+
+    def test_message_exists_by_modem_id_returns_false_when_not_exists(self):
+        """message_exists_by_modem_id retorna False si el modem_sms_id no existe."""
+        result = self.svc.message_exists_by_modem_id(999)
+        self.assertFalse(result)
+
+    def test_message_exists_by_modem_id_ignores_other_ids(self):
+        """message_exists_by_modem_id solo encuentra el ID exacto."""
+        conv = self.svc.create_conversation(
+            peer_number="+573001234567", workflow_type="emergency",
+        )
+        msg = self.svc.create_message(
+            conversation_id=conv.id,
+            direction="sent",
+            peer_number="+573001234567",
+            body="Test",
+            status="sent",
+        )
+        self.svc.update_message_status(msg.id, "sent", modem_sms_id=100)
+
+        self.assertTrue(self.svc.message_exists_by_modem_id(100))
+        self.assertFalse(self.svc.message_exists_by_modem_id(101))
+
     def test_get_message_by_id(self):
         """Recuperar mensaje por ID."""
         conv = self.svc.create_conversation(

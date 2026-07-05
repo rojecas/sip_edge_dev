@@ -738,3 +738,142 @@ class TestSMSServiceDryRun(unittest.TestCase):
             self.assertEqual(msgs[0].body, "Dry run with persist")
         finally:
             db.close()
+
+
+# ==================================================================
+# Fix 2: modem_sms_id persistence in _send_via_mmcli_sync
+# ==================================================================
+
+
+class TestSMSServiceModemSmsId(unittest.TestCase):
+    """Fix 2: Verificar que _send_via_mmcli_sync persiste modem_sms_id."""
+
+    def setUp(self):
+        self.config = SmsConfig(
+            admin_phones=["+573001234567"],
+            scheduled_reports=["06:00", "14:00", "22:00"],
+        )
+        self.svc = SMSService(config=self.config, modem_index=0, dev_mode=False)
+
+        self.engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(bind=self.engine)
+        self.Session = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
+        self.persistence = SmsPersistenceService(db_session_factory=self.Session)
+        self.svc.set_persistence_service(self.persistence)
+
+        # Crear conversacion y mensaje de prueba
+        self.conv = self.persistence.create_conversation(
+            peer_number="+573001234567", workflow_type="emergency",
+        )
+        self.msg = self.persistence.create_message(
+            conversation_id=self.conv.id,
+            direction="sent",
+            peer_number="+573001234567",
+            body="Test modem_sms_id",
+            status="pending",
+        )
+
+    def test_modem_sms_id_saved_on_successful_send(self):
+        """Fix 2: Con message_id, _send_via_mmcli_sync persiste modem_sms_id."""
+        create_stdout = (
+            "Successfully created new SMS: "
+            "/org/freedesktop/ModemManager1/SMS/7\n"
+        )
+        send_stdout = "successfully sent the SMS\n"
+
+        call_log = []
+
+        def fake_run(args, **_kwargs):
+            call_log.append(args)
+            if "--messaging-create-sms" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout=create_stdout, stderr="",
+                )
+            if "--send" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout=send_stdout, stderr="",
+                )
+            return subprocess.CompletedProcess(
+                args=args, returncode=1, stdout="", stderr="unknown",
+            )
+
+        with mock.patch("subprocess.run", side_effect=fake_run):
+            result = self.svc._send_via_mmcli_sync(
+                "+573001234567", "Test", message_id=self.msg.id,
+            )
+
+        self.assertTrue(result)
+
+        # Verificar que modem_sms_id se persistio
+        updated = self.persistence.get_message(self.msg.id)
+        self.assertEqual(updated.modem_sms_id, 7)
+        self.assertEqual(updated.status, "sent")
+
+    def test_modem_sms_id_not_saved_without_message_id(self):
+        """Fix 2: Sin message_id, no se persiste modem_sms_id (compatibilidad)."""
+        create_stdout = (
+            "Successfully created new SMS: "
+            "/org/freedesktop/ModemManager1/SMS/5\n"
+        )
+        send_stdout = "successfully sent the SMS\n"
+
+        def fake_run(args, **_kwargs):
+            if "--messaging-create-sms" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout=create_stdout, stderr="",
+                )
+            if "--send" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout=send_stdout, stderr="",
+                )
+            return subprocess.CompletedProcess(
+                args=args, returncode=1, stdout="", stderr="unknown",
+            )
+
+        with mock.patch("subprocess.run", side_effect=fake_run):
+            result = self.svc._send_via_mmcli_sync(
+                "+573001234567", "Test",
+            )
+
+        self.assertTrue(result)
+
+        # El modem_sms_id NO se persistio (no se paso message_id)
+        updated = self.persistence.get_message(self.msg.id)
+        self.assertIsNone(updated.modem_sms_id)
+        self.assertEqual(updated.status, "pending")  # No se actualizo
+
+    def test_modem_sms_id_not_saved_on_send_failure(self):
+        """Fix 2: Si el envio falla, NO se persiste modem_sms_id."""
+        create_stdout = (
+            "Successfully created new SMS: "
+            "/org/freedesktop/ModemManager1/SMS/3\n"
+        )
+
+        def fake_run(args, **_kwargs):
+            if "--messaging-create-sms" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout=create_stdout, stderr="",
+                )
+            if "--send" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=1, stdout="", stderr="Send failed",
+                )
+            return subprocess.CompletedProcess(
+                args=args, returncode=1, stdout="", stderr="unknown",
+            )
+
+        with mock.patch("subprocess.run", side_effect=fake_run):
+            result = self.svc._send_via_mmcli_sync(
+                "+573001234567", "Test", message_id=self.msg.id,
+            )
+
+        self.assertFalse(result)
+
+        # modem_sms_id NO debe estar persistido
+        updated = self.persistence.get_message(self.msg.id)
+        self.assertIsNone(updated.modem_sms_id)
+        self.assertEqual(updated.status, "pending")

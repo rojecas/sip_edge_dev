@@ -291,6 +291,24 @@ class SmsPersistenceService:
         finally:
             db.close()
 
+    def message_exists_by_modem_id(self, modem_sms_id: int) -> bool:
+        """Verifica si existe un mensaje con el modem_sms_id dado.
+
+        Args:
+            modem_sms_id: ID del SMS en el modem (modem_sms_id).
+
+        Returns:
+            True si existe al menos un mensaje con ese modem_sms_id.
+        """
+        db: Session = self._db_session_factory()
+        try:
+            count = db.query(func.count(SmsMessage.id)).filter(
+                SmsMessage.modem_sms_id == modem_sms_id,
+            ).scalar()
+            return count > 0
+        finally:
+            db.close()
+
     def get_message(self, message_id: int) -> SmsMessage | None:
         """Recupera un mensaje por su ID."""
         db: Session = self._db_session_factory()
