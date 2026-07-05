@@ -163,22 +163,32 @@ class TestSmsQueryEmptyData(_OrchTestBase):
 
     def test_empty_data_responds_no_data(self):
         """R23: Si herramientas retornan datos vacios, responde sin datos."""
-        self.mock_llm.chat_completion.return_value = {
-            "choices": [{
-                "message": {
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": [{
-                        "id": "call_1",
-                        "type": "function",
-                        "function": {
-                            "name": "get_basic_stats",
-                            "arguments": '{"fecha_inicio":"2020-01-01","fecha_fin":"2020-01-02"}',
-                        },
-                    }],
-                },
-            }],
-        }
+        self.mock_llm.chat_completion.side_effect = [
+            {
+                "choices": [{
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [{
+                            "id": "call_1",
+                            "type": "function",
+                            "function": {
+                                "name": "get_basic_stats",
+                                "arguments": '{"fecha_inicio":"2020-01-01","fecha_fin":"2020-01-02"}',
+                            },
+                        }],
+                    },
+                }],
+            },
+            {
+                "choices": [{
+                    "message": {
+                        "role": "assistant",
+                        "content": "No hay datos para el periodo consultado.",
+                    },
+                }],
+            },
+        ]
         self.mock_sql_tools.execute_tool.return_value = {
             "count": 0, "avg": 0.0, "min": 0.0, "max": 0.0, "std": 0.0,
         }
@@ -228,6 +238,54 @@ class TestHandleAnomalyLlmFailure(_OrchTestBase):
         self.orchestrator.handle_sms_query("+573001234567", "Cuantos pesajes?")
 
         self.mock_sms.send_sms.assert_called()
+
+
+class TestSmsQuerySecondTurnNoTools(_OrchTestBase):
+    """Verificar que la segunda vuelta NO fuerza tool_calls."""
+
+    def test_second_turn_called_without_tools(self):
+        """Segunda llamada al LLM debe hacerse con tools=None."""
+        # Primera llamada: LLM devuelve tool_call
+        # Segunda llamada: LLM parafrasea
+        self.mock_llm.chat_completion.side_effect = [
+            {
+                "choices": [{
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [{
+                            "id": "call_1",
+                            "type": "function",
+                            "function": {
+                                "name": "get_basic_stats",
+                                "arguments": '{"fecha_inicio":"2026-06-15","fecha_fin":"2026-06-15"}',
+                            },
+                        }],
+                    },
+                }],
+            },
+            {
+                "choices": [{
+                    "message": {
+                        "role": "assistant",
+                        "content": "Hay 10 registros con promedio de 107 kg.",
+                    },
+                }],
+            },
+        ]
+        self.mock_sql_tools.execute_tool.return_value = {
+            "count": 10, "avg": 107.0,
+        }
+        self.mock_sms.send_sms.return_value = True
+
+        self.orchestrator.handle_sms_query("+573001234567", "Cuantos pesajes hoy?")
+
+        # Verificar que la segunda llamada NO incluye tools (tools=None)
+        self.assertEqual(self.mock_llm.chat_completion.call_count, 2)
+        second_call_args = self.mock_llm.chat_completion.call_args_list[1]
+        # call_args_list[1] = (args, kwargs) de la segunda llamada
+        _, second_kwargs = second_call_args
+        self.assertIsNone(second_kwargs.get("tools"), "Segunda vuelta debe tener tools=None")
 
 
 class TestAgentOrchestratorConstruction(_OrchTestBase):

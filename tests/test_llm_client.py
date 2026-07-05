@@ -166,6 +166,154 @@ class TestLlamaClientConnectionError(unittest.TestCase):
             )
 
 
+class TestToolChoiceParameter(unittest.TestCase):
+    """Verificar que chat_completion acepta y usa tool_choice parameter."""
+
+    def setUp(self):
+        self.client = LlamaClient(
+            base_url="http://localhost:8080",
+            model="test-model",
+            timeout=10,
+            dev_mode=False,
+        )
+
+    def tearDown(self):
+        self.client.close()
+
+    @mock.patch.object(httpx.Client, "post")
+    def test_tool_choice_none_defaults_to_required(self, mock_post):
+        """tool_choice=None + tools -> payload usa tool_choice='required'."""
+        mock_response = mock.MagicMock()
+        mock_response.json.return_value = {
+            "choices": [{"message": {"role": "assistant", "content": "Ok"}}],
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        tools = [{"type": "function", "function": {"name": "test_tool"}}]
+        self.client.chat_completion(
+            messages=[{"role": "user", "content": "Hola"}],
+            tools=tools,
+            tool_choice=None,
+        )
+
+        call_kwargs = mock_post.call_args[1]
+        payload = call_kwargs["json"]
+        self.assertEqual(payload["tool_choice"], "required")
+
+    @mock.patch.object(httpx.Client, "post")
+    def test_tool_choice_none_overrides_default(self, mock_post):
+        """tool_choice='none' -> payload usa tool_choice='none'."""
+        mock_response = mock.MagicMock()
+        mock_response.json.return_value = {
+            "choices": [{"message": {"role": "assistant", "content": "Ok"}}],
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        tools = [{"type": "function", "function": {"name": "test_tool"}}]
+        self.client.chat_completion(
+            messages=[{"role": "user", "content": "Hola"}],
+            tools=tools,
+            tool_choice="none",
+        )
+
+        call_kwargs = mock_post.call_args[1]
+        payload = call_kwargs["json"]
+        self.assertEqual(payload["tool_choice"], "none")
+
+    @mock.patch.object(httpx.Client, "post")
+    def test_no_tools_no_tool_choice_in_payload(self, mock_post):
+        """Sin tools, tool_choice NO debe incluirse en payload."""
+        mock_response = mock.MagicMock()
+        mock_response.json.return_value = {
+            "choices": [{"message": {"role": "assistant", "content": "Ok"}}],
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        self.client.chat_completion(
+            messages=[{"role": "user", "content": "Hola"}],
+            tools=None,
+        )
+
+        call_kwargs = mock_post.call_args[1]
+        payload = call_kwargs["json"]
+        self.assertNotIn("tool_choice", payload)
+
+    @mock.patch.object(httpx.Client, "post")
+    def test_tool_choice_auto(self, mock_post):
+        """tool_choice='auto' -> payload usa tool_choice='auto'."""
+        mock_response = mock.MagicMock()
+        mock_response.json.return_value = {
+            "choices": [{"message": {"role": "assistant", "content": "Ok"}}],
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        tools = [{"type": "function", "function": {"name": "test_tool"}}]
+        self.client.chat_completion(
+            messages=[{"role": "user", "content": "Hola"}],
+            tools=tools,
+            tool_choice="auto",
+        )
+
+        call_kwargs = mock_post.call_args[1]
+        payload = call_kwargs["json"]
+        self.assertEqual(payload["tool_choice"], "auto")
+
+
+class TestDevModeImprovedSecondTurn(unittest.TestCase):
+    """Verificar que _simulate_response mejoro segunda vuelta con datos reales."""
+
+    def setUp(self):
+        self.client = LlamaClient(
+            base_url="http://localhost:8080",
+            model="test-model",
+            timeout=10,
+            dev_mode=True,
+        )
+
+    def tearDown(self):
+        self.client.close()
+
+    def test_second_turn_with_tool_results_includes_data(self):
+        """Segunda vuelta con tool_results genera resumen con datos reales."""
+        tools = [{"type": "function", "function": {"name": "get_basic_stats"}}]
+        response = self.client.chat_completion(
+            messages=[
+                {"role": "user", "content": "Estadisticas de hoy"},
+                {"role": "assistant", "content": None,
+                 "tool_calls": [{"id": "call_1", "type": "function",
+                               "function": {"name": "get_basic_stats",
+                                           "arguments": "{}"}}]},
+                {"role": "tool", "tool_call_id": "call_1",
+                 "content": '{"count": 15, "total": 1500.0, "avg": 100.0}'},
+            ],
+            tools=tools,
+        )
+        content = response["choices"][0]["message"]["content"]
+        self.assertIn("[DEV_MODE]", content)
+        self.assertIn("15", content)
+        self.assertIn("1500", content)
+
+    def test_second_turn_with_empty_tool_results(self):
+        """Segunda vuelta con tool_results vacios muestra mensaje adecuado."""
+        tools = [{"type": "function", "function": {"name": "get_basic_stats"}}]
+        response = self.client.chat_completion(
+            messages=[
+                {"role": "user", "content": "Estadisticas de hoy"},
+                {"role": "tool", "tool_call_id": "call_1",
+                 "content": '{"count": 0, "total": 0}'},
+            ],
+            tools=tools,
+        )
+        content = response["choices"][0]["message"]["content"]
+        self.assertIn("[DEV_MODE]", content)
+        # Debe mencionar que hay 0 registros o similares
+        self.assertIn("0", content)
+
+
 class TestLlamaClientClose(unittest.TestCase):
     """T30: Verificar que close no falla."""
 

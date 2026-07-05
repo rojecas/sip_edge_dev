@@ -510,9 +510,9 @@ async def agent_query(
                 "tool_call_id": tc.get("id", ""),
                 "content": json.dumps(result, ensure_ascii=False, default=str),
             })
-        # Segunda vuelta
+        # Segunda vuelta: NO forzar tool_calls, permitir que el LLM parafrasee
         try:
-            response2 = llm_client.chat_completion(messages, tools=TOOL_DEFINITIONS)
+            response2 = llm_client.chat_completion(messages, tools=None)
         except Exception as e:
             return JSONResponse(
                 status_code=503,

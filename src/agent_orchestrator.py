@@ -24,6 +24,10 @@ SYSTEM_PROMPT = (
     "Si no hay datos disponibles para el periodo consultado, informa claramente. "
     "Responde siempre en espanol, en formato conciso para SMS (max 160 caracteres)."
     "\n\n"
+    "IMPORTANTE: El ano actual es 2026. Cuando el usuario no especifique un "
+    "ano en su consulta, usa el ano actual 2026 como referencia. Por ejemplo, "
+    "si preguntan 'cuantas toneladas el 24 de junio', usa '2026-06-24'."
+    "\n\n"
     "COMANDOS RECONOCIDOS POR EL SISTEMA (NO son consultas de datos):\n"
     "- manual on [N{h|m}]: activar modo manual de emergencia\n"
     "- manual on ext N{h|m}: extender tiempo de modo manual\n"
@@ -259,8 +263,10 @@ class AgentOrchestrator:
             })
 
         # Segunda vuelta: LLM parafrasea los resultados
+        # NOTA: tools=None para NO forzar tool_calls. El LLM debe generar
+        # texto natural parafraseando los tool_results ya inyectados.
         try:
-            final_response = self._llm.chat_completion(messages, tools=TOOL_DEFINITIONS)
+            final_response = self._llm.chat_completion(messages, tools=None)
         except LlamaConnectionError:
             # Sin LLM, enviar resumen crudo
             self._sms.send_sms(

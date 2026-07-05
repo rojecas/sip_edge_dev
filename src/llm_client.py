@@ -41,11 +41,19 @@ class LlamaClient:
         self,
         messages: list[dict],
         tools: list[dict] | None = None,
+        tool_choice: str | None = None,
     ) -> dict:
         """Envia un chat completion a llama-server.
 
         En dev mode, retorna respuesta simulada (predecible).
         En prod, hace POST a /v1/chat/completions.
+
+        Args:
+            messages: Lista de mensajes del historial.
+            tools: Definiciones de tools (Function Calling).
+            tool_choice: Control de tool_choice. None = usa "required"
+                si hay tools (default compatibilidad). "none" = no forzar
+                tools. "auto" = LLM decide. "required" = forzar tools.
 
         Retorna dict con formato OpenAI API: {'choices': [...], ...}
 
@@ -65,7 +73,7 @@ class LlamaClient:
         }
         if tools:
             payload["tools"] = tools
-            payload["tool_choice"] = "required"
+            payload["tool_choice"] = tool_choice if tool_choice is not None else "required"
 
         try:
             response = self._client.post(url, json=payload, headers=self._headers)
@@ -149,10 +157,39 @@ class LlamaClient:
             }
 
         # Segunda vuelta o sin tools: generar respuesta de texto
-        response_text = (
-            f"[DEV_MODE] Respuesta simulada del LLM a: '{user_text[:80]}'. "
-            "Los datos presentados son reales, obtenidos de la base de datos."
-        )
+        if has_tool_results:
+            # Extraer datos reales de los tool_results
+            response_lines = []
+            for msg in messages:
+                if msg.get("role") == "tool":
+                    try:
+                        data = json.loads(msg["content"])
+                    except (json.JSONDecodeError, TypeError):
+                        continue
+                    if isinstance(data, dict):
+                        count = data.get("count", 0)
+                        total = data.get("total") or data.get("peso_total") or data.get("total_weight")
+                        avg = data.get("avg") or data.get("peso_promedio")
+                        parts = []
+                        parts.append(f"Se encontraron {count} registros")
+                        if total:
+                            parts.append(f"con un total de {total} kg")
+                        if avg:
+                            parts.append(f"(promedio {avg} kg)")
+                        if parts:
+                            response_lines.append("[DEV_MODE] " + " ".join(parts))
+            if response_lines:
+                response_text = "\n".join(response_lines)
+            else:
+                response_text = (
+                    f"[DEV_MODE] Respuesta simulada del LLM a: '{user_text[:80]}'. "
+                    "No se pudieron extraer datos de los tool_results."
+                )
+        else:
+            response_text = (
+                f"[DEV_MODE] Respuesta simulada del LLM a: '{user_text[:80]}'. "
+                "Los datos presentados son reales, obtenidos de la base de datos."
+            )
         return {
             "choices": [{
                 "message": {
@@ -174,7 +211,7 @@ class DualBackendClient:
         self._backoff = cooldown
         self._last_failure = 0.0
 
-    def chat_completion(self, messages, tools=None):
+    def chat_completion(self, messages, tools=None, tool_choice=None):
         now = time.time()
         if self._state == "FALLBACK" and (now - self._last_failure) >= self._backoff:
             self._state = "PROBING"
@@ -182,7 +219,7 @@ class DualBackendClient:
 
         if self._state in ("OK", "PROBING"):
             try:
-                result = self._primary.chat_completion(messages, tools)
+                result = self._primary.chat_completion(messages, tools, tool_choice)
                 self._on_success()
                 return result
             except LlamaConnectionError as e:
@@ -190,7 +227,7 @@ class DualBackendClient:
                 self._on_primary_failure()
 
         try:
-            result = self._secondary.chat_completion(messages, tools)
+            result = self._secondary.chat_completion(messages, tools, tool_choice)
             self._on_success()
             return result
         except LlamaConnectionError as e:
