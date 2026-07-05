@@ -199,6 +199,7 @@ class SmsPersistenceService:
         body: str,
         handler: str | None = None,
         status: str = "pending",
+        modem_sms_id: int | None = None,
     ) -> SmsMessage:
         """Crea un nuevo registro de mensaje SMS."""
         if direction not in ("sent", "received"):
@@ -216,6 +217,7 @@ class SmsPersistenceService:
                 body=body,
                 handler=handler,
                 status=status,
+                modem_sms_id=modem_sms_id,
             )
             db.add(msg)
             db.commit()

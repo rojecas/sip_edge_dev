@@ -99,6 +99,51 @@ class TestSmsDispatcherV2(unittest.TestCase):
             db.close()
 
     # ==================================================================
+    # modem_sms_id for incoming SMS
+    # ==================================================================
+
+    def test_incoming_sms_stores_modem_sms_id(self):
+        """Verificar que un SMS entrante almacena el modem_sms_id en BD."""
+        self.dispatcher.register_handler(
+            lambda p, t: True, workflow_type="test",
+        )
+        self.dispatcher._dispatch(
+            "+573001234567", "test message", modem_sms_id="42",
+        )
+
+        db = self.Session()
+        try:
+            msgs = (
+                db.query(SmsMessage)
+                .filter(SmsMessage.peer_number == "+573001234567")
+                .all()
+            )
+            self.assertEqual(len(msgs), 1, "Deberia haber 1 mensaje persistido")
+            self.assertEqual(msgs[0].modem_sms_id, 42,
+                "modem_sms_id debe almacenarse como entero")
+            self.assertEqual(msgs[0].direction, "received")
+            self.assertEqual(msgs[0].status, "received")
+            self.assertEqual(msgs[0].body, "test message")
+        finally:
+            db.close()
+
+    def test_incoming_sms_modem_sms_id_none_carrier(self):
+        """Verificar que SMS de carrier tiene modem_sms_id=NULL."""
+        self.dispatcher._dispatch("369", "Tigo: saldo")
+        db = self.Session()
+        try:
+            msgs = (
+                db.query(SmsMessage)
+                .filter(SmsMessage.peer_number == "369")
+                .all()
+            )
+            self.assertEqual(len(msgs), 1)
+            self.assertIsNone(msgs[0].modem_sms_id,
+                "SMS de carrier debe tener modem_sms_id=NULL")
+        finally:
+            db.close()
+
+    # ==================================================================
     # R4: Conversation created on first message
     # ==================================================================
 
@@ -422,9 +467,11 @@ class TestSmsDispatcherV2B2(unittest.TestCase):
         with mock.patch("subprocess.run", side_effect=fake_run):
             messages = asyncio.run(self.dispatcher._fetch_mmcli_sms())
 
-        # Verificar que se devolvio el mensaje correctamente
+        # Verificar que se devolvio el mensaje correctamente con modem_sms_id
         self.assertEqual(len(messages), 1)
-        self.assertEqual(messages[0], ("+573001111111", "test message"))
+        self.assertEqual(messages[0][0], "+573001111111")
+        self.assertEqual(messages[0][1], "test message")
+        self.assertEqual(messages[0][2], "88")
 
 
 # ==================================================================
@@ -544,7 +591,9 @@ class TestSmsDispatcherV2Fix3(unittest.TestCase):
             messages = asyncio.run(self.dispatcher._fetch_mmcli_sms())
 
         self.assertEqual(len(messages), 1)
-        self.assertEqual(messages[0], ("+573001111111", "hello world"))
+        self.assertEqual(messages[0][0], "+573001111111")
+        self.assertEqual(messages[0][1], "hello world")
+        self.assertEqual(messages[0][2], "99")
 
 
 if __name__ == "__main__":

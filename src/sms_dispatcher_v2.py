@@ -64,7 +64,7 @@ class IncomingSmsDispatcherV2:
         self._dev_mode = dev_mode
         self._persistence = persistence
         self._handlers: list[tuple[SmsHandler, str]] = []  # (handler, workflow_type)
-        self._dev_queue: list[tuple[str, str]] = []
+        self._dev_queue: list[tuple[str, str, str | None]] = []
         self._poll_task: asyncio.Task | None = None
 
     # ------------------------------------------------------------------
@@ -86,9 +86,11 @@ class IncomingSmsDispatcherV2:
             handler, workflow_type,
         )
 
-    def enqueue_incoming_sms(self, sender_phone: str, text: str) -> None:
+    def enqueue_incoming_sms(
+        self, sender_phone: str, text: str, modem_sms_id: str | None = None,
+    ) -> None:
         """Encola un SMS entrante simulado (para dev mode y tests)."""
-        self._dev_queue.append((sender_phone, text))
+        self._dev_queue.append((sender_phone, text, modem_sms_id))
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -135,21 +137,24 @@ class IncomingSmsDispatcherV2:
 
     async def _check_incoming_sms(self) -> None:
         """Verifica si hay SMS entrantes y los distribuye a los handlers."""
-        messages: list[tuple[str, str]] = []
+        messages: list[tuple[str, str, str | None]] = []
 
         if self._dev_mode:
             while self._dev_queue:
-                messages.append(self._dev_queue.pop(0))
+                sender, text, sms_id = self._dev_queue.pop(0)
+                messages.append((sender, text, sms_id))
         else:
             mmcli_msgs = await self._fetch_mmcli_sms()
             messages.extend(mmcli_msgs)
 
-        for sender_phone, text in messages:
-            await asyncio.to_thread(self._dispatch, sender_phone, text)
+        for sender_phone, text, modem_sms_id in messages:
+            await asyncio.to_thread(
+                self._dispatch, sender_phone, text, modem_sms_id,
+            )
 
-    async def _fetch_mmcli_sms(self) -> list[tuple[str, str]]:
+    async def _fetch_mmcli_sms(self) -> list[tuple[str, str, str | None]]:
         """Consulta mmcli para listar y leer SMS entrantes."""
-        messages: list[tuple[str, str]] = []
+        messages: list[tuple[str, str, str | None]] = []
         try:
             result = await asyncio.to_thread(
                 subprocess.run,
@@ -209,7 +214,7 @@ class IncomingSmsDispatcherV2:
                             pass  # Si falla la consulta, procesar normalmente
 
                     if sender and text:
-                        messages.append((sender, text))
+                        messages.append((sender, text, sms_id))
 
                     await self._delete_sms(sms_id)
                 except Exception:
@@ -243,7 +248,9 @@ class IncomingSmsDispatcherV2:
     # Dispatch
     # ------------------------------------------------------------------
 
-    def _dispatch(self, sender_phone: str, text: str) -> None:
+    def _dispatch(
+        self, sender_phone: str, text: str, modem_sms_id: str | None = None,
+    ) -> None:
         """Distribuye un SMS a los handlers registrados.
 
         Flujo:
@@ -274,6 +281,7 @@ class IncomingSmsDispatcherV2:
                 body=trimmed_text,
                 handler=None,
                 status="received",
+                modem_sms_id=int(modem_sms_id) if modem_sms_id is not None else None,
             )
         except Exception:
             logger.exception(
