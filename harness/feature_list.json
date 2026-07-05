@@ -530,14 +530,14 @@
                          "type":  "feature",
                          "sdd":  true,
                          "description":  "Reemplazar el boton unico de Reset general de la medida actual por tres botones de reset individual,\nuno por cada campo de peso en el formulario de pesaje del kiosko (peso_muestra,\npeso_mineral,\npeso_vegetal). Actualmente el boton Reset borra toda la medida completa (los 3 pesos + campos de texto). Con el cambio,\ncada peso tiene su propio boton Reset que borra solo ese valor,\npermitiendo al operador corregir un error en una sola lectura sin perder las otras dos ni tener que re-mezclar el material fisicamente en la mesa de trabajo.",
-                          "name":  "reset_individual_pesos",
-                           "status":  "done",
-                          "depends_on":  [
-                                             6,
-                                             13
-                                         ],
-                          "github_issue":  "https://github.com/rojecas/sip_edge/issues/21",
-                          "title":  "Reset Individual de Pesos en Kiosko de Pesaje"
+                         "name":  "reset_individual_pesos",
+                         "status":  "done",
+                         "depends_on":  [
+                                            6,
+                                            13
+                                        ],
+                         "github_issue":  "https://github.com/rojecas/sip_edge/issues/21",
+                         "title":  "Reset Individual de Pesos en Kiosko de Pesaje"
                      },
                      {
                          "id":  25,
@@ -556,13 +556,13 @@
                                             "Script generador: scripts/generate_readings.py produce los 5 datasets CSV",
                                             "Documentacion de conexion fisica: workstation USB-\u003eRS232 -\u003e conversor RS232/RS485 -\u003e EdgeBox RS485"
                                         ],
-                          "status":  "testing",
-                          "depends_on":  [
+                         "status":  "testing",
+                         "depends_on":  [
 
-                                         ]
-                      },
-                      {
-                          "id":  26,
+                                        ]
+                     },
+                     {
+                         "id":  26,
                          "name":  "emergency_request_wrong_sms",
                          "title":  "Solicitud de modo manual desde Kiosko envÃ­a mensaje de error del LLM al admin",
                          "type":  "bug",
@@ -609,7 +609,7 @@
                                             12,
                                             26
                                         ],
-                         "status":  "testing",
+                         "status":  "done",
                          "github_issue":  "https://github.com/rojecas/sip_edge/issues/20"
                      },
                      {
