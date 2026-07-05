@@ -170,8 +170,35 @@ class AgentOrchestrator:
         4. Pasa resultados al LLM para segunda vuelta (parafraseo).
         5. Envia respuesta por SMS al remitente.
         """
+        # Look up user role for context-aware responses
+        role = "unknown"
+        _db = None
+        try:
+            _db = self._db_session_factory()
+            from src.models import User
+            _user = _db.query(User).filter(
+                User.phone == sender_phone, User.is_active == True
+            ).first()
+            if _user:
+                role = _user.role
+        except Exception:
+            pass
+        finally:
+            if _db:
+                _db.close()
+
+        role_note = ""
+        if role == "corresponsal":
+            role_note = (
+                "\n\nIMPORTANTE: El usuario es CORRESPONSAL. "
+                "SOLO puede hacer consultas de datos de pesaje. "
+                "Si el mensaje NO es una consulta de datos, responde UNICAMENTE: "
+                "'Solo puedo responder consultas sobre datos de pesaje.' "
+                "NO menciones comandos del sistema."
+            )
+
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": SYSTEM_PROMPT + role_note},
             {"role": "user", "content": text},
         ]
 
@@ -210,7 +237,6 @@ class AgentOrchestrator:
         })
 
         # Ejecutar cada tool_call
-        all_results_empty = True
         for tc in tool_calls:
             func_info = tc.get("function", {})
             tool_name = func_info.get("name", "")
@@ -225,24 +251,12 @@ class AgentOrchestrator:
                 logger.error("Error ejecutando tool %s: %s", tool_name, e)
                 result = {"error": str(e)}
 
-            # Verificar si el resultado tiene datos
-            if self._has_data(result):
-                all_results_empty = False
-
             # Anadir resultado de la tool al historial
             messages.append({
                 "role": "tool",
                 "tool_call_id": tc.get("id", ""),
                 "content": json.dumps(result, ensure_ascii=False, default=str),
             })
-
-        # Si todos los resultados estan vacios, responder sin LLM
-        if all_results_empty:
-            self._sms.send_sms(
-                sender_phone,
-                "No hay datos disponibles para el periodo o filtros solicitados.",
-            )
-            return True
 
         # Segunda vuelta: LLM parafrasea los resultados
         try:
