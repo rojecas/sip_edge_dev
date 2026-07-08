@@ -128,16 +128,13 @@ class PasswordResetService:
             )
 
             if sender_user is None or sender_user.role != "admin":
-                # R13: Remitente no admin
-                error_msg = (
-                    "Solo administradores pueden solicitar reset de contrasena"
+                # R13: Remitente no admin — silencio total por seguridad.
+                # El dispatcher V2 ya filtra por rol, pero si el handler
+                # es llamado directamente, se rechaza sin respuesta.
+                logger.debug(
+                    "Password reset: no admin sender %s ignorado (silencio)", sender_phone,
                 )
-                self._sms_service.send_sms(sender_phone, f"SIP-Edge: {error_msg}")
-                logger.warning(
-                    "Password reset: no admin sender %s intento reset para '%s'",
-                    sender_phone, username,
-                )
-                return True  # Manejado (aunque rechazado)
+                return True  # Manejado (aunque rechazado en silencio)
 
             # R14: Verificar que admin no resetea su propia contrasena
             if sender_user.username.lower() == username.lower():

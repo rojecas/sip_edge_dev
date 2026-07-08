@@ -240,24 +240,13 @@ class EmergencyModeService:
             )
 
             if user is None or user.role != "admin":
-                # Emisor no autorizado
-                invalid_log = EmergencyModeLog(
-                    status="invalid",
-                    cmd_source="sms",
-                    cmd_raw=f"Unauthorized sender: {sender_phone}",
-                    sender_phone=sender_phone,
+                # Emisor no autorizado — silencio total por seguridad.
+                # El dispatcher V2 ya filtra por rol, pero si el handler
+                # es llamado directamente, se rechaza sin log ni respuesta.
+                logger.debug(
+                    "SMS de emisor no autorizado ignorado (silencio): %s", sender_phone
                 )
-                db.add(invalid_log)
-                db.commit()
-                logger.warning(
-                    "SMS de emisor no autorizado o no admin: %s", sender_phone
-                )
-                self._sms_service.send_sms(
-                    sender_phone,
-                    "SIP-Edge: Comando no autorizado. Solo administradores "
-                    "registrados pueden controlar el modo manual.",
-                )
-                return True  # Manejado (aunque rechazado)
+                return True  # Manejado (aunque rechazado en silencio)
 
             supervisor_id = user.id
 

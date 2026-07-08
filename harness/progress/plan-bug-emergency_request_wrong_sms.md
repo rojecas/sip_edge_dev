@@ -1,38 +1,49 @@
-# Plan Bug 26 — emergency_request_wrong_sms
+# Plan - Bug #26: emergency_request_wrong_sms
 
-## Sintoma
-Al solicitar modo manual desde la vista Kiosko (POST /api/emergency/request), el administrador recibe en su telefono el mensaje "Lo siento, el sistema de analisis no esta disponible en este momento." en lugar del mensaje esperado de solicitud de emergencia.
+## Síntoma
+Al solicitar modo manual desde la vista Kiosko (POST /api/emergency/request), el administrador recibe en su teléfono el mensaje "Lo siento, el sistema de análisis no está disponible en este momento." en lugar del mensaje esperado de solicitud de emergencia.
 
-## Causa raiz
-El dispatcher v2 (`sms_dispatcher_v2.py`) esta diseñado correctamente: procesa handlers en orden (emergency → password_reset → ai_query), y si NINGUN handler retorna True, responde con HELP_RESPONSE "Comando no reconocido...".
+## Causa raíz
 
-Sin embargo, la funcion `_build_ai_sms_handler()` en `src/main.py` (lineas 322-334) construye un handler que **SIEMPRE retorna True**, actuando como catch-all:
+**Double-send race condition entre `send_sms()` y `SmsSendQueue`:**
 
-```python
-def handler(sender_phone: str, text: str) -> bool:
-    agent_orchestrator.handle_sms_query(sender_phone, text)
-    return True  # Siempre procesa como fallback
-```
+Cuando `create_request()` llama a `send_sms()`, el flujo actual es:
 
-Cuando se solicita emergencia desde el kiosko (no via SMS), el sistema envia un SMS al admin con la solicitud. El SMS es recibido por el modem, el dispatcher lo procesa y como no matchea emergency (no dice "manual on") ni password_reset, cae al handler AI que retorna True y ejecuta `handle_sms_query()`, que al no poder conectar con el LLM, envia el mensaje de error "Lo siento, el sistema de analisis no esta disponible en este momento."
+1. `send_sms()` persiste el SMS en `sms_messages` con `status="pending"` (via `_persist_sms()`)
+2. `send_sms()` envía el SMS directamente via `_send_via_mmcli()` → `_send_via_mmcli_sync(phone, message)` **SIN `message_id`**
+3. `SmsSendQueue` (thread separado, poll cada 2s) detecta el mensaje pendiente y también lo envía via `_send_via_mmcli_sync(phone, message, message_id=msg.id)` **CON `message_id`**
+
+Esto produce DOS envíos del mismo SMS:
+- **Envío A (desde `send_sms()` directamente):** Crea objeto SMS en el módem, lo envía, pero **NO guarda `modem_sms_id`** porque no pasa `message_id`.
+- **Envío B (desde `SmsSendQueue`):** Crea otro objeto SMS en el módem, lo envía, y **SÍ guarda `modem_sms_id`** porque pasa `message_id`.
+
+**Problema con el Envío A:**
+Como no se guardó `modem_sms_id`, si el módem reporta este SMS como "received" (en lugar de "sent") —o si ocurre cualquier eco—, el dispatcher lo procesa como SMS entrante:
+1. Pasa filtro B2 (state="received")
+2. Fix 3 (`message_exists_by_modem_id()`) NO lo detecta porque `modem_sms_id` no está en BD
+3. El texto del SMS es la solicitud de emergencia, NO coincide con "manual on"
+4. `process_incoming_sms()` retorna `False` (texto no reconocido)
+5. `handle_sms_query()` intenta procesarlo con LLM
+6. LLM falla (LlamaConnectionError) → envía "Lo siento..." al número del admin
 
 ## Archivos implicados
-- `src/main.py` — Eliminar registro del handler AI en el dispatcher v2 (lineas 274-278) y eliminar la funcion `_build_ai_sms_handler()` (lineas 322-334)
+- `src/sms_service.py` — método `send_sms()`: debe delegar el envío real al `SmsSendQueue` cuando hay persistencia configurada
+- `tests/test_sms_service.py` — nuevos tests de regresión
 
 ## Fix propuesto
-1. En `src/main.py`: Eliminar las lineas que registran el handler AI como handler del dispatcher v2 (lineas 274-278)
-2. Eliminar la funcion `_build_ai_sms_handler()` (lineas 322-334)
-3. Mantener `AgentOrchestrator` y `app.state.agent_orchestrator` porque otras partes del sistema (endpoint `/agent/query`, reportes programados, deteccion de anomalias) lo usan
 
-Con este cambio:
-- SMS "hola" u otros no reconocidos → ningun handler retorna True → dispatcher envia HELP_RESPONSE ("Comando no reconocido...")
-- SMS "manual on" → handler emergency lo procesa
-- SMS "reset password <user>" → handler password_reset lo procesa
-- La solicitud de emergencia desde kiosko envia SMS directo, sin pasar por el dispatcher
+**En `src/sms_service.py`, método `send_sms()`:**
 
-## Plan de verificacion
-1. Aplicar cambios en `src/main.py`
-2. Reiniciar servicio: `echo sipedge1234 | sudo -S systemctl restart sip-edge`
-3. Verificar health check: `curl -s http://127.0.0.1:8000/health`
-4. Verificar logs: `sudo journalctl -u sip-edge --no-pager -n 30` — sin errores
-5. Verificar que el endpoint `/agent/query` sigue funcionando (usa `app.state.agent_orchestrator` directamente)
+Cuando `self._persistence is not None` (F27 está activo), `send_sms()` NO debe llamar a `_send_via_mmcli()` directamente. Debe:
+1. Persistir el mensaje con `status="pending"` (ya lo hace)
+2. Retornar `True`
+
+El `SmsSendQueue` se encarga del envío real, con `message_id` correcto, garantizando que `modem_sms_id` se guarde.
+
+El comportamiento legacy (sin persistencia) se mantiene igual.
+
+## Plan de verificación
+1. Test unitario que verifique que `send_sms()` NO llama a `_send_via_mmcli()` cuando hay persistencia
+2. Test de integración que verifique que el mensaje se persiste como "pending" y el `SmsSendQueue` lo envía correctamente
+3. Ejecutar `python -m unittest discover -s tests -v` → todos los tests pasan
+4. Ejecutar `./init.ps1` → OK

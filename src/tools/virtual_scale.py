@@ -1,4 +1,4 @@
-"""Balanza Virtual DINI ARGEO DFWLI-2 para desarrollo y pruebas.
+﻿"""Balanza Virtual DINI ARGEO DFWLI-2 para desarrollo y pruebas.
 
 Simula el protocolo DINI ARGEO DFWLI-2 via puerto serial, respondiendo
 a los comandos REXT, TARE, TMAN, ZERO y CLEAR con datos desde archivos
@@ -53,7 +53,7 @@ SUB_STEP_NAMES = ["muestra", "mineral", "vegetal"]
 
 
 # ---------------------------------------------------------------------------
-# T5 — carga de dataset
+# T5 â€” carga de dataset
 # ---------------------------------------------------------------------------
 
 
@@ -61,7 +61,7 @@ def load_dataset(data_dir: str, dataset_id: str) -> list[dict]:
     """Carga el CSV del dataset y devuelve una lista de dicts.
 
     Valida: existencia del archivo, header de 7 columnas exactas,
-    y parseo numérico de los pesos.  Lanza SystemExit en caso de error.
+    y parseo numÃ©rico de los pesos.  Lanza SystemExit en caso de error.
     """
     filepath = os.path.join(data_dir, f"dataset_{dataset_id.upper()}.csv")
     if not os.path.isfile(filepath):
@@ -93,7 +93,7 @@ def load_dataset(data_dir: str, dataset_id: str) -> list[dict]:
             except (ValueError, IndexError) as exc:
                 print(
                     f"ERROR: Fila {line_num + 1} del CSV contiene datos no "
-                    f"numéricos donde se esperaban pesos: {exc}",
+                    f"numÃ©ricos donde se esperaban pesos: {exc}",
                     file=sys.stderr,
                 )
                 sys.exit(1)
@@ -112,7 +112,7 @@ def load_dataset(data_dir: str, dataset_id: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# T6 — lectura actual
+# T6 â€” lectura actual
 # ---------------------------------------------------------------------------
 
 
@@ -123,7 +123,7 @@ def _current_reading(
 ) -> dict:
     """Devuelve un dict con status, peso y unit del sub-paso activo.
 
-    Si override está activo, usa ese peso en lugar del valor del CSV.
+    Si override estÃ¡ activo, usa ese peso en lugar del valor del CSV.
     """
     row, sub = pointer
     cols = ["status_muestra", "status_mineral", "status_vegetal"]
@@ -137,7 +137,7 @@ def _current_reading(
 
 
 # ---------------------------------------------------------------------------
-# T7 — construir respuesta extendida (REXT)
+# T7 â€” construir respuesta extendida (REXT)
 # ---------------------------------------------------------------------------
 
 
@@ -145,7 +145,7 @@ def _build_extended_response(reading: dict) -> str:
     """Construye la cadena de respuesta extendida: 01ST,1,<peso>,PT 0.0,0,kg\\r\\n.
 
     La respuesta siempre lleva ST (la balanza virtual solo transmite
-    cuando está estable).
+    cuando estÃ¡ estable).
     """
     peso = reading["peso"]
     unit = reading["unit"]
@@ -153,7 +153,7 @@ def _build_extended_response(reading: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# T8 — construir respuesta OK
+# T8 â€” construir respuesta OK
 # ---------------------------------------------------------------------------
 
 
@@ -163,7 +163,7 @@ def _build_ok_response() -> str:
 
 
 # ---------------------------------------------------------------------------
-# T9 — simulación de estabilidad
+# T9 â€” simulaciÃ³n de estabilidad
 # ---------------------------------------------------------------------------
 
 
@@ -179,7 +179,7 @@ def _simulate_stability(status: str) -> None:
         delay = random.uniform(0.2, 3.0)
         time.sleep(delay)
         return
-    # valor desconocido → tratar como ST + warning
+    # valor desconocido â†’ tratar como ST + warning
     print(
         f"WARNING: Status desconocido '{status}' tratado como ST.",
         file=sys.stderr,
@@ -187,12 +187,12 @@ def _simulate_stability(status: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# T10 — parseo de comandos seriales
+# T10 â€” parseo de comandos seriales
 # ---------------------------------------------------------------------------
 
 
 def _parse_serial_command(line: str) -> tuple[str, str | None]:
-    """Parsea una línea recibida por el puerto serial.
+    """Parsea una lÃ­nea recibida por el puerto serial.
 
     Retorna (comando, argumento) donde comando es uno de:
     'REXT', 'TARE', 'TMAN', 'ZERO', 'CLEAR', o 'UNKNOWN'.
@@ -218,7 +218,7 @@ def _parse_serial_command(line: str) -> tuple[str, str | None]:
 
 
 # ---------------------------------------------------------------------------
-# T15 — mostrar estado
+# T15 â€” mostrar estado
 # ---------------------------------------------------------------------------
 
 
@@ -252,7 +252,7 @@ def _show_status(
 
 
 # ---------------------------------------------------------------------------
-# T14 — manejar tecla w (override)
+# T14 â€” manejar tecla w (override)
 # ---------------------------------------------------------------------------
 
 
@@ -260,7 +260,7 @@ def _handle_override(
     pointer: tuple[int, int],
     dataset: list[dict],
 ) -> float | None:
-    """Solicita un valor numérico por consola y retorna el peso override."""
+    """Solicita un valor numÃ©rico por consola y retorna el peso override."""
     try:
         raw = input("Ingrese peso override (valor numerico): ")
         return float(raw)
@@ -270,12 +270,12 @@ def _handle_override(
 
 
 # ---------------------------------------------------------------------------
-# T14 — manejar tecla g (goto)
+# T14 â€” manejar tecla g (goto)
 # ---------------------------------------------------------------------------
 
 
 def _handle_goto(dataset: list[dict]) -> tuple[int, int] | None:
-    """Solicita un índice de fila y retorna el nuevo pointer."""
+    """Solicita un Ã­ndice de fila y retorna el nuevo pointer."""
     total = len(dataset)
     try:
         raw = input(f"Ingrese indice de medida (0-{total - 1}): ")
@@ -289,7 +289,7 @@ def _handle_goto(dataset: list[dict]) -> tuple[int, int] | None:
 
 
 # ---------------------------------------------------------------------------
-# T17 — cierre limpio
+# T17 â€” cierre limpio
 # ---------------------------------------------------------------------------
 
 
@@ -307,7 +307,7 @@ def _shutdown(
 
 
 # ---------------------------------------------------------------------------
-# T11–T16 — bucle principal
+# T11â€“T16 â€” bucle principal
 # ---------------------------------------------------------------------------
 
 
@@ -315,10 +315,10 @@ def main() -> None:
     """Punto de entrada del script: parsea args, carga dataset, abre serial, REPL."""
 
     # ------------------------------------------------------------------
-    # T16 — argparse
+    # T16 â€” argparse
     # ------------------------------------------------------------------
     parser = argparse.ArgumentParser(
-        description="Balanza Virtual DINI ARGEO DFWLI-2 — Simulador serial para desarrollo.",
+        description="Balanza Virtual DINI ARGEO DFWLI-2 â€” Simulador serial para desarrollo.",
     )
     parser.add_argument(
         "--port",
@@ -353,7 +353,7 @@ def main() -> None:
         sys.exit(1)
 
     # ------------------------------------------------------------------
-    # T5 — cargar dataset
+    # T5 â€” cargar dataset
     # ------------------------------------------------------------------
     dataset = load_dataset(args.data_dir, dataset_id)
     total_rows = len(dataset)
@@ -365,7 +365,7 @@ def main() -> None:
     override: float | None = None
 
     # ------------------------------------------------------------------
-    # T16 — abrir puerto serial
+    # T16 â€” abrir puerto serial
     # ------------------------------------------------------------------
     if serial is None:
         print(
@@ -422,7 +422,7 @@ def main() -> None:
     serial_buffer = ""
 
     # ------------------------------------------------------------------
-    # T11 — bucle principal
+    # T11 â€” bucle principal
     # ------------------------------------------------------------------
     try:
         while True:
@@ -441,7 +441,7 @@ def main() -> None:
                 )
                 serial_connected = False
 
-            # Procesar líneas completas del buffer serial
+            # Procesar lÃ­neas completas del buffer serial
             while "\n" in serial_buffer:
                 line, serial_buffer = serial_buffer.split("\n", 1)
                 line = line.rstrip("\r")
@@ -459,16 +459,16 @@ def main() -> None:
                     continue
 
                 # ---------------------------------------------------------
-                # T10 — enrutar comando
+                # T10 â€” enrutar comando
                 # ---------------------------------------------------------
                 if cmd == "REXT":
-                    # T6 — leer el valor actual
+                    # T6 â€” leer el valor actual
                     reading = _current_reading(pointer, dataset, override)
 
-                    # T9 — simular estabilidad (delay si US)
+                    # T9 â€” simular estabilidad (delay si US)
                     _simulate_stability(reading["status"])
 
-                    # T7 — construir y enviar respuesta
+                    # T7 â€” construir y enviar respuesta
                     response = _build_extended_response(reading)
                     try:
                         ser.write(response.encode("ascii"))  # type: ignore[union-attr]
@@ -535,12 +535,14 @@ def main() -> None:
             # Leer tecla del teclado (non-blocking via msvcrt o stdin)
             # -------------------------------------------------------------
             key = None
-            if msvcrt is not None and msvcrt.kbhit():
-                raw = msvcrt.getch()
-                try:
-                    key = raw.decode("ascii", errors="replace").lower()
-                except Exception:
-                    key = None
+            if msvcrt is not None:
+                # Windows: usar msvcrt para lectura non-blocking de teclado
+                if msvcrt.kbhit():
+                    raw = msvcrt.getch()
+                    try:
+                        key = raw.decode("ascii", errors="replace").lower()
+                    except Exception:
+                        key = None
             else:
                 # Fallback Unix: usar select para ver si hay stdin disponible
                 if select.select([sys.stdin], [], [], 0.0)[0]:
@@ -558,7 +560,7 @@ def main() -> None:
             row, sub = pointer
 
             if key == "n":
-                # T12 — next
+                # T12 â€” next
                 if sub < 2:
                     pointer = (row, sub + 1)
                 elif row < total_rows - 1:
@@ -571,7 +573,7 @@ def main() -> None:
                 )
 
             elif key == "p":
-                # T13 — previous
+                # T13 â€” previous
                 if sub > 0:
                     pointer = (row, sub - 1)
                 elif row > 0:
@@ -585,7 +587,7 @@ def main() -> None:
                 )
 
             elif key == "w":
-                # T14 — override
+                # T14 â€” override
                 new_override = _handle_override(pointer, dataset)
                 if new_override is not None:
                     override = new_override
@@ -595,7 +597,7 @@ def main() -> None:
                     )
 
             elif key == "g":
-                # T14 — goto
+                # T14 â€” goto
                 result = _handle_goto(dataset)
                 if result is not None:
                     pointer = result
@@ -603,19 +605,19 @@ def main() -> None:
                     print(f"[g] -> row={result[0]} sub=0 (muestra)")
 
             elif key == "s":
-                # T15 — status
+                # T15 â€” status
                 _show_status(
                     dataset_id, pointer, dataset, override,
                     args.port, args.baudrate, serial_connected,
                 )
 
             elif key == "q":
-                # T17 — quit
+                # T17 â€” quit
                 _shutdown(ser, serial_connected)
                 break
 
             elif key in (" ", "d"):
-                # T14 / R9 — PRINT: enviar sin delay ni avance
+                # T14 / R9 â€” PRINT: enviar sin delay ni avance
                 reading = _current_reading(pointer, dataset, override)
                 # Forzar status ST (sin delay) para PRINT
                 # Enviamos directamente sin llamar _simulate_stability

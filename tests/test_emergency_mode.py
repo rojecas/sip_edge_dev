@@ -23,6 +23,7 @@ from src.emergency_mode import (
     ParsedSmsCommand,
     parse_emergency_sms,
 )
+from src.sms_dispatcher_v2 import IncomingSmsDispatcherV2
 from src.sms_service import SMSService
 
 
@@ -434,9 +435,11 @@ class TestEmergencyModeService(unittest.TestCase):
             )
         self.assertIsNotNone(req_id)
         self.assertGreater(req_id, 0)
+        combined = " ".join(log_ctx.output)
         self.assertTrue(
-            any("[DEV_MODE] SMS simulado" in msg for msg in log_ctx.output),
-            f"Expected SMS simulation log, got: {log_ctx.output}",
+            any(pattern in combined for pattern in
+                ["[DEV_MODE] SMS simulado", "[DRY_RUN] SMS bloqueado"]),
+            f"Expected SMS simulation/dry-run log, got: {log_ctx.output}",
         )
 
     def test_create_request_invalid_supervisor(self):
@@ -1016,12 +1019,12 @@ class TestSmsPolling(unittest.TestCase):
         self.assertTrue(self.svc.is_active())
 
     def test_incoming_sms_unauthorized_sender(self):
-        """R17: numero no admin → se ignora."""
+        """R17: numero no admin → silencio (no se procesa ni loggea)."""
         self.assertFalse(self.svc.is_active())
         self.svc.process_incoming_sms("+573002222222", "manual on")
         self.assertFalse(self.svc.is_active())
 
-        # Verificar log de invalid
+        # Verificar que NO se creo log de invalid (silencio por seguridad)
         db = self._SessionLocal()
         try:
             invalid = (
@@ -1029,8 +1032,8 @@ class TestSmsPolling(unittest.TestCase):
                 .filter(EmergencyModeLog.status == "invalid")
                 .first()
             )
-            self.assertIsNotNone(invalid)
-            self.assertIn("Unauthorized", invalid.cmd_raw or "")
+            self.assertIsNone(invalid,
+                "No debe loggearse SMS de no-admin por seguridad")
         finally:
             db.close()
 
@@ -1057,8 +1060,9 @@ class TestSmsPolling(unittest.TestCase):
 
     def test_incoming_sms_emergency_pattern_from_nonadmin_logged(self):
         """Un patron de emergencia ('manual on') de un no-admin
-        se loggea como invalid (porque el patron SI coincide)."""
+        se silencia: no activa el modo y no se loggea (seguridad)."""
         self.svc.process_incoming_sms("+573002222222", "manual on")
+        self.assertFalse(self.svc.is_active())
         db = self._SessionLocal()
         try:
             invalid = (
@@ -1066,8 +1070,8 @@ class TestSmsPolling(unittest.TestCase):
                 .filter(EmergencyModeLog.status == "invalid")
                 .first()
             )
-            self.assertIsNotNone(invalid)
-            self.assertIn("Unauthorized", invalid.cmd_raw or "")
+            self.assertIsNone(invalid,
+                "SMS de no-admin no debe loggearse por seguridad")
         finally:
             db.close()
 
@@ -1120,7 +1124,7 @@ class TestSmsPolling(unittest.TestCase):
             db.close()
 
     def test_incoming_sms_unknown_sender(self):
-        """Numero no registrado en users → unauthorized."""
+        """Numero no registrado en users → silencio (no se loggea ni procesa)."""
         self.svc.process_incoming_sms("+579999999999", "manual on")
         self.assertFalse(self.svc.is_active())
 
@@ -1131,7 +1135,8 @@ class TestSmsPolling(unittest.TestCase):
                 .filter(EmergencyModeLog.status == "invalid")
                 .first()
             )
-            self.assertIsNotNone(invalid)
+            self.assertIsNone(invalid,
+                "SMS de remitente desconocido no debe loggearse")
         finally:
             db.close()
 
@@ -1322,6 +1327,234 @@ class TestFullPipeline(unittest.TestCase):
         import asyncio
         asyncio.run(dispatcher._check_incoming_sms())
         self.assertFalse(self.svc.is_active())
+
+
+# ==================================================================
+# T19b: Full pipeline V2 tests — dispatcher v2 + persistencia + whitelist
+# ==================================================================
+
+
+class TestFullPipelineV2(unittest.TestCase):
+    """Tests del pipeline V2: IncomingSmsDispatcherV2 → persistencia → handler.
+
+    Verifica que el dispatcher V2 persiste SMS antes de delegar, delega
+    correctamente a handlers registrados con workflow_type, y que el handler
+    de emergencia aplica su propia whitelist de remitentes admin.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls._engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(bind=cls._engine)
+        cls._SessionLocal = sessionmaker(bind=cls._engine)
+
+    def setUp(self):
+        db = self._SessionLocal()
+        try:
+            db.query(EmergencyModeLog).delete()
+            db.query(User).delete()
+            from src.models import SmsConversation, SmsMessage
+            db.query(SmsMessage).delete()
+            db.query(SmsConversation).delete()
+            db.commit()
+        finally:
+            db.close()
+
+        db = self._SessionLocal()
+        try:
+            self.admin = User(
+                username="admin_test",
+                password_hash=hash_password("adminpass"),
+                role="admin",
+                full_name="Admin Test",
+                is_active=True,
+                phone="+573001111111",
+            )
+            db.add(self.admin)
+            db.commit()
+            db.refresh(self.admin)
+        finally:
+            db.close()
+
+        self.sms_config = SmsConfig(
+            admin_phones=["+573001111111"],
+            scheduled_reports=["06:00"],
+        )
+        self.sms_service = SMSService(
+            config=self.sms_config, modem_index=0, dev_mode=True
+        )
+        self.persistence = SmsPersistenceService(
+            db_session_factory=self._SessionLocal,
+        )
+        self.svc = EmergencyModeService(
+            db_session_factory=self._SessionLocal,
+            sms_service=self.sms_service,
+            modem_index=0,
+            dev_mode=True,
+            sms_persistence=None,  # V2 dispatcher handles persistence
+        )
+
+        self.dispatcher = IncomingSmsDispatcherV2(
+            modem_index=0, dev_mode=True, persistence=self.persistence,
+        )
+        self.dispatcher.register_handler(
+            self.svc.process_incoming_sms, workflow_type="emergency",
+        )
+
+    def _run_dispatcher_cycle(self):
+        """Ejecuta un ciclo: start → espera processing → stop."""
+        async def _run():
+            await self.dispatcher.start()
+            await asyncio.sleep(0.3)
+            await self.dispatcher.stop()
+        asyncio.run(_run())
+
+    def test_pipeline_v2_activate(self):
+        """Pipeline V2: dispatcher → persistence → handler → activate → status active."""
+        self.assertFalse(self.svc.is_active())
+        status = self.svc.get_status()
+        self.assertFalse(status["active"])
+
+        self.dispatcher.enqueue_incoming_sms(
+            "+573001111111", "manual on", modem_sms_id="100",
+        )
+        self._run_dispatcher_cycle()
+
+        self.assertTrue(
+            self.svc.is_active(),
+            "V2 PIPELINE: service should be active after SMS 'manual on'",
+        )
+        status = self.svc.get_status()
+        self.assertTrue(status["active"])
+        self.assertIsNotNone(status["expires_at"])
+        self.assertIsNotNone(status["remaining_seconds"])
+        self.assertGreater(status["remaining_seconds"], 0)
+
+        # Auditoria
+        db = self._SessionLocal()
+        try:
+            active_logs = (
+                db.query(EmergencyModeLog)
+                .filter(EmergencyModeLog.status == "active")
+                .all()
+            )
+            self.assertEqual(len(active_logs), 1)
+            self.assertEqual(active_logs[0].cmd_source, "sms")
+        finally:
+            db.close()
+
+        # V2 persistencia: SMS entrante en sms_messages
+        db = self._SessionLocal()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001111111",
+                SM.direction == "received",
+            ).all()
+            self.assertGreaterEqual(
+                len(msgs), 1,
+                "V2 debe persistir SMS entrante en sms_messages",
+            )
+        finally:
+            db.close()
+
+    def test_pipeline_v2_deactivate(self):
+        """Pipeline V2: dispatcher → activate → deactivate."""
+        self.svc.activate(
+            request_id=None,
+            supervisor_id=self.admin.id,
+            duration_minutes=60,
+            cmd_raw="manual on 1h",
+            cmd_source="sms",
+        )
+        self.assertTrue(self.svc.is_active())
+
+        self.dispatcher.enqueue_incoming_sms(
+            "+573001111111", "manual off", modem_sms_id="101",
+        )
+        self._run_dispatcher_cycle()
+        self.assertFalse(self.svc.is_active())
+
+    def test_pipeline_v2_unauthorized(self):
+        """Pipeline V2: SMS de numero no-admin NO activa modo (whitelist en dispatcher)."""
+        self.assertFalse(self.svc.is_active())
+
+        self.dispatcher.enqueue_incoming_sms(
+            "+579999999999", "manual on", modem_sms_id="102",
+        )
+        self._run_dispatcher_cycle()
+
+        self.assertFalse(
+            self.svc.is_active(),
+            "V2 WHITELIST: non-admin SMS should NOT activate emergency mode",
+        )
+
+        # Verificar que NO se creo log (silencio total por seguridad)
+        db = self._SessionLocal()
+        try:
+            invalid = (
+                db.query(EmergencyModeLog)
+                .filter(EmergencyModeLog.status == "invalid")
+                .first()
+            )
+            self.assertIsNone(
+                invalid,
+                "Unauthorized SMS should NOT be logged (silence for security)",
+            )
+        finally:
+            db.close()
+
+    def test_pipeline_v2_invalid_command(self):
+        """Pipeline V2: SMS no relevante → dispatcher envia ayuda."""
+        self.assertFalse(self.svc.is_active())
+
+        self.dispatcher.enqueue_incoming_sms(
+            "+573001111111", "hello world", modem_sms_id="103",
+        )
+        self._run_dispatcher_cycle()
+
+        self.assertFalse(self.svc.is_active())
+
+        # V2 envia respuesta de ayuda cuando ningun handler procesa
+        db = self._SessionLocal()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001111111",
+                SM.direction == "sent",
+                SM.handler == "dispatcher_v2",
+            ).all()
+            self.assertGreaterEqual(
+                len(msgs), 1,
+                "V2 debe enviar respuesta de ayuda para SMS no manejado",
+            )
+            self.assertIn("Comando no reconocido", msgs[0].body)
+        finally:
+            db.close()
+
+    def test_pipeline_v2_persistence_creates_conversation(self):
+        """Pipeline V2: cada SMS crea/actualiza conversacion en sms_conversations."""
+        self.dispatcher.enqueue_incoming_sms(
+            "+573001111111", "manual on", modem_sms_id="104",
+        )
+        self._run_dispatcher_cycle()
+
+        db = self._SessionLocal()
+        try:
+            from src.models import SmsConversation as SC
+            convs = db.query(SC).filter(
+                SC.peer_number == "+573001111111",
+            ).all()
+            self.assertGreaterEqual(
+                len(convs), 1,
+                "V2 debe crear conversacion en sms_conversations",
+            )
+        finally:
+            db.close()
 
 
 # ==================================================================

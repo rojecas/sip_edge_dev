@@ -24,34 +24,40 @@
    (planes, cierres, bloqueos).
 8. **Session reminder:** Revisa si hay contenido entre las marcas
    <!-- SESSION_REMINDER_START -->
-## Recordatorio — Proxima sesion (2026-07-05)
+## Recordatorio — Proxima sesion (2026-07-06)
 
-### Bugs resueltos en esta sesion
-- **Bug A (tool_choice=required en 2da vuelta):** FIXED — DeepSeek ahora parafrasea correctamente.
-- **Bug B1/B2/B3 (loop SMS huerfanos):** FIXED — _delete_orphan_sms, filtro unknown, DRY_RUN completo.
-- **modem_sms_id:** FIXED — se puebla tanto para entrantes como salientes.
-- **Logging LLM:** AHORA DISPONIBLE — `journalctl -u sip-edge -f | grep "LLM:"`
+### Lo que funcionó
+- **SIM #3 (573008162266):** ACTIVA y funcional. SMS enviados correctamente.
+- **Bug #26** (emergency_request_wrong_sms): FIXED — double-send corregido.
+- **Opcion A:** emergency y password_reset handlers reusan fila del dispatcher (sin duplicados).
+- **Whitelist:** implementada en dispatcher — no-admins reciben silencio total.
+- **Rate-limiter:** send_sms() atomico con status "sending" evita race condition con SmsSendQueue.
+- **LLM logging:** `journalctl -u sip-edge -f | grep "LLM:"` — muestra tool_calls y resultados.
+- **Formato fecha:** LLM instruido a usar "24 jun 2026" (sin "/") — Tigo bloquea fechas con barras.
 
-### Estado actual EdgeBox
+### Bugs/features FAKEADOS
+- Bug 26 (emergency_request_wrong_sms) → **DONE** (fix desplegado, probado)
+- Bug 19 (watchdog_sd_notify) → **DONE** (previamente)
+- Bug 20 (admin_suertes_response_format) → **DONE** (previamente)
+- Bug 22 (user_phone_not_exposed) → **DONE** (previamente)
+- Bug 23 (emergency_mode_not_activating) → **DONE** (previamente)
 - F27 (sms_persistence) → **DONE**
-- Bug 26 (emergency_request_wrong_sms) → **TRIAGED** — pendiente de probar con SIM nueva
-- AI_PRIMARY_BACKEND=local (Qwen 1.5B en puerto 8080, taskset -c 0-2 -t 3)
-- phpMyAdmin en :8081
-- SMS_DRY_RUN=true
-- llm_timeout=240s
+- F25 (virtual_scale) → **testing** (previamente)
 
-### Pendiente: Probar Bug 26 con SIM nueva
-1. Insertar SIM #3
-2. Quitar SMS_DRY_RUN del .env
-3. Probar solicitud de emergencia desde kiosko (POST /api/emergency/request)
-4. Verificar que el admin recibe el SMS correcto (no el mensaje de error del LLM)
-5. Verificar que responder "manual on" activa el modo manual
-6. Si todo funciona → release-manager para Bug 26
+### Pendiente para mañana
+1. **Git add/commit/push** desde EdgeBox (se apagó antes de sincronizar)
+2. **Ejecutar close.ps1** para cerrar sesion formalmente
+3. **Verificar llama-server.service** que arranque automáticamente con el boot (3 núcleos)
+4. **phpMyAdmin** iniciar manual cuando se necesite: `php -S 0.0.0.0:8081 -t ~/phpMyAdmin-5.2.2-all-languages &`
 
-### Linea de tiempo de SIMs
-- SIM #1 (573013643187): quemada 2026-07-03 por ~40 SMS sin rate limiter
-- SIM #2 (573008163109): quemada 2026-07-04 por loop retroalimentacion sin rate limiter
-- SIM #3: NO INSERTAR hasta que DRY_RUN confirme todo el flujo (YA confirmado)
+### Configuracion actual
+| Parametro | Valor |
+|-----------|-------|
+| AI_PRIMARY_BACKEND | remote (DeepSeek API) |
+| SMS_DRY_RUN | false |
+| llama-server | `taskset -c 0-2`, 3 núcleos, puerto 8080 |
+| phpMyAdmin | :8081 (manual) |
+| Feature status | Bug#26 done, pendiente sync |
 
 <!-- SESSION_REMINDER_END -->
 
@@ -59,4 +65,75 @@
 
 
 
+
+
+## 2. Flujo de trabajo: Como descomponer tareas
+
+Este es el flujo que el agente lider debe seguir para procesar features y bugs.
+Lee siempre el status de la primera entrada no-`done` / no-`blocked` en `harness/feature_list.json`
+y aplica el caso correspondiente.
+
+### Caso A — status == `"pending"` Y type == `"feature"` Y sdd == `true`
+
+1. Lanza **1 subagente `spec-author`** pasandole `id` y `name`.
+2. El `spec-author` redacta `harness/specs/{NN}_{name}/{requirements.md, design.md, tasks.md}` y cambia el status a `spec_ready`.
+3. **PARAS.** No lanzas implementer. Tu mensaje al humano:
+   > "Spec listo en `harness/specs/{NN}_{name}/`. Revisalo y di **'aprobado'** para continuar con la implementacion, o pideme cambios."
+
+### Caso B — status == `"spec_ready"` Y el humano acaba de aprobar (feature SDD)
+
+1. Cambia el status a `in_progress` en `harness/feature_list.json`.
+2. Lanza **1 subagente `implementer`** pasandole la ruta `harness/specs/{NN}_{name}/` como input.
+   El `implementer` trabaja a partir del spec, no del `acceptance` original.
+3. Cuando termine -> lanza **1 `reviewer`** que verifica trazabilidad tests <-> requirements
+   y que `tasks.md` queda completo.
+4. Cuando el reviewer apruebe -> cambia el status a `testing`. **PARAS.**
+   Pregunta al humano: "Implementacion lista. **autorizo cierre**?"
+5. Cuando el humano autorice el cierre -> lanza **1 subagente `release-manager (register)`**
+   pasandole `id` y `name`.
+
+### Caso C — status == `"spec_ready"` SIN aprobacion humana
+
+NO continues. El humano todavia no ha leido el spec. Recuerdale que le toca.
+
+### Caso D — status == `"in_progress"`
+
+Sesion interrumpida. Pregunta al humano si reanudas al implementer o abortas.
+
+### Caso E — `type: "bug"`, status == `"untriaged"`
+
+1. Presenta el bug al humano: description, reproduction, affected features.
+2. Pregunta: "confirmas que este bug es valido?"
+3. Si humano confirma:
+   a. Cambia el status a `"triaged"` en `harness/feature_list.json`.
+4. Si humano rechaza -> pregunta si marcar `done` con justificacion `"rejected"` o mantener `untriaged`.
+
+### Caso F — `type: "bug"`, status == `"triaged"`
+
+1. Verifica que no haya otro item en curso (feature en `in_progress` u otro bug siendo atendido).
+2. Lanza **1 subagente `bug-fixer`** pasandole `id` y `name`.
+3. Cuando el `bug-fixer` reporta `done`:
+   a. Lanza **1 `reviewer`** con instrucciones de revision de bug (verificar `reproduction` cubierto por test, no exigir trazabilidad R<n>).
+   b. Si el reviewer aprueba -> cambia el status a `testing`. **PARAS.**
+      Pregunta al humano: "Bug listo. **autorizo cierre**?"
+   c. Si el reviewer rechaza -> reabre con `triaged` para que el bug-fixer corrija.
+4. Cuando el humano autorice el cierre (desde `testing`):
+   a. Lanza **1 subagente `release-manager (register)`** pasandole `id` y `name`.
+5. Si el `bug-fixer` reporta `blocked`:
+   a. Mantiene `blocked` y documenta la razon en `progress/current.md`.
+
+### Caso G — `type: "bug"`, status == `"in_progress"`
+
+Sesion interrumpida. Pregunta al humano si reanudar al `bug-fixer` o abortar.
+
+### Caso H — `sdd: false` (o sin `sdd`) Y `type` no es `"bug"`, status == `"pending"`
+
+1. Cambia el status a `in_progress` en `harness/feature_list.json`.
+2. Lanza **1 subagente `implementer`** con instruccion: "sin carpeta `specs/`, trabaja desde `acceptance`
+   en `feature_list.json`, crea `harness/progress/plan-<name>.md` antes de tocar codigo".
+3. Cuando termine -> lanza **1 `reviewer`**.
+4. Cuando el reviewer apruebe -> cambia el status a `testing`. **PARAS.**
+   Pregunta al humano: "Implementacion lista. **autorizo cierre**?"
+5. Cuando el humano autorice el cierre -> lanza **1 subagente `release-manager (register)`**
+   pasandole `id` y `name`.
 

@@ -1,5 +1,5 @@
 # Database Schema — database
 
-> Auto-generated: 2026-07-05 20:15:00 UTC
+> Auto-generated: 2026-07-08 17:51:53 UTC
 > Source: C:\MySource\sip_edge\database\database.sqlite
 > DO NOT EDIT BY HAND.

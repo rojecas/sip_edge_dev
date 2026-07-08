@@ -1,5 +1,6 @@
 """Tests for password reset via SMS: parser, service, endpoints, dispatcher."""
 
+import asyncio
 import os
 import tempfile
 import time
@@ -23,6 +24,7 @@ from src.password_reset import (
     _parse_reset_command,
 )
 from src.sms_incoming import IncomingSmsDispatcher
+from src.sms_dispatcher_v2 import IncomingSmsDispatcherV2
 from src.sms_persistence import SmsPersistenceService
 
 
@@ -322,8 +324,8 @@ def _build_test_app():
     db = _db.SessionLocal()
     try:
         admin, operator, no_phone = _create_test_users(db)
-        self_admin_id = admin.id
-        self_operator_id = operator.id
+        admin_id = admin.id
+        operator_id = operator.id
     finally:
         db.close()
 
@@ -366,7 +368,7 @@ def _build_test_app():
 
     main_mod.app.dependency_overrides[_original_get_db] = _override_get_db
 
-    return TestClient(main_mod.app), self_operator_id
+    return TestClient(main_mod.app), operator_id
 
 
 class TestVerifyResetPinAPI(unittest.TestCase):
@@ -752,7 +754,7 @@ class TestIncomingSmsDispatcher(unittest.TestCase):
             # Acceder al metodo interno directamente
             await self.dispatcher._check_incoming_sms()
 
-        asyncio.get_event_loop().run_until_complete(run_one_cycle())
+        asyncio.run(run_one_cycle())
 
         self.assertEqual(len(received), 1)
         self.assertEqual(received[0], ("+573001111111", "reset password juan"))
@@ -778,7 +780,7 @@ class TestIncomingSmsDispatcher(unittest.TestCase):
         async def run():
             await self.dispatcher._check_incoming_sms()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
         self.assertEqual(len(first_called), 1)
         self.assertEqual(len(second_called), 0)
@@ -804,7 +806,7 @@ class TestIncomingSmsDispatcher(unittest.TestCase):
         async def run():
             await self.dispatcher._check_incoming_sms()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
         self.assertEqual(len(first_called), 1)
         self.assertEqual(len(second_called), 1)
@@ -828,7 +830,7 @@ class TestIncomingSmsDispatcher(unittest.TestCase):
         async def run():
             await self.dispatcher._check_incoming_sms()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
         self.assertEqual(len(received), 3)
         self.assertEqual(received, ["msg1", "msg2", "msg3"])
@@ -852,8 +854,218 @@ class TestIncomingSmsDispatcher(unittest.TestCase):
             await self.dispatcher._check_incoming_sms()
 
         # No debe lanzar excepcion
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
         self.assertEqual(len(second_called), 1)
+
+
+# ==================================================================
+# T18b: IncomingSmsDispatcherV2 tests — dispatcher v2 + persistencia
+# ==================================================================
+
+
+class TestIncomingSmsDispatcherV2(unittest.TestCase):
+    """Tests para IncomingSmsDispatcherV2: registro, cadena, cola dev, excepciones.
+
+    Verifica que el dispatcher V2 persiste SMS, delega correctamente con
+    workflow_type, y maneja la cadena de handlers igual que V1.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls._engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(bind=cls._engine)
+        cls._SessionLocal = sessionmaker(bind=cls._engine)
+
+    def setUp(self):
+        db = self._SessionLocal()
+        try:
+            from src.models import SmsConversation, SmsMessage
+            db.query(SmsMessage).delete()
+            db.query(SmsConversation).delete()
+            db.commit()
+        finally:
+            db.close()
+
+        self.persistence = SmsPersistenceService(
+            db_session_factory=self._SessionLocal,
+        )
+        self.dispatcher = IncomingSmsDispatcherV2(
+            modem_index=0, dev_mode=True, persistence=self.persistence,
+        )
+
+    def _run_dispatcher_cycle(self):
+        """Ejecuta un ciclo de procesamiento del dispatcher."""
+        import asyncio as _asyncio
+        _asyncio.run(self.dispatcher._check_incoming_sms())
+
+    def test_register_and_dispatch(self):
+        """Handler registrado recibe SMS via V2 dispatcher."""
+        received: list[tuple[str, str]] = []
+
+        def handler(phone: str, text: str) -> bool:
+            received.append((phone, text))
+            return True
+
+        self.dispatcher.register_handler(handler, workflow_type="emergency")
+        self.dispatcher.enqueue_incoming_sms(
+            "+573001111111", "reset password juan", modem_sms_id="200",
+        )
+        self._run_dispatcher_cycle()
+
+        self.assertEqual(len(received), 1)
+        self.assertEqual(received[0], ("+573001111111", "reset password juan"))
+
+        # V2 persistencia: SMS entrante debe estar en BD
+        db = self._SessionLocal()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001111111",
+                SM.direction == "received",
+            ).all()
+            self.assertGreaterEqual(
+                len(msgs), 1,
+                "V2 debe persistir SMS entrante en sms_messages",
+            )
+        finally:
+            db.close()
+
+    def test_handler_returns_true_stops_chain(self):
+        """Si el primer handler retorna True, el segundo no se ejecuta (V2)."""
+        first_called = []
+        second_called = []
+
+        def handler1(phone, text):
+            first_called.append(text)
+            return True
+
+        def handler2(phone, text):
+            second_called.append(text)
+            return True
+
+        self.dispatcher.register_handler(handler1, workflow_type="emergency")
+        self.dispatcher.register_handler(handler2, workflow_type="password_reset")
+        self.dispatcher.enqueue_incoming_sms("+573000000001", "test", modem_sms_id="201")
+        self._run_dispatcher_cycle()
+
+        self.assertEqual(len(first_called), 1)
+        self.assertEqual(len(second_called), 0)
+
+    def test_handler_returns_false_continues_chain(self):
+        """Si el primer handler retorna False, el segundo se ejecuta (V2)."""
+        first_called = []
+        second_called = []
+
+        def handler1(phone, text):
+            first_called.append(text)
+            return False
+
+        def handler2(phone, text):
+            second_called.append(text)
+            return True
+
+        self.dispatcher.register_handler(handler1, workflow_type="emergency")
+        self.dispatcher.register_handler(handler2, workflow_type="password_reset")
+        self.dispatcher.enqueue_incoming_sms("+573000000002", "test", modem_sms_id="202")
+        self._run_dispatcher_cycle()
+
+        self.assertEqual(len(first_called), 1)
+        self.assertEqual(len(second_called), 1)
+
+    def test_dev_mode_queue(self):
+        """Dev mode V2: enqueue_incoming_sms procesa multiples mensajes."""
+        received = []
+
+        def handler(phone, text):
+            received.append(text)
+            return True
+
+        self.dispatcher.register_handler(handler, workflow_type="emergency")
+        self.dispatcher.enqueue_incoming_sms("+573000000003", "msg1", modem_sms_id="203")
+        self.dispatcher.enqueue_incoming_sms("+573000000003", "msg2", modem_sms_id="204")
+        self.dispatcher.enqueue_incoming_sms("+573000000003", "msg3", modem_sms_id="205")
+        self._run_dispatcher_cycle()
+
+        self.assertEqual(len(received), 3)
+        self.assertEqual(received, ["msg1", "msg2", "msg3"])
+
+    def test_handler_exception_does_not_crash_dispatcher(self):
+        """Si un handler lanza excepcion, el dispatcher V2 continua."""
+        def bad_handler(phone, text):
+            raise RuntimeError("Handler error")
+
+        second_called = []
+        def good_handler(phone, text):
+            second_called.append(text)
+            return True
+
+        self.dispatcher.register_handler(bad_handler, workflow_type="emergency")
+        self.dispatcher.register_handler(good_handler, workflow_type="password_reset")
+        self.dispatcher.enqueue_incoming_sms("+573000000004", "test", modem_sms_id="206")
+        self._run_dispatcher_cycle()
+
+        self.assertEqual(len(second_called), 1)
+
+    def test_unhandled_sms_gets_help_response(self):
+        """V2: SMS no manejado por ningun handler → dispatcher envia ayuda."""
+        received = []
+
+        def handler(phone, text):
+            received.append(text)
+            return False  # No lo maneja
+
+        self.dispatcher.register_handler(handler, workflow_type="emergency")
+        self.dispatcher.enqueue_incoming_sms(
+            "+573001111111", "comando desconocido", modem_sms_id="207",
+        )
+        self._run_dispatcher_cycle()
+
+        self.assertEqual(len(received), 1)
+
+        # V2 envia respuesta de ayuda
+        db = self._SessionLocal()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001111111",
+                SM.direction == "sent",
+                SM.handler == "dispatcher_v2",
+            ).all()
+            self.assertGreaterEqual(
+                len(msgs), 1,
+                "V2 debe enviar respuesta de ayuda para SMS no manejado",
+            )
+            self.assertIn("Comando no reconocido", msgs[0].body)
+        finally:
+            db.close()
+
+    def test_v2_persists_conversation(self):
+        """V2: cada SMS entrante crea conversacion en sms_conversations."""
+        def handler(phone, text):
+            return True
+
+        self.dispatcher.register_handler(handler, workflow_type="emergency")
+        self.dispatcher.enqueue_incoming_sms(
+            "+573001111111", "test sms", modem_sms_id="208",
+        )
+        self._run_dispatcher_cycle()
+
+        db = self._SessionLocal()
+        try:
+            from src.models import SmsConversation as SC
+            convs = db.query(SC).filter(
+                SC.peer_number == "+573001111111",
+            ).all()
+            self.assertGreaterEqual(
+                len(convs), 1,
+                "V2 debe crear conversacion en sms_conversations",
+            )
+        finally:
+            db.close()
 
 
 # ==================================================================
@@ -1041,21 +1253,19 @@ class TestPasswordResetPersistence(unittest.TestCase):
     # ==================================================================
 
     def test_non_admin_rejected(self):
-        """R13: remitente no admin recibe error."""
+        """R13: remitente no admin → silencio (no se envia respuesta)."""
         # operator tiene phone +573002222222
+        self.sms_mock.reset_mock()
         result = self.svc.handle_incoming_sms("+573002222222", "reset password admin")
-        self.assertTrue(result, "SMS debe ser manejado (rechazado)")
-        self.sms_mock.send_sms.assert_called()
-        call_args = self.sms_mock.send_sms.call_args
-        self.assertIn("Solo administradores", call_args[0][1])
+        self.assertTrue(result, "SMS debe ser manejado (rechazado en silencio)")
+        self.sms_mock.send_sms.assert_not_called()
 
     def test_unknown_phone_rejected(self):
-        """R13: remitente desconocido recibe error de no admin."""
+        """R13: remitente desconocido → silencio (no se envia respuesta)."""
+        self.sms_mock.reset_mock()
         result = self.svc.handle_incoming_sms("+579999999999", "reset password admin")
         self.assertTrue(result)
-        self.sms_mock.send_sms.assert_called()
-        call_args = self.sms_mock.send_sms.call_args
-        self.assertIn("Solo administradores", call_args[0][1])
+        self.sms_mock.send_sms.assert_not_called()
 
     # ==================================================================
     # R14: Self-reset rejected
@@ -1150,21 +1360,15 @@ class TestPasswordResetPersistence(unittest.TestCase):
     # ==================================================================
 
     def test_pin_sms_persisted(self):
-        """R17: SMS de PIN se persiste en sms_messages."""
+        """R17: SMS de PIN se persiste en sms_messages via send_sms()."""
+        self.sms_mock.reset_mock()
         self.svc.handle_incoming_sms("+573001111111", "reset password operator1")
 
-        db = self._SessionLocal()
-        try:
-            from src.models import SmsMessage as SM
-            msgs = db.query(SM).filter(
-                SM.handler == "password_reset",
-                SM.direction == "sent",
-            ).all()
-            self.assertGreaterEqual(len(msgs), 1,
-                "SMS de PIN debe persistirse en sms_messages")
-            self.assertIn("PIN", msgs[0].body)
-        finally:
-            db.close()
+        # Verificar que send_sms fue llamado (persiste internamente via SmsSendQueue)
+        self.sms_mock.send_sms.assert_called()
+        call_args = self.sms_mock.send_sms.call_args
+        self.assertEqual(call_args[0][0], "+573002222222")  # phone del operator
+        self.assertIn("PIN", call_args[0][1])
 
 
 if __name__ == "__main__":

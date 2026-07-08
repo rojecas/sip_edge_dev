@@ -95,14 +95,15 @@ class SMSService:
         """Envia un SMS al numero indicado.
 
         En dev mode simula el envio con log. En prod ejecuta mmcli.
-        Si hay persistencia inyectada, registra el mensaje en sms_messages
-        antes de enviar y actualiza el status segun el resultado.
+        Si hay persistencia inyectada (F27), registra el mensaje en sms_messages
+        con status='pending' y delega el envio fisico al SmsSendQueue para
+        evitar race conditions (Bug #26: doble-envio y modem_sms_id no guardado).
 
         B3: Si SMS_DRY_RUN=true, simula exito sin tocar el modem.
 
         Returns:
-            True si el envio tuvo exito (dev mode siempre True),
-            False en caso de fallo (el error se loggea internamente).
+            True si el envio fue persistido exitosamente (dev mode siempre True),
+            False si phone o message estan vacios.
         """
         # B3: SMS_DRY_RUN bloquea envios reales
         dry_run = os.getenv("SMS_DRY_RUN", "false").lower() in ("true", "1", "yes")
@@ -125,6 +126,21 @@ class SMSService:
             self._update_persisted_status(persisted_msg_id, "sent")
             return True
 
+        # F27 (Bug #26): Si hay persistencia configurada, delegar el envio
+        # al SmsSendQueue. Esto evita:
+        #   - Doble-envio (send_sms() + send queue envían el mismo SMS)
+        #   - modem_sms_id no guardado (send queue pasa message_id)
+        #   - Race conditions que permiten al dispatcher procesar el SMS
+        #     como entrante (no hay objeto huerfano sin modem_sms_id)
+        if self._persistence is not None:
+            logger.debug(
+                "send_sms: persistido msg_id=%s para %s, "
+                "SmsSendQueue lo enviara",
+                persisted_msg_id, phone,
+            )
+            return True
+
+        # Legacy path (sin persistencia): envio directo sincrono
         success = self._send_via_mmcli(phone, message)
 
         # R18: Actualizar status segun resultado

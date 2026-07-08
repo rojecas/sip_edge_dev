@@ -1,0 +1,11 @@
+pi@raspberrypi:/ $ cat /etc/udev/rules.d/99-quectel-ttyUSB2-blacklist.rules
+
+# Regla para ignorar el puerto AT ttyUSB2 del EC25
+# (Reemplace el PRODUCT ID 9003 por el que le aparezca en 'lsusb' si es diferente)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="05c6", ATTRS{idProduct}=="0125", ATTRS{bInterfaceNumber}=="02", ENV{MM_SERIAL_BLACKLIST}="1"
+# Ignorar /dev/ttyUSB2 basado en el ID del hardware y el n▒mero de interfaz
+# El valor "02" en bInterfaceNumber corresponde tpicamente al puerto ttyUSB2
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2c7c", ATTRS{idProduct}=="0125", ATTRS{bInterfaceNumber}=="02", ENV{MODEMMANAGER_IGNORE}="1"
+
+# Tambin puede probar con el puerto en s si e2c7cl udev no lo asigna correctamente
+KERNEL=="ttyUSB2", ENV{MODEMMANAGER_IGNORE}="1"
