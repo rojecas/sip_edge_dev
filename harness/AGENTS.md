@@ -1,4 +1,4 @@
-﻿# AGENTS.md â€” Mapa de navegacion para agentes de IA
+# AGENTS.md â€” Mapa de navegacion para agentes de IA
 
 > Este archivo es el **punto de entrada** para cualquier agente que trabaje en este
 > repositorio. NO es una biblia de reglas: es un **mapa**. Lee solo lo que
@@ -24,40 +24,35 @@
    (planes, cierres, bloqueos).
 8. **Session reminder:** Revisa si hay contenido entre las marcas
    <!-- SESSION_REMINDER_START -->
-## Recordatorio — Proxima sesion (2026-07-06)
+## Recordatorio — Proxima sesion (2026-07-08)
 
 ### Lo que funcionó
-- **SIM #3 (573008162266):** ACTIVA y funcional. SMS enviados correctamente.
-- **Bug #26** (emergency_request_wrong_sms): FIXED — double-send corregido.
-- **Opcion A:** emergency y password_reset handlers reusan fila del dispatcher (sin duplicados).
-- **Whitelist:** implementada en dispatcher — no-admins reciben silencio total.
-- **Rate-limiter:** send_sms() atomico con status "sending" evita race condition con SmsSendQueue.
-- **LLM logging:** `journalctl -u sip-edge -f | grep "LLM:"` — muestra tool_calls y resultados.
-- **Formato fecha:** LLM instruido a usar "24 jun 2026" (sin "/") — Tigo bloquea fechas con barras.
+- **Sincronizacion de tablas:** users (remoto→local), haciendas/suertes/weighings (local→remoto) completada
+- **Script generador:** `scripts/generate_historical_weighings.py` — 4221 pesajes historicos (65 dias × ~65/dia)
+- **Arquitectura SMS revisada:** 5 modulos analizados (sms_service, sms_persistence, sms_dispatcher_v2, sms_send_queue, emergency_mode)
 
-### Bugs/features FAKEADOS
-- Bug 26 (emergency_request_wrong_sms) → **DONE** (fix desplegado, probado)
-- Bug 19 (watchdog_sd_notify) → **DONE** (previamente)
-- Bug 20 (admin_suertes_response_format) → **DONE** (previamente)
-- Bug 22 (user_phone_not_exposed) → **DONE** (previamente)
-- Bug 23 (emergency_mode_not_activating) → **DONE** (previamente)
-- F27 (sms_persistence) → **DONE**
-- F25 (virtual_scale) → **testing** (previamente)
+### Estado del repositorio
+- Bug 26 (emergency_request_wrong_sms) → **triaged** ← PROXIMA ACCION
+- Bug 29 (scale_service_async_crashes) → **triaged**
+- F28 (ai_multi_turn) → **pending**
+- F17 (frontend_analytics) → **pending**
 
-### Pendiente para mañana
-1. **Git add/commit/push** desde EdgeBox (se apagó antes de sincronizar)
-2. **Ejecutar close.ps1** para cerrar sesion formalmente
-3. **Verificar llama-server.service** que arranque automáticamente con el boot (3 núcleos)
-4. **phpMyAdmin** iniciar manual cuando se necesite: `php -S 0.0.0.0:8081 -t ~/phpMyAdmin-5.2.2-all-languages &`
+### Pendiente para la proxima sesion
+1. **Bug #26** (emergency_request_wrong_sms) — lanzar bug-fixer
+   - Symptom: al solicitar modo manual desde kiosco, el admin recibe "Lo siento, el
+     sistema de analisis no esta disponible" en vez de la solicitud de emergencia
+   - Causa raiz en `src/agent_orchestrator.py:175` dentro de `handle_sms_query()`
+   - Bug-fixer debe diagnosticar por qué el emergency handler deriva al AI handler
 
 ### Configuracion actual
 | Parametro | Valor |
 |-----------|-------|
 | AI_PRIMARY_BACKEND | remote (DeepSeek API) |
-| SMS_DRY_RUN | false |
-| llama-server | `taskset -c 0-2`, 3 núcleos, puerto 8080 |
-| phpMyAdmin | :8081 (manual) |
-| Feature status | Bug#26 done, pendiente sync |
+| SMS_DRY_RUN | false (en EdgeBox) |
+| DEV_MODE | true (local) |
+| MariaDB local | v10.5 (Docker) |
+| MariaDB remoto | v11.8 (EdgeBox) |
+| Diferencia collation | utf8mb4_general_ci vs utf8mb4_uca1400_ai_ci |
 
 <!-- SESSION_REMINDER_END -->
 
