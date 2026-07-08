@@ -286,7 +286,7 @@ class SmsMessage(Base):
     body = Column(Text, nullable=False)
     handler = Column(String(32), nullable=True, default=None)
     status = Column(
-        Enum("pending", "sent", "failed", "timeout", "delivered", "received"),
+        Enum("pending", "sending", "sent", "failed", "timeout", "delivered", "received"),
         nullable=False,
         default="pending",
     )

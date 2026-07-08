@@ -205,7 +205,7 @@ class SmsPersistenceService:
         if direction not in ("sent", "received"):
             raise SmsPersistenceError(f"direction invalido: {direction}")
 
-        if status not in ("pending", "sent", "failed", "timeout", "delivered", "received"):
+        if status not in ("pending", "sending", "sent", "failed", "timeout", "delivered", "received"):
             raise SmsPersistenceError(f"status invalido: {status}")
 
         db: Session = self._db_session_factory()
@@ -249,7 +249,7 @@ class SmsPersistenceService:
         modem_sms_id: int | None = None,
     ) -> None:
         """Actualiza el estado de un mensaje SMS."""
-        if status not in ("pending", "sent", "failed", "timeout", "delivered", "received"):
+        if status not in ("pending", "sending", "sent", "failed", "timeout", "delivered", "received"):
             raise SmsPersistenceError(f"status invalido: {status}")
 
         db: Session = self._db_session_factory()

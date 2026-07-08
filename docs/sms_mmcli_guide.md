@@ -122,3 +122,33 @@ El script en `/usr/local/bin/send_sms.sh` fue actualizado con ambos fixes:
 - `docs/Comandos de ModemManager para Quectel EC25.md` - Comandos mmcli basicos
 - `src/sms_service.py` - Implementacion de referencia en sip-edge
 - `/usr/local/bin/send_sms.sh` - Script de envio reparado
+
+
+## 8. Hallazgo: Fechas con barra / bloqueadas por Tigo (2026-07-05)
+
+### Problema
+Los SMS que contenian fechas en formato `24/06/2026` (dd/mm/aaaa) NO eran
+entregados por Tigo Colombia. Mensajes con texto similar pero SIN barras
+si llegaban correctamente.
+
+### Sintoma
+Inconsistencia intermitente: algunas respuestas del asistente AI llegaban
+y otras no. El patron era que las respuestas con fechas numericas (con /)
+nunca llegaban.
+
+### Causa raiz
+Tigo bloquea los SMS que contienen secuencias tipo fecha con barras,
+probablemente por filtros anti-spam que interpretan el patron como numero
+de telefono mal formateado.
+
+### Fix (2026-07-06)
+Se modifico el SYSTEM_PROMPT del LLM en src/agent_orchestrator.py para
+que use formato "24 jun 2026" (con mes en texto) en vez de "24/06/2026".
+
+### Prueba
+- Enviar SMS con "24/06/2026" -> NO llega
+- Enviar SMS con "24 jun 2026" -> LLEGA
+- Enviar SMS con solo "/" -> LLEGA (la barra sola no es bloqueada)
+
+### Referencia
+Documento completo: harness/docs/findings/sms_date_format_bug.md
