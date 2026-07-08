@@ -105,7 +105,7 @@ class PasswordResetService:
     # Handler para IncomingSmsDispatcher
     # ------------------------------------------------------------------
 
-    def handle_incoming_sms(self, sender_phone: str, text: str) -> bool:
+    def handle_incoming_sms(self, sender_phone: str, text: str, message_id: int | None = None, conversation_id: int | None = None) -> bool:
         """Procesa un SMS entrante como handler del dispatcher compartido.
 
         Retorna True si el SMS fue reconocido como comando 'reset password',
@@ -118,6 +118,15 @@ class PasswordResetService:
         if username is None:
             return False
 
+        # Opcion A: marcar la fila ya persistida por el dispatcher
+        if message_id is not None and self._sms_persistence is not None:
+            try:
+                self._sms_persistence.update_message_handler(
+                    message_id, "password_reset",
+                )
+            except Exception:
+                logger.exception("password_reset: error actualizando handler del mensaje")
+
         # R13: Validar que sender_phone pertenece a usuario con rol admin
         db: Session = self._db_session_factory()
         try:
@@ -127,16 +136,8 @@ class PasswordResetService:
                 .first()
             )
 
-            if sender_user is None or sender_user.role != "admin":
-                # R13: Remitente no admin — silencio total por seguridad.
-                # El dispatcher V2 ya filtra por rol, pero si el handler
-                # es llamado directamente, se rechaza sin respuesta.
-                logger.debug(
-                    "Password reset: no admin sender %s ignorado (silencio)", sender_phone,
-                )
-                return True  # Manejado (aunque rechazado en silencio)
-
             # R14: Verificar que admin no resetea su propia contrasena
+            # (la whitelist del dispatcher ya garantiza que solo admins llegan aqui)
             if sender_user.username.lower() == username.lower():
                 self._sms_service.send_sms(
                     sender_phone,
@@ -292,24 +293,7 @@ class PasswordResetService:
                 "contrasena' para cambiar su clave."
             )
 
-            # R17: Persistir SMS de PIN
-            if self._sms_persistence is not None and user.phone:
-                try:
-                    conv = self._sms_persistence.get_or_create_active_conversation(
-                        peer_number=user.phone,
-                        workflow_type="password_reset",
-                    )
-                    self._sms_persistence.create_message(
-                        conversation_id=conv.id,
-                        direction="sent",
-                        peer_number=user.phone,
-                        body=sms_text,
-                        handler="password_reset",
-                        status="pending",
-                    )
-                except Exception:
-                    logger.exception("password_reset: error persistiendo SMS de PIN")
-
+            # R17: send_sms() ya persiste via _persist_sms (sin duplicar)
             self._sms_service.send_sms(user.phone, sms_text)
 
             if old_pin_invalidated:

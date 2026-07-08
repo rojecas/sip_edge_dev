@@ -51,6 +51,10 @@ class SMSService:
         Si no se inyecta, send_sms() funciona en modo legacy (sin persistencia).
         """
         self._persistence = persistence
+        self._send_queue = None
+
+    def set_send_queue(self, send_queue):
+        self._send_queue = send_queue
 
     # ------------------------------------------------------------------
     # Envio individual
@@ -95,15 +99,14 @@ class SMSService:
         """Envia un SMS al numero indicado.
 
         En dev mode simula el envio con log. En prod ejecuta mmcli.
-        Si hay persistencia inyectada (F27), registra el mensaje en sms_messages
-        con status='pending' y delega el envio fisico al SmsSendQueue para
-        evitar race conditions (Bug #26: doble-envio y modem_sms_id no guardado).
+        Si hay persistencia inyectada, registra el mensaje en sms_messages
+        antes de enviar y actualiza el status segun el resultado.
 
         B3: Si SMS_DRY_RUN=true, simula exito sin tocar el modem.
 
         Returns:
-            True si el envio fue persistido exitosamente (dev mode siempre True),
-            False si phone o message estan vacios.
+            True si el envio tuvo exito (dev mode siempre True),
+            False en caso de fallo (el error se loggea internamente).
         """
         # B3: SMS_DRY_RUN bloquea envios reales
         dry_run = os.getenv("SMS_DRY_RUN", "false").lower() in ("true", "1", "yes")
@@ -126,30 +129,14 @@ class SMSService:
             self._update_persisted_status(persisted_msg_id, "sent")
             return True
 
-        # F27 (Bug #26): Si hay persistencia configurada, delegar el envio
-        # al SmsSendQueue. Esto evita:
-        #   - Doble-envio (send_sms() + send queue envían el mismo SMS)
-        #   - modem_sms_id no guardado (send queue pasa message_id)
-        #   - Race conditions que permiten al dispatcher procesar el SMS
-        #     como entrante (no hay objeto huerfano sin modem_sms_id)
-        if self._persistence is not None:
-            logger.debug(
-                "send_sms: persistido msg_id=%s para %s, "
-                "SmsSendQueue lo enviara",
-                persisted_msg_id, phone,
-            )
-            return True
-
-        # Legacy path (sin persistencia): envio directo sincrono
-        success = self._send_via_mmcli(phone, message)
-
-        # R18: Actualizar status segun resultado
-        new_status = "sent" if success else "failed"
-        self._update_persisted_status(
-            persisted_msg_id, new_status,
-            error_message=None if success else "mmcli send failed",
-        )
-
+        # Envio atomico sincrono: marcar como sending, enviar, actualizar.
+        # Esto evita race conditions con SmsSendQueue (que solo ve "pending")
+        # y el doble-envio (Bug #26).
+        if persisted_msg_id is not None:
+            self._update_persisted_status(persisted_msg_id, "sending")
+        success = self._send_via_mmcli(phone, message, persisted_msg_id)
+        if success:
+            logger.info("SMS enviado correctamente a %s (msg_id=%s)", phone, persisted_msg_id)
         return success
 
     def send_sms_sync(self, phone: str, message: str) -> bool:
@@ -193,7 +180,7 @@ class SMSService:
 
         return success
 
-    def _send_via_mmcli(self, phone: str, message: str) -> bool:
+    def _send_via_mmcli(self, phone: str, message: str, message_id: int | None = None) -> bool:
         """Envia un SMS usando mmcli. Retorna True si exitoso, False si falla.
         
         Ejecuta subprocess.run en un ThreadPoolExecutor para no bloquear
@@ -205,10 +192,10 @@ class SMSService:
             # Hay event loop: ejecutar en thread para no bloquear
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                return pool.submit(self._send_via_mmcli_sync, phone, message).result()
+                return pool.submit(self._send_via_mmcli_sync, phone, message, message_id).result()
         except RuntimeError:
             # No hay event loop: ejecutar sincrono
-            return self._send_via_mmcli_sync(phone, message)
+            return self._send_via_mmcli_sync(phone, message, message_id)
 
     def _delete_orphan_sms(self, sms_index: str) -> None:
         """Elimina un SMS huerfano del modem tras un fallo de envio (B1).

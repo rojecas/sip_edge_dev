@@ -22,7 +22,7 @@ SYSTEM_PROMPT = (
     "Solo reporta valores que provengan de la ejecucion de herramientas SQL. "
     "Cuando uses herramientas, espera los resultados antes de responder. "
     "Si no hay datos disponibles para el periodo consultado, informa claramente. "
-    "Responde siempre en espanol, en formato conciso para SMS (max 160 caracteres)."
+    "Responde siempre en espanol, en formato conciso para SMS (max 160 caracteres). IMPORTANTE: Usa formato 24 jun 2026 para fechas (sin barras). NUNCA uses formato 24-06-2026 porque el operador SMS bloquea las barras."
     "\n\n"
     "IMPORTANTE: El ano actual es 2026. Cuando el usuario no especifique un "
     "ano en su consulta, usa el ano actual 2026 como referencia. Por ejemplo, "
@@ -219,6 +219,29 @@ class AgentOrchestrator:
             self._sms.send_sms(sender_phone, error_text)
             return False
 
+        # LLM: log del pensamiento y tool_calls de la primera vuelta
+        first_msg = response.get("choices", [{}])[0].get("message", {})
+        first_content = first_msg.get("content", "") or ""
+        first_tools = first_msg.get("tool_calls", []) or []
+        if first_content:
+            logger.info(
+                "LLM: pensamiento de %s: %s",
+                sender_phone, first_content[:200],
+            )
+        if first_tools:
+            for tc in first_tools:
+                fn = tc.get("function", {})
+                logger.info(
+                    "LLM: tool_call de %s -> %s(%s)",
+                    sender_phone,
+                    fn.get("name", "?"),
+                    fn.get("arguments", "{}")[:150],
+                )
+        else:
+            logger.info(
+                "LLM: %s NO uso tools (respuesta directa)", sender_phone,
+            )
+
         choices = response.get("choices", [])
         if not choices:
             logger.info(
@@ -270,11 +293,18 @@ class AgentOrchestrator:
                 logger.error("Error ejecutando tool %s: %s", tool_name, e)
                 result = {"error": str(e)}
 
+            # LLM: log del resultado de la tool
+            result_summary = json.dumps(result, ensure_ascii=False, default=str)
+            logger.info(
+                "LLM: tool_result para %s: %s -> %s",
+                sender_phone, tool_name, result_summary[:200],
+            )
+
             # Anadir resultado de la tool al historial
             messages.append({
                 "role": "tool",
                 "tool_call_id": tc.get("id", ""),
-                "content": json.dumps(result, ensure_ascii=False, default=str),
+                "content": result_summary,
             })
 
         logger.info(

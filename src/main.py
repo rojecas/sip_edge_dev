@@ -172,6 +172,11 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
+    # Configurar logging
+    logging.basicConfig(level=logging.INFO, force=True)
+    logging.getLogger("src.agent_orchestrator").setLevel(logging.INFO)
+    logging.getLogger("src.sms_send_queue").setLevel(logging.INFO)
+
     # Inicializar SMSService
     sms_config: SmsConfig = app.state.sms_config
     modem_index = _find_quectel_modem()
@@ -194,6 +199,7 @@ async def lifespan(app: FastAPI):
         min_send_interval=60,
     )
     app.state.sms_send_queue.start()
+    app.state.sms_service.set_send_queue(app.state.sms_send_queue)
 
     # Inicializar ReportTemplateService
     from src.report_templates import ReportTemplateService
@@ -303,7 +309,7 @@ async def lifespan(app: FastAPI):
     )
     # 3. AI query ΓÇö retorna False si falla, no es catch-all
     app.state.sms_dispatcher.register_handler(
-        lambda phone, text: app.state.agent_orchestrator.handle_sms_query(phone, text),
+        lambda phone, text, message_id=None, conversation_id=None: app.state.agent_orchestrator.handle_sms_query(phone, text),
         workflow_type="ai_query",
     )
     # Iniciar dispatcher v2 de SMS entrantes (el v1 NO se inicia)

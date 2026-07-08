@@ -192,7 +192,7 @@ class EmergencyModeService:
     # Procesamiento de SMS entrantes (handler para IncomingSmsDispatcher)
     # ------------------------------------------------------------------
 
-    def process_incoming_sms(self, sender_phone: str, text: str) -> bool:
+    def process_incoming_sms(self, sender_phone: str, text: str, message_id: int | None = None, conversation_id: int | None = None) -> bool:
         """Procesa un SMS entrante como handler del dispatcher compartido.
 
         Retorna True si el SMS fue reconocido como comando de emergencia
@@ -211,14 +211,28 @@ class EmergencyModeService:
             # No coincide con ningun patron de emergencia -> otro handler
             return False
 
-        # R12: Persistir SMS entrante y crear/recuperar conversacion emergency
-        conversation_id = None
-        if self._sms_persistence is not None:
+        # R12: Reusar fila del dispatcher (Opcion A) o crear nueva (legacy)
+        conv_id = None
+        if message_id is not None and conversation_id is not None:
+            # Opcion A: el dispatcher ya persistio el SMS. Solo actualizar.
+            try:
+                self._sms_persistence.update_message_handler(
+                    message_id, "emergency",
+                )
+                if self._sms_persistence.get_message(message_id) is not None:
+                    self._sms_persistence.update_conversation_workflow_type(
+                        conversation_id, "emergency",
+                    )
+                    conv_id = conversation_id
+            except Exception:
+                logger.exception("emergency_mode: error actualizando mensaje existente")
+        elif self._sms_persistence is not None:
+            # Fallback: crear nueva (comportamiento anterior)
             try:
                 conv = self._sms_persistence.get_or_create_active_conversation(
                     peer_number=sender_phone, workflow_type="emergency",
                 )
-                conversation_id = conv.id
+                conv_id = conv.id
                 self._sms_persistence.create_message(
                     conversation_id=conv.id,
                     direction="received",
@@ -239,15 +253,7 @@ class EmergencyModeService:
                 .first()
             )
 
-            if user is None or user.role != "admin":
-                # Emisor no autorizado — silencio total por seguridad.
-                # El dispatcher V2 ya filtra por rol, pero si el handler
-                # es llamado directamente, se rechaza sin log ni respuesta.
-                logger.debug(
-                    "SMS de emisor no autorizado ignorado (silencio): %s", sender_phone
-                )
-                return True  # Manejado (aunque rechazado en silencio)
-
+            # La whitelist en el dispatcher ya garantiza que solo admins llegan aqui
             supervisor_id = user.id
 
             try:
@@ -259,7 +265,7 @@ class EmergencyModeService:
                         cmd_raw=parsed.raw_text,
                         cmd_source="sms",
                         sender_phone=sender_phone,
-                        conversation_id=conversation_id,
+                        conversation_id=conv_id,
                     )
                     # Verificar que la activacion realmente funciono
                     if not self._active:

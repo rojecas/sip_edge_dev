@@ -24,14 +24,19 @@ _MIN_PEER_DIGITS = 6
 
 @runtime_checkable
 class SmsHandler(Protocol):
-    """Protocolo para handlers de SMS entrantes (compatible con v1).
+    """Protocolo para handlers de SMS entrantes.
 
-    Cada handler recibe (sender_phone, text) y retorna True si el SMS fue
-    procesado. Si un handler retorna True, los handlers siguientes no se
-    ejecutan para ese SMS.
+    Cada handler recibe (sender_phone, text) y opcionalmente los IDs
+    de la fila ya persistida por el dispatcher (message_id, conversation_id).
+    Retorna True si el SMS fue procesado. Si un handler retorna True,
+    los handlers siguientes no se ejecutan para ese SMS.
     """
 
-    def __call__(self, sender_phone: str, text: str) -> bool:
+    def __call__(
+        self, sender_phone: str, text: str,
+        message_id: int | None = None,
+        conversation_id: int | None = None,
+    ) -> bool:
         ...
 
 
@@ -290,10 +295,23 @@ class IncomingSmsDispatcherV2:
             return
 
         # R3 cumplido: el SMS ya esta en BD. Ahora delegar.
+        # R19: Whitelist - solo usuarios registrados (admin, corresponsal)
+        role = self._persistence.get_user_role_by_phone(sender_phone)
+        if role is None or role not in ("admin", "corresponsal"):
+            logger.info(
+                "DispatcherV2: SMS de %s (rol=%s) ignorado por whitelist",
+                sender_phone, role,
+            )
+            self._persistence.update_conversation_status(conv.id, "completed")
+            return
+
+        # R19: Corresponsal solo puede hacer consultas AI
         handled = False
         for handler, workflow_type in self._handlers:
+            if role == "corresponsal" and workflow_type not in ("ai_query",):
+                continue
             try:
-                if handler(sender_phone, trimmed_text):
+                if handler(sender_phone, trimmed_text, msg.id, conv.id):
                     handled = True
                     logger.info(
                         "DispatcherV2: SMS de %s delegado a %s (workflow=%s)",
@@ -307,22 +325,22 @@ class IncomingSmsDispatcherV2:
                     "DispatcherV2: handler %s fallo procesando SMS", handler,
                 )
 
-        # R6: Si ningun handler retorno True, responder con ayuda
+        # R6: Si ningun handler retorno True
         if not handled:
             logger.info(
                 "DispatcherV2: SMS no manejado de %s: '%s'", sender_phone, trimmed_text,
             )
-            # Marcar conversacion como unknown/completed
             self._persistence.update_conversation_status(conv.id, "completed")
-            # Enviar respuesta de ayuda (persistiendo el mensaje de respuesta)
-            self._persistence.create_message(
-                conversation_id=conv.id,
-                direction="sent",
-                peer_number=sender_phone,
-                body=self.HELP_RESPONSE,
-                handler="dispatcher_v2",
-                status="pending",
-            )
+            # R19: Solo responder con ayuda a admins
+            if role == "admin":
+                self._persistence.create_message(
+                    conversation_id=conv.id,
+                    direction="sent",
+                    peer_number=sender_phone,
+                    body=self.HELP_RESPONSE,
+                    handler="dispatcher_v2",
+                    status="pending",
+                )
 
     # ------------------------------------------------------------------
     # Carrier SMS (R7)
