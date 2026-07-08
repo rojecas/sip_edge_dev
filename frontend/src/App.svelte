@@ -19,6 +19,9 @@
   import AdminHaciendas from "./components/AdminHaciendas.svelte";
   import AdminSuertes from "./components/AdminSuertes.svelte";
   import AdminBackup from "./components/AdminBackup.svelte";
+  import AdminReportes from "./components/AdminReportes.svelte";
+  import AdminAnomalias from "./components/AdminAnomalias.svelte";
+  import AdminAgente from "./components/AdminAgente.svelte";
 
   // Initialize auth store for the API wrapper
   setAuthStore(authStore);
@@ -65,6 +68,12 @@
         <AdminSuertes />
       {:else if currentRoute === "/admin/backup"}
         <AdminBackup />
+      {:else if currentRoute === "/admin/reportes"}
+        <AdminReportes />
+      {:else if currentRoute === "/admin/anomalias"}
+        <AdminAnomalias />
+      {:else if currentRoute === "/admin/agente"}
+        <AdminAgente />
       {:else}
         <AdminDashboard />
       {/if}

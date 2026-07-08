@@ -675,36 +675,63 @@ async def detect_anomalies_on_demand(
     ]
 
 
-@anomaly_router.get("/history")
+class AnomalyLogResponse(BaseModel):
+    """Response schema for a single anomaly log entry."""
+    id: int
+    record_id: int
+    layer: str
+    z_score: float | None = None
+    metric_value: float
+    threshold: float
+    llm_report: str | None = None
+    sent_sms: bool
+    created_at: str | None = None  # ISO format
+
+    class Config:
+        from_attributes = True
+
+
+def _anomaly_log_to_response(log) -> AnomalyLogResponse:
+    """Convert AnomalyLog ORM object to AnomalyLogResponse."""
+    return AnomalyLogResponse(
+        id=log.id,
+        record_id=log.record_id,
+        layer=log.layer,
+        z_score=float(log.z_score) if log.z_score is not None else None,
+        metric_value=float(log.metric_value),
+        threshold=float(log.threshold),
+        llm_report=log.llm_report,
+        sent_sms=log.sent_sms,
+        created_at=log.created_at.isoformat() if log.created_at else None,
+    )
+
+
+@anomaly_router.get("/history", response_model=PaginatedResponse[AnomalyLogResponse])
 async def get_anomaly_history(
-    limit: int = 50,
     _: dict = Depends(check_inactivity),
     __: dict = Depends(require_role("admin")),
     db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    limit: int | None = Query(None, description="Deprecado: usar page_size"),
 ):
-    if limit < 1 or limit > 500:
-        limit = 50
+    # Backward compatibility: limit deprecated, use page_size instead
+    if limit is not None and page_size == 20:
+        page_size = min(max(limit, 1), 100)
     from src.models import AnomalyLog as AL
-    logs = (
-        db.query(AL)
-        .order_by(AL.created_at.desc())
-        .limit(limit)
-        .all()
+    query = db.query(AL).order_by(AL.created_at.desc())
+    total = query.count()
+    total_pages = max(1, math.ceil(total / page_size))
+    offset = (page - 1) * page_size
+    logs = query.offset(offset).limit(page_size).all()
+    items = [_anomaly_log_to_response(log) for log in logs]
+    return PaginatedResponse(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
     )
-    return [
-        {
-            "id": log.id,
-            "record_id": log.record_id,
-            "layer": log.layer,
-            "z_score": float(log.z_score) if log.z_score is not None else None,
-            "metric_value": float(log.metric_value),
-            "threshold": float(log.threshold),
-            "llm_report": log.llm_report,
-            "sent_sms": log.sent_sms,
-            "created_at": log.created_at.isoformat() if log.created_at else None,
-        }
-        for log in logs
-    ]
 
 
 app.include_router(anomaly_router)

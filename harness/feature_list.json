@@ -372,10 +372,11 @@
                 "RF-F15-04: /admin/agente muestra interfaz tipo chat con POST /api/agent/query",
                 "RF-F15-05: BotÃƒÆ’Ã‚Â³n 'Detectar ahora' con parÃƒÆ’Ã‚Â¡metros configurables"
             ],
-            "status": "pending",
+            "status": "testing",
             "depends_on": [
                 16
-            ]
+            ],
+            "github_issue": "https://github.com/rojecas/sip_edge/issues/21"
         },
         {
             "id": 18,

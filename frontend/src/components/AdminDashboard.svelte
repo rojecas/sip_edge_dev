@@ -30,6 +30,24 @@
       description: "Gestionar suertes filtradas por hacienda.",
     },
     {
+      route: "/admin/reportes",
+      icon: "📋",
+      title: "Reportes",
+      description: "Plantillas de reportes programados.",
+    },
+    {
+      route: "/admin/anomalias",
+      icon: "⚠️",
+      title: "Anomalías",
+      description: "Historial de anomalías detectadas.",
+    },
+    {
+      route: "/admin/agente",
+      icon: "🤖",
+      title: "Agente IA",
+      description: "Consola de consultas al agente inteligente.",
+    },
+    {
       route: "/admin/backup",
       icon: "💾",
       title: "Backup",

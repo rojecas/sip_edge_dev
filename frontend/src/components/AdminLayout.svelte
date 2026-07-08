@@ -18,6 +18,9 @@
     { route: "/admin/usuarios", label: "Usuarios", icon: "👥" },
     { route: "/admin/haciendas", label: "Haciendas", icon: "🏠" },
     { route: "/admin/suertes", label: "Suertes", icon: "🌱" },
+    { route: "/admin/reportes", label: "Reportes", icon: "📋" },
+    { route: "/admin/anomalias", label: "Anomalías", icon: "⚠️" },
+    { route: "/admin/agente", label: "Agente IA", icon: "🤖" },
     { route: "/admin/backup", label: "Backup", icon: "💾" },
   ];
 

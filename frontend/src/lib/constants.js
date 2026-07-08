@@ -25,6 +25,12 @@ export const ENDPOINTS = {
   BACKUP_STATUS: "/api/backup/status",
   BACKUP_RUN: "/api/backup/run",
   WS_SCALE: "/ws/scale",
+  // Analytics endpoints
+  REPORTS_TEMPLATES: "/api/reports/templates",
+  REPORTS_TEMPLATES_BY_ID: "/api/reports/templates/",
+  ANOMALIES_HISTORY: "/api/anomalies/history",
+  ANOMALIES_DETECT: "/api/anomalies",
+  AGENT_QUERY: "/api/agent/query",
 };
 
 export const CONFIG = {
