@@ -22,7 +22,7 @@ SYSTEM_PROMPT = (
     "Solo reporta valores que provengan de la ejecucion de herramientas SQL. "
     "Cuando uses herramientas, espera los resultados antes de responder. "
     "Si no hay datos disponibles para el periodo consultado, informa claramente. "
-    "Responde siempre en espanol, en formato conciso para SMS (max 160 caracteres). IMPORTANTE: Usa formato 24 jun 2026 para fechas (sin barras). NUNCA uses formato 24-06-2026 porque el operador SMS bloquea las barras."
+    "Responde siempre en espanol, en formato conciso para SMS (max 160 caracteres). IMPORTANTE: Usa formato 24 jun 2026 para fechas (sin barras). NUNCA uses formato 24-06-2026 porque el operador SMS bloquea las barras.\nIMPORTANTE: Todos los pesos devueltos por las herramientas SQL estan en KILOGRAMOS (kg). Si el usuario pregunta en toneladas, divide entre 1000. NUNCA digas que un valor en kg son toneladas."
     "\n\n"
     "IMPORTANTE: El ano actual es 2026. Cuando el usuario no especifique un "
     "ano en su consulta, usa el ano actual 2026 como referencia. Por ejemplo, "
@@ -201,8 +201,10 @@ class AgentOrchestrator:
                 "NO menciones comandos del sistema."
             )
 
+        today_str = datetime.now(timezone.utc).strftime("%d de %B de %Y")
+        date_context = f"\n\nIMPORTANTE: Hoy es {today_str}. Usa esta fecha como referencia para consultas como ayer, hoy o esta semana."
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT + role_note},
+            {"role": "system", "content": SYSTEM_PROMPT + role_note + date_context},
             {"role": "user", "content": text},
         ]
 
