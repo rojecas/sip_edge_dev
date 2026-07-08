@@ -1,28 +1,31 @@
-﻿# Sesion actual - 2026-07-08
+# Sesion actual - 2026-07-08 (Parte 2)
 
-- **Inicio:** 2026-07-08
+- **Inicio:** 2026-07-08 14:30
+- **Fin:** 2026-07-08 16:30
 - **Agente:** leader (deepseek-v4-pro)
-- **Enfoque:** Pruebas manuales Feature 25 - Balanza Virtual (virtual_scale)
+- **Enfoque:** Prueba manual flujo SMS + Bug #26 + fixes ENUM y LLM
 
-## Resumen de la sesion
+## Resumen
 
-### Feature 25 — Balanza Virtual (VERIFICADA → DONE)
-- **Fix aplicado:** Error `select.select()` en Windows corregido (separar path msvcrt de fallback Unix)
-- **Pruebas realizadas:**
-  - Comunicacion RS-485 real a 9600 baud: ✅ REXT, TARE, ZERO, CLEAR, TMAN responden OK
-  - Integracion con sip-edge via RS-485: ✅ 5/5 comandos desde EdgeBox
-  - REPL interactivo: ✅ navegacion n/p/w/g/s/q/espacio
-  - 5 datasets disponibles: ✅
-- **Bug descubierto en sip-edge (scale.py + main.py):**
-  - `_async_reader` crashea con TypeError, no se recupera
-  - `_on_scale_data` no await correctamente `ws.send_text()` en WebSocket
-  - `ScaleService` inicia pero no loggea "started"
-- **config.yaml cambiado a 9600 baud** (default de balanza DINI ARGEO)
+### Prueba manual de SMS en EdgeBox
+1. Envio de prueba via script send_sms.sh al 3006117436 - Exitoso
+2. Respuesta Manual on desde corresponsal - Procesado por AI handler (R19 whitelist)
+3. Bug duplicado detectado: send_sms() marcaba sending pero ENUM no lo aceptaba
+
+### Fixes aplicados
+- ENUM status +sending: models.py, sms_persistence.py, MariaDB ALTER TABLE
+- Metodos faltantes sms_persistence.py: get_user_role_by_phone, update_message_handler, update_conversation_workflow_type
+- Fecha dinamica LLM: agent_orchestrator.py (datetime.now() en system prompt)
+- Unidades kg/toneladas: agent_orchestrator.py (aclaracion en prompt)
+
+### Sincronizacion git
+- EdgeBox 3 commits pusheados a origin/master
+- Local git pull fast-forward a f5a3320
 
 ## Pendientes
 | Item | Status | Nota |
 |------|--------|------|
-| Bug 26 (emergency_request_wrong_sms) | triaged | Bug-fixer pendiente |
-| F27 (sms_persistence) | testing | Espera pruebas manuales + autorizacion |
+| Bug 26 (emergency_request_wrong_sms) | testing | Flujo SMS probado y corregido |
+| Bug 29 (scale_service_async_crashes) | triaged | Pendiente bug-fixer |
 | F28 (ai_multi_turn) | pending | Pendiente spec-author |
-| Bug ScaleService/WebSocket (nuevo) | pending | Bugs descubiertos durante pruebas F25 |
+| F17 (frontend_analytics) | pending | Pendiente spec-author |
