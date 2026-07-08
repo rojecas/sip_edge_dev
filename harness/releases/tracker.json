@@ -1,86 +1,98 @@
 {
-  "project_version": "1.0.0",
-  "pending": [
-    {
-      "id": 13,
-      "type": "feature",
-      "name": "frontend_login_kiosk",
-      "title": "Frontend - Login, Kiosco de Pesaje y Logout",
-      "completed_at": "2026-06-16"
-    },
-    {
-      "id": 19,
-      "type": "bug",
-      "name": "watchdog_sd_notify",
-      "title": "Watchdog mal configurado - servicio reiniciado cada 30s por falta de sd_notify",
-      "completed_at": "2026-06-17"
-    },
-    {
-      "id": 14,
-      "type": "feature",
-      "name": "frontend_admin_dashboard",
-      "title": "Frontend Admin - Dashboard y Navegación (14a)",
-      "completed_at": "2026-06-18"
-    },
-    {
-      "id": 20,
-      "type": "bug",
-      "name": "admin_suertes_response_format",
-      "title": "AdminSuertes.svelte no carga las suertes al seleccionar una hacienda",
-      "completed_at": "2026-06-18"
-    },
-    {
-      "id": 15,
-      "type": "feature",
-      "name": "frontend_admin_operations",
-      "title": "Frontend Admin - Configuración y Backup (14b)",
-      "completed_at": "2026-06-19",
-      "notes": "Reabierta para tests frontend (33 tests, Vitest) - cerrada definitivamente"
-    },
-    {
-      "id": 16,
-      "type": "feature",
-      "name": "frontend_admin_masterdata",
-      "title": "Frontend Admin - CRUD de Datos Maestros (14c)",
-      "completed_at": "2026-06-19"
-    },
-    {
-      "id": 22,
-      "type": "bug",
-      "name": "user_phone_not_exposed",
-      "title": "Campo phone no expuesto y campo document ambiguo - renombrar a employee_code",
-      "completed_at": "2026-06-23"
-    },
-    {
-      "id": 23,
-      "type": "bug",
-      "name": "emergency_mode_not_activating",
-      "title": "Modo manual de emergencia no se activa via SMS",
-      "completed_at": "2026-06-24"
-    },
-    {
-      "id": 18,
-      "type": "feature",
-      "name": "harvest_type",
-      "title": "Campo tipo de cosecha en registro de pesaje",
-      "completed_at": "2026-06-25"
-    },
-    {
-      "id": 21,
-      "type": "feature",
-      "name": "pagination_users_backups",
-      "title": "Paginacion en endpoints y tablas de Usuarios y Backups",
-      "completed_at": "2026-06-12"
-    },
-    {
-      "id": 24,
-      "type": "feature",
-      "name": "reset_individual_pesos",
-      "title": "Reset Individual de Pesos en Kiosko de Pesaje",
-      "completed_at": "2026-07-03"
-    }
-  ],
+  "project_version": "1.2.0",
+  "pending": [],
   "history": [
+    {
+      "version": "1.2.0",
+      "released_at": "2026-07-08",
+      "items": [
+        {
+          "id": 13,
+          "type": "feature",
+          "name": "frontend_login_kiosk",
+          "title": "Frontend - Login, Kiosco de Pesaje y Logout",
+          "completed_at": "2026-06-16"
+        },
+        {
+          "id": 19,
+          "type": "bug",
+          "name": "watchdog_sd_notify",
+          "title": "Watchdog mal configurado - servicio reiniciado cada 30s por falta de sd_notify",
+          "completed_at": "2026-06-17"
+        },
+        {
+          "id": 14,
+          "type": "feature",
+          "name": "frontend_admin_dashboard",
+          "title": "Frontend Admin - Dashboard y Navegación (14a)",
+          "completed_at": "2026-06-18"
+        },
+        {
+          "id": 20,
+          "type": "bug",
+          "name": "admin_suertes_response_format",
+          "title": "AdminSuertes.svelte no carga las suertes al seleccionar una hacienda",
+          "completed_at": "2026-06-18"
+        },
+        {
+          "id": 15,
+          "type": "feature",
+          "name": "frontend_admin_operations",
+          "title": "Frontend Admin - Configuración y Backup (14b)",
+          "completed_at": "2026-06-19",
+          "notes": "Reabierta para tests frontend (33 tests, Vitest) - cerrada definitivamente"
+        },
+        {
+          "id": 16,
+          "type": "feature",
+          "name": "frontend_admin_masterdata",
+          "title": "Frontend Admin - CRUD de Datos Maestros (14c)",
+          "completed_at": "2026-06-19"
+        },
+        {
+          "id": 22,
+          "type": "bug",
+          "name": "user_phone_not_exposed",
+          "title": "Campo phone no expuesto y campo document ambiguo - renombrar a employee_code",
+          "completed_at": "2026-06-23"
+        },
+        {
+          "id": 23,
+          "type": "bug",
+          "name": "emergency_mode_not_activating",
+          "title": "Modo manual de emergencia no se activa via SMS",
+          "completed_at": "2026-06-24"
+        },
+        {
+          "id": 18,
+          "type": "feature",
+          "name": "harvest_type",
+          "title": "Campo tipo de cosecha en registro de pesaje",
+          "completed_at": "2026-06-25"
+        },
+        {
+          "id": 21,
+          "type": "feature",
+          "name": "pagination_users_backups",
+          "title": "Paginacion en endpoints y tablas de Usuarios y Backups",
+          "completed_at": "2026-06-12"
+        },
+        {
+          "id": 24,
+          "type": "feature",
+          "name": "reset_individual_pesos",
+          "title": "Reset Individual de Pesos en Kiosko de Pesaje",
+          "completed_at": "2026-07-03"
+        },
+        {
+          "id": 25,
+          "type": "feature",
+          "name": "virtual_scale",
+          "title": "Balanza Virtual DINI ARGEO DFWLI-2 para Desarrollo y Pruebas",
+          "completed_at": "2026-07-08"
+        }
+      ]
+    },
     {
       "version": "1.0.0",
       "released_at": "2026-06-16",

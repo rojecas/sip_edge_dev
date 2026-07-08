@@ -556,7 +556,8 @@
                                             "Script generador: scripts/generate_readings.py produce los 5 datasets CSV",
                                             "Documentacion de conexion fisica: workstation USB-\u003eRS232 -\u003e conversor RS232/RS485 -\u003e EdgeBox RS485"
                                         ],
-                         "status":  "testing",
+                          "github_issue":  "https://github.com/rojecas/sip_edge/issues/22",
+                          "status":  "done",
                          "depends_on":  [
 
                                         ]
