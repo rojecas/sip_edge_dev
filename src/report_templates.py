@@ -8,7 +8,7 @@ from decimal import Decimal
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from src.models import AnomalyLog, Hacienda, ReportTemplate, User, Weighing
+from src.models import AnomalyLog, Hacienda, ReportTemplate, ReportTemplateUser, User, Weighing
 
 logger = logging.getLogger(__name__)
 
@@ -46,17 +46,28 @@ class ReportTemplateService:
     # ------------------------------------------------------------------
 
     def create(self, data: dict) -> ReportTemplate:
-        """Crea una nueva plantilla de reporte."""
+        """Crea una nueva plantilla de reporte.
+
+        Almacena destinatarios en la tabla pivote report_template_users
+        en vez de como JSON en la columna recipients.
+        """
         db = self._get_db()
         try:
             template = ReportTemplate(
                 name=data["name"],
                 schedule=json.dumps(data.get("schedule", [])),
-                recipients=json.dumps(data.get("recipients", [])),
                 metrics=json.dumps(data.get("metrics", [])),
                 is_active=data.get("is_active", True),
             )
             db.add(template)
+            db.flush()  # Necesario para obtener template.id
+
+            # Insertar filas en la tabla pivote para cada user_id
+            user_ids = data.get("user_ids", [])
+            for uid in user_ids:
+                rtu = ReportTemplateUser(template_id=template.id, user_id=uid)
+                db.add(rtu)
+
             db.commit()
             db.refresh(template)
             return template
@@ -65,6 +76,9 @@ class ReportTemplateService:
 
     def update(self, template_id: int, data: dict) -> ReportTemplate:
         """Actualiza una plantilla existente.
+
+        Si se pasa user_ids, reemplaza las filas en la tabla pivote
+        (borra existentes + inserta nuevas).
 
         Raises:
             TemplateNotFoundError: si la plantilla no existe.
@@ -81,12 +95,21 @@ class ReportTemplateService:
                 template.name = data["name"]
             if "schedule" in data:
                 template.schedule = json.dumps(data["schedule"])
-            if "recipients" in data:
-                template.recipients = json.dumps(data["recipients"])
             if "metrics" in data:
                 template.metrics = json.dumps(data["metrics"])
             if "is_active" in data:
                 template.is_active = data["is_active"]
+
+            # Reemplazar filas en la tabla pivote si se proporcionan user_ids
+            if "user_ids" in data:
+                db.query(ReportTemplateUser).filter(
+                    ReportTemplateUser.template_id == template_id
+                ).delete()
+                for uid in data["user_ids"]:
+                    rtu = ReportTemplateUser(
+                        template_id=template_id, user_id=uid
+                    )
+                    db.add(rtu)
 
             db.commit()
             db.refresh(template)
@@ -112,11 +135,80 @@ class ReportTemplateService:
         finally:
             db.close()
 
-    def get_all(self) -> list[ReportTemplate]:
-        """Lista todas las plantillas."""
+    def get_all(self) -> list[dict]:
+        """Lista todas las plantillas con destinatarios resueltos via JOIN."""
         db = self._get_db()
         try:
-            return db.query(ReportTemplate).all()
+            templates = db.query(ReportTemplate).all()
+            return [self._template_to_dict(db, t) for t in templates]
+        finally:
+            db.close()
+
+    def get_one(self, template_id: int) -> dict:
+        """Obtiene una plantilla por ID con destinatarios resueltos.
+
+        Raises:
+            TemplateNotFoundError: si la plantilla no existe.
+        """
+        db = self._get_db()
+        try:
+            template = db.query(ReportTemplate).filter(
+                ReportTemplate.id == template_id
+            ).first()
+            if template is None:
+                raise TemplateNotFoundError(f"Plantilla {template_id} no encontrada")
+            return self._template_to_dict(db, template)
+        finally:
+            db.close()
+
+    def _resolve_recipients(self, db: Session, template_id: int) -> tuple[list[str], list[int]]:
+        """Resuelve telefonos y user_ids desde la tabla pivote + users.
+
+        Returns:
+            (phones, user_ids) donde phones son los telefonos actuales
+            de los usuarios vinculados a la plantilla.
+        """
+        rows = (
+            db.query(User.phone, User.id)
+            .join(ReportTemplateUser, ReportTemplateUser.user_id == User.id)
+            .filter(ReportTemplateUser.template_id == template_id)
+            .all()
+        )
+        phones = [r.phone for r in rows if r.phone]
+        user_ids = [r.id for r in rows]
+        return phones, user_ids
+
+    def _template_to_dict(self, db: Session, template: ReportTemplate) -> dict:
+        """Convierte un ReportTemplate a dict con destinatarios resueltos."""
+        phones, uids = self._resolve_recipients(db, template.id)
+        return {
+            "id": template.id,
+            "name": template.name,
+            "schedule": json.loads(template.schedule) if template.schedule else [],
+            "recipients": phones,
+            "recipient_ids": uids,
+            "metrics": json.loads(template.metrics) if template.metrics else [],
+            "is_active": template.is_active,
+            "created_at": template.created_at.isoformat() if template.created_at else None,
+            "updated_at": template.updated_at.isoformat() if template.updated_at else None,
+        }
+
+    def get_recipient_phones(self, template_id: int) -> list[str]:
+        """Obtiene los telefonos actuales de los destinatarios de una plantilla.
+
+        Usado por el scheduler SMS para resolver destinatarios al enviar reportes.
+        Los telefonos se obtienen via JOIN desde la tabla pivote + users,
+        garantizando que esten siempre actualizados.
+        """
+        db = self._get_db()
+        try:
+            rows = (
+                db.query(User.phone)
+                .join(ReportTemplateUser, ReportTemplateUser.user_id == User.id)
+                .filter(ReportTemplateUser.template_id == template_id)
+                .all()
+            )
+            return [r.phone for r in rows if r.phone]
         finally:
             db.close()
 

@@ -57,3 +57,9 @@ EL sistema DEBE incluir enlaces de navegación en el sidebar del panel admin par
 
 ## R18
 EL sistema DEBE incluir en el Dashboard admin cards de acceso rápido para Reportes, Anomalías y Agente con descripciones funcionales.
+
+## R19
+CUANDO un administrador guarda una plantilla de reporte, el sistema DEBE almacenar los destinatarios como referencias a usuarios (user_id) en una tabla pivote eport_template_users, NO como texto plano de numeros de telefono en la columna ecipients.
+
+## R20
+CUANDO el sistema envia un reporte programado, DEBE resolver los numeros de telefono de los destinatarios mediante JOIN desde la tabla users a traves de la tabla pivote eport_template_users, garantizando que los telefonos esten siempre actualizados.

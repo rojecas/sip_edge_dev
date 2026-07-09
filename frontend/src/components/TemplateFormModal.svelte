@@ -3,8 +3,13 @@
    * TemplateFormModal — Modal for creating/editing report templates.
    * Props: show, mode ("create"|"edit"), plantilla, error, onClose, onSave.
    * onSave receives the payload object.
+   *
+   * Fase 8: Reemplaza recipients_text por selector multiple de usuarios
+   * con checkboxes. Envia user_ids en vez de recipients.
    */
   import { onMount } from "svelte";
+  import { api, ApiError } from "../lib/api.js";
+  import { ENDPOINTS } from "../lib/constants.js";
 
   let {
     show = false,
@@ -36,7 +41,7 @@
   let form = $state({
     name: "",
     schedule: [],
-    recipients_text: "",
+    selectedUserIds: [],
     metrics: [],
     is_active: true,
   });
@@ -44,16 +49,24 @@
   let validationError = $state("");
   let submitting = $state(false);
 
+  // User selector state
+  let allUsers = $state([]);
+  let availableUsers = $state([]);
+  let usersLoading = $state(false);
+  let usersError = $state("");
+  let userSearch = $state("");
+
   $effect(() => {
     if (show) {
       validationError = "";
       submitting = false;
+      userSearch = "";
       if (mode === "edit" && plantilla) {
         form = {
           name: plantilla.name || "",
           schedule: Array.isArray(plantilla.schedule) ? [...plantilla.schedule] : [],
-          recipients_text: Array.isArray(plantilla.recipients)
-            ? plantilla.recipients.join(", ") : "",
+          selectedUserIds: Array.isArray(plantilla.recipient_ids)
+            ? [...plantilla.recipient_ids] : [],
           metrics: Array.isArray(plantilla.metrics) ? [...plantilla.metrics] : [],
           is_active: plantilla.is_active !== undefined ? plantilla.is_active : true,
         };
@@ -61,13 +74,57 @@
         form = {
           name: "",
           schedule: [],
-          recipients_text: "",
+          selectedUserIds: [],
           metrics: [],
           is_active: true,
         };
       }
+      loadUsers();
     }
   });
+
+  async function loadUsers() {
+    usersLoading = true;
+    usersError = "";
+    try {
+      const result = await api.get(ENDPOINTS.USERS + "?page_size=100");
+      const users = Array.isArray(result) ? result : (result.items || []);
+      allUsers = users;
+      // Filter: only admin + corresponsal, active
+      availableUsers = users.filter(
+        u => (u.role === "admin" || u.role === "corresponsal") && u.is_active
+      );
+    } catch (err) {
+      usersError = err instanceof ApiError ? err.message : "Error al cargar usuarios.";
+      availableUsers = [];
+    } finally {
+      usersLoading = false;
+    }
+  }
+
+  let filteredUsers = $derived(
+    userSearch.trim()
+      ? availableUsers.filter(u =>
+          u.full_name.toLowerCase().includes(userSearch.toLowerCase())
+        )
+      : availableUsers
+  );
+
+  function toggleUser(userId) {
+    if (form.selectedUserIds.includes(userId)) {
+      form.selectedUserIds = form.selectedUserIds.filter(id => id !== userId);
+    } else {
+      form.selectedUserIds = [...form.selectedUserIds, userId];
+    }
+  }
+
+  function selectAll() {
+    form.selectedUserIds = filteredUsers.map(u => u.id);
+  }
+
+  function deselectAll() {
+    form.selectedUserIds = [];
+  }
 
   function toggleMetric(value) {
     if (form.metrics.includes(value)) {
@@ -99,15 +156,10 @@
     validationError = "";
     submitting = true;
 
-    const recipients = form.recipients_text
-      .split(",")
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
-
     const payload = {
       name: form.name.trim(),
       schedule: form.schedule,
-      recipients: recipients,
+      user_ids: form.selectedUserIds,
       metrics: form.metrics,
       is_active: form.is_active,
     };
@@ -175,14 +227,51 @@
           </div>
         </fieldset>
 
-        <label>
-          Destinatarios SMS
-          <input
-            type="text"
-            bind:value={form.recipients_text}
-            placeholder="Teléfonos separados por coma (ej. 573001234567, 573007654321)"
-          />
-        </label>
+        <!-- Destinatarios: user selector with checkboxes -->
+        <fieldset class="field-group">
+          <legend>
+            Destinatarios
+            {#if form.selectedUserIds.length > 0}
+              <span class="selected-count">({form.selectedUserIds.length} seleccionados)</span>
+            {/if}
+          </legend>
+
+          {#if usersLoading}
+            <span class="loading-text">Cargando usuarios...</span>
+          {:else if usersError}
+            <span class="error-text">{usersError}</span>
+          {:else if availableUsers.length === 0}
+            <span class="hint-text">No hay usuarios admin o corresponsal activos.</span>
+          {:else}
+            <div class="user-selector-controls">
+              <input
+                type="text"
+                bind:value={userSearch}
+                placeholder="Buscar por nombre..."
+                class="search-input"
+              />
+              <div class="selector-actions">
+                <button type="button" class="btn-link" onclick={selectAll}>Seleccionar todos</button>
+                <button type="button" class="btn-link" onclick={deselectAll}>Deseleccionar</button>
+              </div>
+            </div>
+            <div class="user-checkbox-list">
+              {#each filteredUsers as user (user.id)}
+                <label class="checkbox-label user-row">
+                  <input
+                    type="checkbox"
+                    checked={form.selectedUserIds.includes(user.id)}
+                    onchange={() => toggleUser(user.id)}
+                  />
+                  <span class="user-name">{user.full_name}</span>
+                  <span class="user-phone">{user.phone || "Sin teléfono"}</span>
+                </label>
+              {:else}
+                <span class="hint-text">Sin resultados para "{userSearch}".</span>
+              {/each}
+            </div>
+          {/if}
+        </fieldset>
 
         <label class="checkbox-label">
           <input type="checkbox" bind:checked={form.is_active} />
@@ -363,5 +452,99 @@
   .btn-cancel:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  /* User selector styles */
+  .selected-count {
+    font-weight: 400;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .loading-text {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  .error-text {
+    color: var(--error);
+    font-size: 12px;
+  }
+
+  .hint-text {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  .user-selector-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .search-input {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 13px;
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .selector-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn-link {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+  }
+
+  .btn-link:hover {
+    color: var(--accent-hover);
+  }
+
+  .user-checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 4px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .user-row {
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+
+  .user-row:hover {
+    background: var(--bg-input);
+  }
+
+  .user-name {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-primary);
+  }
+
+  .user-phone {
+    font-size: 12px;
+    color: var(--text-secondary);
   }
 </style>

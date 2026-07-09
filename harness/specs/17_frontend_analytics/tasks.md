@@ -119,3 +119,40 @@
 | R16 | T8 | — |
 | R17 | T6 | T22 |
 | R18 | T7 | T22 |
+
+## Fase 8 - Tabla pivote report_template_users (R19, R20)
+- [x] T23 - Crear migracion database/migrations/2026_07_08_000001_create_report_template_users_table.py: CREATE TABLE report_template_users (template_id FK, user_id FK, PK compuesta), ALTER TABLE report_templates DROP COLUMN recipients. Cubre: R19.
+- [x] T24 - Agregar modelo ReportTemplateUser en src/models.py con __tablename__ = ""report_template_users"", columnas template_id y user_id, FK a ReportTemplate y User. Cubre: R19.
+- [x] T25 - Actualizar ReportTemplateService.create() en src/report_templates.py: aceptar user_ids en data, insertar filas en report_template_users, ya NO guardar JSON en recipients. Cubre: R19.
+- [x] T26 - Actualizar ReportTemplateService.update() en src/report_templates.py: reemplazar filas en report_template_users (borrar existentes + insertar nuevas). Cubre: R19.
+- [x] T27 - Actualizar ReportTemplateService.get_all() en src/report_templates.py: incluir JOIN a report_template_users + users para retornar 
+ecipients (telefonos) y 
+ecipient_ids (user_ids). Cubre: R19, R20.
+- [x] T28 - Actualizar _send_template_reports() en src/sms_service.py: leer telefonos via JOIN desde pivote + users, no desde template.recipients. Cubre: R20.
+- [x] T29 - Actualizar TemplateFormModal.svelte: reemplazar input recipients_text por selector multiple de usuarios (checkboxes). Cargar usuarios via GET /api/users, filtrar solo admin + corresponsal activos. Enviar user_ids en payload. Cubre: R19.
+- [x] T30 - Agregar test en 	ests/test_report_templates.py (o 	est_main.py) que verifique creacion con user_ids, y que recipients se resuelven desde users. Cubre: R19, R20.
+- [x] T31 - Agregar test frontend en TemplateFormModal.test.js que verifique que el selector de usuarios carga, filtra y envia user_ids correctamente. Cubre: R19.
+## Trazabilidad (actualizada)
+
+| R# | Tasks | Tests |
+|----|-------|-------|
+| R1 | T5, T8, T9 | T15 |
+| R2 | T9 | - |
+| R3 | T9 | - |
+| R4 | T10 | - |
+| R5 | T10, T11 | T16 |
+| R6 | T11 | - |
+| R7 | T1, T2, T3, T4, T5, T12 | T3, T4, T17 |
+| R8 | T1, T12 | T3, T17 |
+| R9 | T8, T14 | - |
+| R10 | T5, T14 | T18 |
+| R11 | T14 | T19 |
+| R12 | T14 | - |
+| R13 | T5, T13 | - |
+| R14 | T13 | T20 |
+| R15 | T13 | - |
+| R16 | T8 | - |
+| R17 | T6 | T22 |
+| R18 | T7 | T22 |
+| R19 | T23, T24, T25, T26, T27, T29 | T30, T31 |
+| R20 | T27, T28 | T30 |

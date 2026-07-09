@@ -2,6 +2,7 @@
 
 from sqlalchemy import BigInteger, Boolean, Column, Date, DateTime, Enum, ForeignKey, Index, Integer, JSON, Numeric, String, Text, Time, TIMESTAMP, UniqueConstraint, func, text
 from sqlalchemy.orm import DeclarativeBase, relationship
+from sqlalchemy.schema import PrimaryKeyConstraint
 
 
 class Base(DeclarativeBase):
@@ -179,7 +180,6 @@ class ReportTemplate(Base):
     )
     name = Column(String(255), nullable=False)
     schedule = Column(Text, nullable=False)  # JSON array de horarios "HH:MM"
-    recipients = Column(Text, nullable=False)  # JSON array de telefonos
     metrics = Column(Text, nullable=False)  # JSON array de metricas
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(
@@ -194,6 +194,33 @@ class ReportTemplate(Base):
 
     __table_args__ = (
         Index("idx_rt_active", "is_active"),
+        {"sqlite_autoincrement": True},
+    )
+
+
+class ReportTemplateUser(Base):
+    """Tabla pivote que relaciona plantillas de reporte con usuarios destinatarios.
+
+    Reemplaza el almacenamiento de telefonos como JSON en report_templates.recipients.
+    Los telefonos se resuelven via JOIN a users al enviar reportes.
+    """
+
+    __tablename__ = "report_template_users"
+
+    template_id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("report_templates.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        PrimaryKeyConstraint("template_id", "user_id"),
+        Index("idx_rtu_user_id", "user_id"),
         {"sqlite_autoincrement": True},
     )
 

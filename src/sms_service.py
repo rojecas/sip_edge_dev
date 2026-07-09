@@ -458,12 +458,8 @@ class SMSService:
             for template in templates:
                 try:
                     report_text = self._template_service.generate_report(template, db)
-                    # Obtener destinatarios de la plantilla
-                    import json
-                    try:
-                        recipients = json.loads(template.recipients)
-                    except (json.JSONDecodeError, TypeError):
-                        recipients = []
+                    # Resolver destinatarios via JOIN a tabla pivote + users
+                    recipients = self._template_service.get_recipient_phones(template.id)
                     self.send_scheduled_report(report_text, recipients=recipients)
                     logger.info("Reporte de plantilla '%s' enviado a %d destinatarios",
                                template.name, len(recipients))

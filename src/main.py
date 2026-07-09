@@ -546,7 +546,7 @@ reports_router = APIRouter(prefix="/api/reports", tags=["reports"])
 class TemplateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     schedule: list[str] = Field(default_factory=list)
-    recipients: list[str] = Field(default_factory=list)
+    user_ids: list[int] = Field(default_factory=list)
     metrics: list[str] = Field(default_factory=list)
     is_active: bool = True
 
@@ -554,7 +554,7 @@ class TemplateCreate(BaseModel):
 class TemplateUpdate(BaseModel):
     name: str | None = None
     schedule: list[str] | None = None
-    recipients: list[str] | None = None
+    user_ids: list[int] | None = None
     metrics: list[str] | None = None
     is_active: bool | None = None
 
@@ -566,19 +566,7 @@ async def list_templates(
 ):
     svc = app.state.report_template_service
     templates = svc.get_all()
-    return [
-        {
-            "id": t.id,
-            "name": t.name,
-            "schedule": json.loads(t.schedule) if t.schedule else [],
-            "recipients": json.loads(t.recipients) if t.recipients else [],
-            "metrics": json.loads(t.metrics) if t.metrics else [],
-            "is_active": t.is_active,
-            "created_at": t.created_at.isoformat() if t.created_at else None,
-            "updated_at": t.updated_at.isoformat() if t.updated_at else None,
-        }
-        for t in templates
-    ]
+    return templates
 
 
 @reports_router.post("/templates", status_code=201)
@@ -590,16 +578,9 @@ async def create_template(
     svc = app.state.report_template_service
     try:
         template = svc.create(body.model_dump())
+        return svc.get_one(template.id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return {
-        "id": template.id,
-        "name": template.name,
-        "schedule": json.loads(template.schedule) if template.schedule else [],
-        "recipients": json.loads(template.recipients) if template.recipients else [],
-        "metrics": json.loads(template.metrics) if template.metrics else [],
-        "is_active": template.is_active,
-    }
 
 
 @reports_router.put("/templates/{template_id}")
@@ -612,19 +593,12 @@ async def update_template(
     svc = app.state.report_template_service
     try:
         data = {k: v for k, v in body.model_dump().items() if v is not None}
-        template = svc.update(template_id, data)
+        svc.update(template_id, data)
+        return svc.get_one(template_id)
     except TemplateNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return {
-        "id": template.id,
-        "name": template.name,
-        "schedule": json.loads(template.schedule) if template.schedule else [],
-        "recipients": json.loads(template.recipients) if template.recipients else [],
-        "metrics": json.loads(template.metrics) if template.metrics else [],
-        "is_active": template.is_active,
-    }
 
 
 @reports_router.delete("/templates/{template_id}", status_code=204)
