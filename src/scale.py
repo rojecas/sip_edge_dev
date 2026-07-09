@@ -185,11 +185,13 @@ class ScaleService:
             try:
                 if self._serial is not None and self._serial.is_open:
                     line = self._serial.readline()
+                    logger.info("[TRACE-A] RAW bytes from serial: %s", line)
                     if line:
                         decoded = line.decode("ascii", errors="replace").strip()
                         if decoded:
                             try:
                                 parsed = _parse_response(decoded)
+                                logger.info("[TRACE-B] PARSED OK: %s", parsed)
                                 self._async_queue.put(parsed)
                             except ScaleProtocolError:
                                 logger.warning(
@@ -205,6 +207,7 @@ class ScaleService:
         self._process_async_queue()
 
     def _process_async_queue(self) -> None:
+        logger.info("[TRACE-C] _process_async_queue called! queue_size=%d", self._async_queue.qsize())
         while not self._async_queue.empty():
             try:
                 data = self._async_queue.get_nowait()
