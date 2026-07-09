@@ -283,7 +283,7 @@
                                             "RF-F13-09: Modal solicitud emergencia lista supervisores y envÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­a POST /api/emergency/request",
                                             "RF-F13-10: Flujo \u0027OlvidÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³ su contraseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a\u0027 con PIN de 4 dÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­gitos"
                                         ],
-                         "status":  "blocked",
+                         "status":  "pending",
                          "depends_on":  [
                                             2,
                                             5,
