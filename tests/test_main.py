@@ -2,7 +2,7 @@
 
 import unittest
 from datetime import date, datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -276,6 +276,49 @@ class TestAnomalyDetectOnDemand(unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
         self.assertIsInstance(data, list)
+
+
+class TestEventLoopReference(unittest.TestCase):
+    """Regression tests for Bug 2b — _event_loop module variable."""
+
+    def test_event_loop_module_variable_exists(self):
+        """Verify _event_loop is defined as module-level variable."""
+        import src.main as main_mod
+        self.assertTrue(hasattr(main_mod, "_event_loop"),
+                        "main module must have _event_loop variable")
+
+    def test_on_scale_data_uses_event_loop_when_set(self):
+        """Verify _on_scale_data prefers stored _event_loop over
+        _resolve_event_loop()."""
+        import src.main as main_mod
+        import asyncio
+
+        # Save original
+        original_loop = main_mod._event_loop
+
+        try:
+            # Set a sentinel loop
+            sentinel = asyncio.new_event_loop()
+            main_mod._event_loop = sentinel
+
+            # Mock websocket
+            ws = MagicMock()
+            ws.send_text = AsyncMock()
+            clients = {ws}
+
+            # Call _on_scale_data — it should use sentinel loop
+            with patch.object(main_mod, "_resolve_event_loop") as mock_resolve:
+                main_mod._on_scale_data(
+                    {"net_weight": 42.0, "is_stable": True, "unit": "kg"},
+                    clients,
+                )
+                # _resolve_event_loop should NOT be called
+                mock_resolve.assert_not_called()
+
+            # Clean up sentinel loop
+            sentinel.close()
+        finally:
+            main_mod._event_loop = original_loop
 
 
 if __name__ == "__main__":

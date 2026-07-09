@@ -77,9 +77,19 @@ CONFIG_PATH = "config.yaml"
 
 scale_clients: set[WebSocket] = set()
 
+# Stores the main asyncio event loop (uvicorn's loop) so that
+# _on_scale_data can schedule coroutines from background threads.
+# Set during lifespan startup, read from _async_reader thread.
+_event_loop: asyncio.AbstractEventLoop | None = None
+
 
 def _resolve_event_loop() -> asyncio.AbstractEventLoop:
-    """Resuelve el event loop: usa el running loop o crea uno nuevo."""
+    """Resuelve el event loop: usa el running loop o crea uno nuevo.
+
+    NOTA: Esta funcion esta en desuso para el flujo principal desde
+    Bug #29 fix. Se mantiene por compatibilidad con tests existentes.
+    El flujo principal usa _event_loop (seteado en lifespan).
+    """
     try:
         return asyncio.get_running_loop()
     except RuntimeError:
@@ -95,7 +105,9 @@ def _on_scale_data(data: dict, clients: set[WebSocket]) -> None:
             "unit": data.get("unit", "kg"),
         },
     })
-    loop = _resolve_event_loop()
+    # Use the stored event loop from lifespan (uvicorn's loop)
+    # so send_text is scheduled on the correct loop (Bug 2b fix).
+    loop = _event_loop if _event_loop is not None else _resolve_event_loop()
     for ws in list(clients):
         try:
             asyncio.run_coroutine_threadsafe(
@@ -154,6 +166,17 @@ async def lifespan(app: FastAPI):
     ) = load_config(CONFIG_PATH)
     from src.scale import ScaleService
 
+    # Configurar logging TEMPRANO — antes de cualquier inicializacion
+    # que pueda loggear (Bug 3 fix — estaba despues de ScaleService.start()).
+    logging.basicConfig(level=logging.INFO, force=True)
+    logging.getLogger("src.agent_orchestrator").setLevel(logging.INFO)
+    logging.getLogger("src.sms_send_queue").setLevel(logging.INFO)
+
+    # Store the current asyncio event loop (uvicorn's loop) for use from
+    # background threads (Bug 2b fix).
+    global _event_loop
+    _event_loop = asyncio.get_running_loop()
+
     dev_mode = os.environ.get("DEV_MODE", "false").lower() in ("true", "1", "yes")
     app.state.scale_service = ScaleService(
         app.state.scale_config, app.state.config.rs485, dev_mode=dev_mode
@@ -171,11 +194,6 @@ async def lifespan(app: FastAPI):
         seed_admin_user(db)
     finally:
         db.close()
-
-    # Configurar logging
-    logging.basicConfig(level=logging.INFO, force=True)
-    logging.getLogger("src.agent_orchestrator").setLevel(logging.INFO)
-    logging.getLogger("src.sms_send_queue").setLevel(logging.INFO)
 
     # Inicializar SMSService
     sms_config: SmsConfig = app.state.sms_config

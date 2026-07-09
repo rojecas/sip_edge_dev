@@ -379,5 +379,141 @@ class TestScaleEndpoint(unittest.TestCase):
                 del main_mod.app.dependency_overrides[get_current_user]
 
 
+class TestScaleBugFixes(unittest.TestCase):
+    """Regression tests for Bug #29 fixes."""
+
+    def setUp(self):
+        self.config = ScaleConfig(timeout_seconds=3)
+        self.serial_config = mock.MagicMock()
+        self.serial_config.path = "/dev/ttyACM0"
+        self.serial_config.baudrate = 115200
+        self.serial_config.parity = "N"
+        self.serial_config.data_bits = 8
+        self.serial_config.stop_bits = 1.0
+
+    def _wait_for_recovery(self, service, received, timeout=3.0):
+        """Wait for callback to receive 2+ data points with polling,
+        then stop the service. Uses real time.sleep() so the background
+        thread gets GIL time to process recovery."""
+        start = time.time()
+        while len(received) < 2 and time.time() - start < timeout:
+            time.sleep(0.05)
+        service.stop()
+
+    @mock.patch("src.scale.serial.Serial")
+    def test_async_reader_recovers_from_serial_error(self, mock_serial):
+        """Bug 1: SerialException triggers recovery and reader continues."""
+        instance = mock_serial.return_value
+        instance.is_open = True
+        read_count = [0]
+        results = [
+            b"01ST,1, 10.0,PT 0.0, 0,kg\r\n",
+            serial.SerialException("Device busy"),
+            b"01ST,1, 20.0,PT 0.0, 0,kg\r\n",
+        ]
+
+        def readline_side():
+            idx = read_count[0]
+            read_count[0] += 1
+            if idx < len(results):
+                val = results[idx]
+                if isinstance(val, BaseException):
+                    raise val
+                return val
+            return b""
+
+        instance.readline.side_effect = readline_side
+
+        # Patch time.sleep to make backoff instant in the reader thread.
+        with mock.patch(
+            "src.scale.time.sleep", side_effect=lambda s: None
+        ):
+            received = []
+
+            def callback(data):
+                received.append(data)
+
+            service = ScaleService(self.config, self.serial_config)
+            service.async_listener(callback)
+            service.start()
+            self._wait_for_recovery(service, received)
+
+        self.assertGreaterEqual(len(received), 2)
+        self.assertEqual(received[0]["net_weight"], 10.0)
+        self.assertEqual(received[-1]["net_weight"], 20.0)
+        # Verify _recover_serial was called (new serial.Serial() created)
+        self.assertGreaterEqual(mock_serial.call_count, 2)
+
+    @mock.patch("src.scale.serial.Serial")
+    def test_async_reader_type_error_recovery(self, mock_serial):
+        """Bug 1: TypeError in serial read triggers recovery."""
+        instance = mock_serial.return_value
+        instance.is_open = True
+        read_count = [0]
+        results = [
+            b"01ST,1, 30.0,PT 0.0, 0,kg\r\n",
+            TypeError("'NoneType' object cannot be interpreted "
+                      "as an integer"),
+            b"01ST,1, 40.0,PT 0.0, 0,kg\r\n",
+        ]
+
+        def readline_side():
+            idx = read_count[0]
+            read_count[0] += 1
+            if idx < len(results):
+                val = results[idx]
+                if isinstance(val, BaseException):
+                    raise val
+                return val
+            return b""
+
+        instance.readline.side_effect = readline_side
+
+        with mock.patch(
+            "src.scale.time.sleep", side_effect=lambda s: None
+        ):
+            received = []
+
+            def callback(data):
+                received.append(data)
+
+            service = ScaleService(self.config, self.serial_config)
+            service.async_listener(callback)
+            service.start()
+            self._wait_for_recovery(service, received)
+
+        self.assertGreaterEqual(len(received), 2)
+        self.assertEqual(received[0]["net_weight"], 30.0)
+        self.assertEqual(received[-1]["net_weight"], 40.0)
+
+    @mock.patch("src.scale.serial.Serial")
+    def test_async_queue_drains_before_stop(self, mock_serial):
+        """Bug 2a: Queue is drained inside the while loop (callback fires
+        before stop() is called)."""
+        instance = mock_serial.return_value
+        instance.readline.side_effect = [
+            b"01ST,1, 50.0,PT 0.0, 0,kg\r\n",
+            b"",
+            StopIteration,
+        ]
+        instance.is_open = True
+
+        callback_called_before_stop = False
+
+        def callback(_data):
+            nonlocal callback_called_before_stop
+            callback_called_before_stop = True
+
+        service = ScaleService(self.config, self.serial_config)
+        service.async_listener(callback)
+        service.start()
+        # Wait for data to arrive (reader runs in background thread)
+        time.sleep(0.3)
+        # Check callback was called WITHOUT calling stop() first
+        self.assertTrue(callback_called_before_stop,
+                        "Callback should have been called before stop()")
+        service.stop()
+
+
 if __name__ == "__main__":
     unittest.main()

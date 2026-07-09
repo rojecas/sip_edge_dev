@@ -180,7 +180,42 @@ class ScaleService:
     def async_listener(self, callback) -> None:
         self._callback = callback
 
+    def _recover_serial(self) -> bool:
+        """Attempt to re-open serial port after an error.
+
+        Returns True if reconnection succeeded, False otherwise.
+        """
+        try:
+            if self._serial is not None:
+                try:
+                    if self._serial.is_open:
+                        self._serial.close()
+                except Exception:
+                    pass
+            self._serial = serial.Serial(
+                port=self._serial_config.path,
+                baudrate=self._serial_config.baudrate,
+                parity=self._serial_config.parity,
+                bytesize=self._serial_config.data_bits,
+                stopbits=self._serial_config.stop_bits,
+                timeout=self._timeout,
+            )
+            logger.info(
+                "Serial port %s re-opened after error", self._serial_config.path
+            )
+            return True
+        except (serial.SerialException, OSError) as e:
+            logger.error(
+                "Failed to re-open serial port %s: %s",
+                self._serial_config.path, e,
+            )
+            return False
+
     def _async_reader(self) -> None:
+        consecutive_errors = 0
+        max_errors = 5
+        backoff = 1  # seconds, doubles each attempt
+
         while self._running:
             try:
                 if self._serial is not None and self._serial.is_open:
@@ -195,13 +230,40 @@ class ScaleService:
                                 logger.warning(
                                     "Ignoring unparseable async line: %s", decoded
                                 )
-            except (serial.SerialException, OSError) as e:
+                # Drain queue inside the while loop so callbacks fire in
+                # real time (Bug 2a fix — was outside the loop before).
+                self._process_async_queue()
+                # Successful iteration → reset error counters
+                consecutive_errors = 0
+                backoff = 1
+            except serial.SerialTimeoutException:
+                # Timeout on readline is expected (no data within timeout).
+                # Do NOT trigger port re-open for this; just continue.
                 if self._running:
-                    logger.error("Async serial read error: %s", e)
-                break
+                    logger.debug("Async serial read timed out (no data)")
+            except (serial.SerialException, OSError, TypeError) as e:
+                if self._running:
+                    logger.error(
+                        "Async serial read error: %s. Attempting recovery "
+                        "(attempt %d/%d)...",
+                        e, consecutive_errors + 1, max_errors,
+                    )
+                    self._recover_serial()
+                    consecutive_errors += 1
+                    if consecutive_errors >= max_errors:
+                        logger.critical(
+                            "Max consecutive serial errors (%d) reached. "
+                            "Async reader giving up.", max_errors,
+                        )
+                        break
+                    time.sleep(backoff)
+                    backoff = min(backoff * 2, 8)
             except Exception:
                 logger.exception("Unexpected error in async reader")
+            # Yield to other threads (original code had this at the end of
+            # every iteration; removing it caused a tight CPU loop).
             time.sleep(0.05)
+        # Drain remaining items on thread exit
         self._process_async_queue()
 
     def _process_async_queue(self) -> None:
