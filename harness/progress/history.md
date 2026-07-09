@@ -973,3 +973,23 @@ Se completó la feature 21 (pagination_users_backups) que estaba interrumpida:
 - docs/sms_mmcli_guide.md — Guia de envio SMS con mmcli
 - src/weighings.py, rontend/.../WeightField.svelte, rontend/.../KioskForm.svelte — Feature 24
 - src/tools/virtual_scale.py, scripts/generate_readings.py, data/readings/ — Feature 25
+
+---
+
+## 2026-07-08 - Feature 17 (frontend_analytics) - DONE
+
+**Release:** v1.3.0
+**Duracion:** 1 sesion (Parte 1: implementacion F17 + Fase 8 pivote)
+**Despliegue:** EdgeBox verificado con envio SMS real
+
+### Logro principal
+Modulo de analiticas del SPA completo:
+- 4 componentes Svelte 5: AdminReportes, TemplateFormModal, AdminAnomalias, AdminAgente
+- Backend: paginacion anomalias con PaginatedResponse
+- Tabla pivote report_template_users para destinatarios normalizados
+- 49 tests backend + 37 tests frontend
+
+### Issues encontrados y resueltos
+1. Frontend build no copiaba carpeta assets/ -> corregido copiando manualmente
+2. Modelo ReportTemplate con columna recipients en cache Python -> restart backend
+3. Migracion BD con UNSIGNED incompatible con bigint existente -> fix a BIGINT
