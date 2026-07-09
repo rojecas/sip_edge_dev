@@ -1,61 +1,56 @@
-# Sesion activa - 2026-07-09 - Diagnostico Bug #29 y analisis de gaps ERS vs SDD
+ï»¿# Sesion activa - 2026-07-09 - Spec-Validator PoC + Feature 13 corregida
 
 ## Resumen
 Sesion dedicada a:
-1. Correccion Bug #29 (scale_service_async_crashes) — CONFIRMADO y CORREGIDO
-2. Descubrimiento de gaps criticos entre el ERS RF-003 y la implementacion de F13
-3. Identificacion de fallo en el harness: falta de revision del spec contra el ERS
+1. Diseno y prueba del nuevo agente **spec-validator** (variante B: auditor + corrector)
+2. Validacion del spec de F13 (frontend_login_kiosk) contra el ERS (RF-003 + RF-F13-01 a 10)
+3. Correccion de 3 gaps ERS vs SDD en requirements.md, design.md, tasks.md
+4. Renombrado de archivos originales a *.old.md para preservar trazabilidad
 
-## Bug #29 — CORREGIDO
+## spec-validator: diseno
 
-### Diagnosticos realizados
-- Nivel 1 (Pipeline interno): Datos llegan desde PC por RS485, se parsean, encolan y desencolan ?
-- Nivel 2 (WebSocket): Cliente recibe mensajes JSON con peso en vivo ?
-- Nivel 3 (UI Kiosko): ScaleReader muestra peso en vivo ?
-- Bug #2a: Cola ahora se drena en el while loop (antes solo al hacer stop)
-- Bug #2b: Event loop de uvicorn almacenado en variable _event_loop (antes se creaba loop nuevo desde thread background)
-- Bug #3: logging.basicConfig() movido ANTES de ScaleService.start() (antes el log 'ScaleService started' se perdia)
-- Bug #1: _recover_serial() con backoff exponencial y reintentos (antes el hilo moria con break)
+### Pipeline SDD corregido
+ERS â†’ spec-author â†’ spec_ready â†’ [spec-validator] â†’ spec-reviewed â†’ implementer â†’ reviewer â†’ testing â†’ done
 
-### Pendiente de prueba
-- Nivel 6 (Recuperacion serial) — no se probo aun
+### Nuevo estado: "spec-reviewed"
+Entre spec_ready e in_progress. Indica que el spec ha sido validado contra el ERS por el spec-validator.
 
-## Gaps ERS vs SDD (criticos)
+### Caracteristicas
+- Variante B: audita + corrige (no solo reporta)
+- Renombra archivos originales a *.old.md (preserva trazabilidad)
+- Produce `harness/progress/spec_review_<name>.md` con tabla de trazabilidad ERS â†’ R<n>
+- Verifica que cada RF tenga al menos un R<n> cubriendolo
+- Verifica que ningun R<n> contradiga el ERS
 
-### RF-003 / R15 — Boton Leer
-- ERS RF-003: Al presionar boton Leer, el sistema DEBE enviar comando REXT al RS485
-- SDD R15 (F13): toma el valor actual del peso en vivo del WebSocket
-- Real: Lee el ultimo valor del WebSocket (NO envia REXT)
-- **Conclusion: R15 es incorrecto respecto al ERS**
+## Resultados en F13
 
-### RF-003 / R16 — Boton Tara
-- ERS RF-003: Al presionar boton Tara, el sistema DEBE enviar comando TARE al RS485
-- SDD R16 (F13): DEBE enviar el comando de tara a la bascula via API
-- Real: Solo pone el campo a 0 localmente, NO envia TARE
-- **Conclusion: R16 correcto en spec pero no implementado**
+### Archivos generados/modificados
+| Archivo | Accion |
+|---------|--------|
+| requirements.old.md | Renombrado (backup del original) |
+| requirements.md | Corregido: R15 (REXT), R16 (TARE); R43-R45 nuevos |
+| design.old.md | Renombrado |
+| design.md | Actualizado: nuevo endpoint, auto-capture, alternativa descartada, analisis de impacto |
+| tasks.old.md | Renombrado |
+| tasks.md | Actualizado: T22 corregido; T36-T43 nuevos (pendientes) |
+| spec_review_13_frontend_login_kiosk.md | Creado: informe completo de validacion |
 
-### RF-003 — Foco + PRINT
-- ERS RF-003: Escucha asincrona de datos entrantes desde la balanza (boton PRINT)
-- Real: No existe auto-captura por foco
-- **Conclusion: No implementado**
+### Gaps corregidos
+| Gap | Correccion |
+|-----|-----------|
+| R15 (Leer usaba WebSocket) | Ahora llama POST /api/scale/command {command: "REXT"} |
+| R16 (Tara no llamaba API) | Ahora llama POST /api/scale/command {command: "TARE"} |
+| Auto-capture PRINT faltante | R44 nuevo: callback onScaleReading + deteccion de foco |
+| Sin endpoint de comandos de bascula | R43 nuevo: POST /api/scale/command + src/scale_api.py |
 
-## Fallo del harness detectado
+### 45 requirements totales (vs 42 originales)
+- R1-R14: sin cambios
+- R15-R16: corregidos
+- R17-R42: sin cambios
+- R43-R45: nuevos
 
-El flujo SDD actual es:
-`
-ERS ? spec-author ? [SIN REVISION] ? spec ? implementer ? reviewer ? done
-`
+## Pendiente
+1. Implementar T36-T43 (backend endpoint + frontend corrections)
+2. Cambiar status de F13 de "pending" a "spec-reviewed" en feature_list.json
+3. Cerrar Bug #29 formalmente (ya esta "done" en feature_list.json)
 
-El reviewer solo verifica implementer vs spec, NUNCA spec vs ERS.
-Esto permitio que R15 contradijera RF-003 sin ser detectado.
-
-Se necesita agregar una etapa de **spec-review** donde un revisor valide
-que cada R<n> del spec se mapea correctamente a un RF del ERS, antes
-de pasar a in_progress.
-
-## Acciones pendientes
-1. Corregir F13: Leer debe enviar REXT y capturar respuesta
-2. Corregir F13: Tara debe enviar TARE al RS485
-3. Implementar auto-captura por foco + PRINT
-4. Agregar spec-review al harness
-5. Cerrar Bug #29 formalmente

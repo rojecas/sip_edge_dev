@@ -1,10 +1,39 @@
 /**
  * Tests para WeightField.svelte — Campo de peso con botones Tara/Leer/Reset.
  * Cubre: R1 (botón Reset se renderiza), R2 (solo ese campo se limpia).
+ * CORREGIDO (T38): Botones Tara/Leer usan api.post en lugar de scaleStore.
  */
 import { vi, describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/svelte";
 import WeightField from "../WeightField.svelte";
+
+// Mock del api para que el componente no intente fetch real
+vi.mock("../../lib/api.js", () => ({
+  api: {
+    get: vi.fn(),
+    post: vi.fn().mockResolvedValue({ result: "ok" }),
+    put: vi.fn(),
+    del: vi.fn(),
+  },
+  ApiError: class ApiError extends Error {
+    constructor(message, status) {
+      super(message);
+      this.name = "ApiError";
+      this.status = status;
+    }
+  },
+  buildQuery: vi.fn(() => ""),
+}));
+
+vi.mock("../../lib/constants.js", () => ({
+  ENDPOINTS: {
+    SCALE_COMMAND: "/api/scale/command",
+  },
+  CONFIG: {},
+  ROLES: {},
+  LS_KEYS: {},
+  HARVEST_TYPES: [],
+}));
 
 // Mock del scaleStore para evitar dependencia de WebSocket
 vi.mock("../../lib/ws.js", () => ({

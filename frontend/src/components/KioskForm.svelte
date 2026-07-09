@@ -4,11 +4,13 @@
    * Includes: vehicle info, hacienda/suerte dropdowns, 3 weight fields,
    * live scale reader, confirm/reset buttons.
    */
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
+  import { get } from "svelte/store";
   import { api, ApiError, buildQuery } from "../lib/api.js";
   import { ENDPOINTS, CONFIG, HARVEST_TYPES } from "../lib/constants.js";
   import { authStore } from "../stores/auth.js";
   import { emergencyStore } from "../stores/emergency.js";
+  import { onScaleReading } from "../lib/ws.js";
   import ScaleReader from "./ScaleReader.svelte";
   import WeightField from "./WeightField.svelte";
   import ConfirmModal from "./ConfirmModal.svelte";
@@ -36,9 +38,6 @@ import EmergencyModal from "./EmergencyModal.svelte";
   // Harvest type
   let tipoCosecha = $state("Mecanico - Verde");
 
-  // Emergency mode — makes weight fields editable
-  let isEmergencyMode = $derived(emergencyStore.isEmergencyMode);
-
   // State
   let isSubmitting = $state(false);
   let successMessage = $state("");
@@ -46,9 +45,53 @@ import EmergencyModal from "./EmergencyModal.svelte";
   let showResetConfirm = $state(false);
   let showEmergencyModal = $state(false);
 
+  // Auto-capture PRINT notification
+  let printNotification = $state("");
+  let printNotificationTimer = null;
+
+  /**
+   * Auto-capture PRINT: when a scale_reading arrives via WebSocket,
+   * assign the weight to the focused field or show a notification.
+   */
+  function handleScaleReading(data) {
+    const activeEl = document.activeElement;
+    // Check if a weight-input has focus
+    if (activeEl && activeEl.classList.contains("weight-input")) {
+      // Determine which field is focused by traversing to parent
+      const fieldEl = activeEl.closest(".weight-field");
+      if (fieldEl) {
+        const label = fieldEl.querySelector(".field-label");
+        if (label) {
+          const labelText = label.textContent.trim();
+          if (labelText.includes("Muestra")) {
+            pesoMuestra = data.net_weight;
+          } else if (labelText.includes("Mineral")) {
+            pesoMineral = data.net_weight;
+          } else if (labelText.includes("Vegetal")) {
+            pesoVegetal = data.net_weight;
+          }
+        }
+      }
+    } else {
+      // No weight field has focus — show temporary notification
+      const weightStr = data.net_weight != null ? data.net_weight.toFixed(3) : "0.000";
+      printNotification = `Peso recibido: ${weightStr} ${data.unit || "kg"}`;
+      if (printNotificationTimer) clearTimeout(printNotificationTimer);
+      printNotificationTimer = setTimeout(() => {
+        printNotification = "";
+      }, 3000);
+    }
+  }
+
   // Load haciendas on mount
   onMount(() => {
     loadHaciendas();
+    // Subscribe to scale readings for auto-capture PRINT
+    onScaleReading(handleScaleReading);
+  });
+
+  onDestroy(() => {
+    if (printNotificationTimer) clearTimeout(printNotificationTimer);
   });
 
   async function loadHaciendas() {
@@ -201,7 +244,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
         peso_muestra: pesoMuestra || 0,
         peso_mineral: pesoMineral || 0,
         peso_vegetal_extrano: pesoVegetal || 0,
-        manual_entry: isEmergencyMode,
+        manual_entry: get(emergencyStore),
         tipo_cosecha: tipoCosecha,
       };
       await api.post(ENDPOINTS.WEIGHINGS, body);
@@ -333,13 +376,16 @@ import EmergencyModal from "./EmergencyModal.svelte";
   <div class="form-section">
     <h3>Pesos (kg)</h3>
     <div class="weights-grid">
-      <WeightField fieldName="Peso Muestra" bind:value={pesoMuestra} disabled={!isEmergencyMode} onReset={handleResetPesoMuestra} />
-      <WeightField fieldName="Peso Mineral" bind:value={pesoMineral} disabled={!isEmergencyMode} onReset={handleResetPesoMineral} />
-      <WeightField fieldName="Peso Vegetal" bind:value={pesoVegetal} disabled={!isEmergencyMode} onReset={handleResetPesoVegetal} />
+      <WeightField fieldName="Peso Muestra" bind:value={pesoMuestra} disabled={!$emergencyStore} onReset={handleResetPesoMuestra} />
+      <WeightField fieldName="Peso Mineral" bind:value={pesoMineral} disabled={!$emergencyStore} onReset={handleResetPesoMineral} />
+      <WeightField fieldName="Peso Vegetal" bind:value={pesoVegetal} disabled={!$emergencyStore} onReset={handleResetPesoVegetal} />
     </div>
   </div>
 
   <!-- Messages -->
+  {#if printNotification}
+    <div class="message notification">{printNotification}</div>
+  {/if}
   {#if successMessage}
     <div class="message success">{successMessage}</div>
   {/if}
@@ -482,6 +528,13 @@ import EmergencyModal from "./EmergencyModal.svelte";
     margin-bottom: 16px;
   }
 
+  .message.notification {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+  }
+
   .message.success {
     background: rgba(81, 207, 102, 0.1);
     color: var(--success);
@@ -564,5 +617,10 @@ import EmergencyModal from "./EmergencyModal.svelte";
   .btn-clear-all:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 </style>

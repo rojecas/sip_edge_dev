@@ -1,6 +1,8 @@
 ﻿/**
  * WebSocket manager for /ws/scale.
  * Reactive store using svelte/store.
+ *
+ * NUEVO (T39): Exporta onScaleReading(callback) para auto-capture PRINT.
  */
 import { writable, get, derived } from "svelte/store";
 import { CONFIG, ENDPOINTS } from "./constants.js";
@@ -21,6 +23,18 @@ let _ws = null;
 let _reconnectAttempts = 0;
 let _reconnectTimer = null;
 let _shouldReconnect = true;
+
+// Callback for auto-capture PRINT
+let _onScaleReading = null;
+
+/**
+ * Register a callback that fires on every scale_reading message.
+ * Used by KioskForm for auto-capture PRINT.
+ * @param {function} callback - receives { net_weight, is_stable, unit }
+ */
+export function onScaleReading(callback) {
+  _onScaleReading = callback;
+}
 
 export function connect(token) {
   if (!token) return;
@@ -54,6 +68,12 @@ function _doConnect(token) {
         if (msg.data.net_weight !== undefined) _net_weight.set(msg.data.net_weight);
         if (msg.data.is_stable !== undefined) _is_stable.set(msg.data.is_stable);
         if (msg.data.unit !== undefined) _unit.set(msg.data.unit);
+        // Auto-capture PRINT callback
+        if (_onScaleReading) {
+          try {
+            _onScaleReading(msg.data);
+          } catch { /* ignore callback errors */ }
+        }
       }
     } catch { /* ignore */ }
   };

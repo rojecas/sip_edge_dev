@@ -23,9 +23,8 @@ Cliente (Chromium kiosco)              Servidor (FastAPI, puerto 8000)
 │  │ api.js (fetch wrapper) │  │      │  │ /api/emergency/*           │  │
 │  │ router.js              │  │      │  │ /api/haciendas             │  │
 │  └────────────────────────┘  │      │  │ /api/suertes               │  │
-│  localStorage (JWT, role)   │      │  │ /api/scale/command (NUEVO)  │  │
-└──────────────────────────────┘      │  │ /ws/scale (WebSocket)       │  │
-                                      │  └────────────────────────────┘  │
+│  localStorage (JWT, role)   │      │  │ /ws/scale (WebSocket)       │  │
+└──────────────────────────────┘      │  └────────────────────────────┘  │
                                       └──────────────────────────────────┘
 ```
 
@@ -86,8 +85,7 @@ sip_edge/
 │       └── assets/
 │
 └── src/
-    ├── main.py                   # MODIFICADO: montar StaticFiles + catch-all route
-    └── scale_api.py              # NUEVO: endpoint POST /api/scale/command
+    └── main.py                   # MODIFICADO: montar StaticFiles + catch-all route
 ```
 
 ---
@@ -96,89 +94,14 @@ sip_edge/
 
 | Archivo | Cambio |
 |---------|--------|
-| `src/main.py` | **MODIFICADO**: Importar `StaticFiles`, montar en `/static`, anadir catch-all route `/{full_path:path}` que sirve `src/static/index.html` para rutas no-API. |
-| `src/scale_api.py` | **NUEVO**: Endpoint `POST /api/scale/command` que recibe `{command, value?}` y llama a `ScaleService.send_command()`. |
-| `frontend/src/components/WeightField.svelte` | **MODIFICADO**: Boton Leer llama a `POST /api/scale/command` con `{command: "REXT"}`. Boton Tara llama a `POST /api/scale/command` con `{command: "TARE"}`. Botones se deshabilitan durante la peticion. |
-| `frontend/src/components/KioskForm.svelte` | **MODIFICADO**: Logica de auto-capture PRINT: detectar nuevos mensajes `scale_reading` y asignar peso al campo con foco, o mostrar notificacion temporal. |
-| `frontend/src/lib/constants.js` | **MODIFICADO**: Anadir `SCALE_COMMAND` endpoint. |
+| `src/main.py` | **MODIFICADO**: Importar `StaticFiles`, montar en `/static`, anadir catch-all route `/{full_path:path}` que sirve `src/static/index.html` para rutas no-API. El orden de rutas importa: las rutas API/WS/login/health van primero. |
+
+No se modifican otros archivos de `src/` ni de `tests/`. Esta feature es
+exclusivamente frontend SPA + integracion estatica.
 
 ---
 
-## 4. Endpoint POST /api/scale/command (NUEVO — src/scale_api.py)
-
-### Contrato API
-
-**Input:**
-```json
-{ "command": "REXT"|"TARE"|"ZERO"|"CLEAR"|"TMAN", "value": "string (opcional, solo TMAN)" }
-```
-
-**Output (comandos TARE/ZERO/CLEAR):**
-```json
-{ "result": "ok" }
-```
-
-**Output (comandos REXT/TMAN — respuesta de peso):**
-```json
-{
-  "net_weight": 150.500,
-  "is_stable": true,
-  "unit": "kg"
-}
-```
-
-**Errores:**
-- HTTP 400: comando desconocido o TMAN sin value
-- HTTP 503: báscula desconectada (ScaleConnectionError, ScaleTimeoutError)
-
-### Implementacion
-
-```python
-# src/scale_api.py
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from src.scale import ScaleService, ScaleConnectionError, ScaleTimeoutError, ScaleProtocolError
-
-router = APIRouter(prefix="/api/scale", tags=["scale"])
-
-class ScaleCommandRequest(BaseModel):
-    command: str  # REXT, TARE, ZERO, CLEAR, TMAN
-    value: str | None = None
-
-@router.post("/command")
-async def scale_command(
-    body: ScaleCommandRequest,
-    scale: ScaleService = Depends(get_scale_service),
-):
-    try:
-        result = scale.send_command(body.command, body.value)
-        return result
-    except ScaleProtocolError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except (ScaleConnectionError, ScaleTimeoutError) as e:
-        raise HTTPException(status_code=503, detail=str(e))
-```
-
-### Dependencia get_scale_service
-
-Se anade a `src/main.py` (o se define en `scale_api.py`) una dependencia que
-obtiene `app.state.scale_service`:
-
-```python
-def get_scale_service(request: Request) -> ScaleService:
-    return request.app.state.scale_service
-```
-
-### Integracion en main.py
-
-```python
-from src.scale_api import router as scale_router
-app.include_router(scale_router)
-```
-
----
-
-## 5. Manejo del JWT en localStorage
+## 4. Manejo del JWT en localStorage
 
 ### Flujo de autenticacion
 
@@ -205,7 +128,7 @@ app.include_router(scale_router)
 
 ---
 
-## 6. Fetch wrapper (`lib/api.js`)
+## 5. Fetch wrapper (`lib/api.js`)
 
 ```javascript
 /**
@@ -225,7 +148,7 @@ app.include_router(scale_router)
 
 ---
 
-## 7. Integracion WebSocket `/ws/scale` (`lib/ws.js`)
+## 6. Integracion WebSocket `/ws/scale` (`lib/ws.js`)
 
 ```javascript
 /**
@@ -251,39 +174,9 @@ app.include_router(scale_router)
 }
 ```
 
-### Mecanismo de auto-capture PRINT
-
-El WebSocket `ws.js` ya recibe y almacena mensajes `scale_reading` en el store
-`scaleStore`. Para auto-capture PRINT, se agrega un **callback opcional**
-exportado desde `ws.js`:
-
-```javascript
-let _onScaleReading = null;
-
-export function onScaleReading(callback) {
-  _onScaleReading = callback;
-}
-
-// Dentro de onmessage, despues de actualizar el store:
-if (_onScaleReading) {
-  _onScaleReading(msg.data);
-}
-```
-
-`KioskForm.svelte` se suscribe a este callback. Cuando recibe un nuevo
-`scale_reading`:
-1. Verifica si existe un campo de peso con foco (via `document.activeElement`)
-2. Si el elemento activo es un `weight-input` dentro del formulario, asigna
-   `net_weight` al peso correspondiente
-3. Si no hay foco en ningun campo de peso, muestra una notificacion temporal
-   "Peso recibido: XX.XXX kg" durante 3 segundos
-
-El `ScaleReader.svelte` NO se modifica — el indicador de peso en vivo
-continua funcionando via `$scaleStore` como antes.
-
 ---
 
-## 8. Control de inactividad (`lib/inactivity.js`)
+## 7. Control de inactividad (`lib/inactivity.js`)
 
 Basado en frontend-architecture.md seccion 3.1:
 
@@ -298,14 +191,13 @@ Este es un mecanismo dual (frontend + backend) para robustez.
 
 ---
 
-## 9. API calls consumidas por el SPA
+## 8. API calls consumidas por el SPA
 
 | Metodo | Endpoint | Proposito | Componente |
 |--------|----------|-----------|------------|
 | POST | `/api/auth/login` | Login | `AuthModal` |
 | POST | `/api/auth/verify-reset-pin` | Verificar PIN reset | `ResetPinModal` |
 | POST | `/api/auth/complete-reset` | Cambiar contrasena | `ResetPasswordModal` |
-| POST | `/api/scale/command` | Enviar comando a la bascula (REXT/TARE) | `WeightField` |
 | GET | `/api/haciendas?page=1&page_size=100` | Listar haciendas activas (paginado) | `KioskForm` |
 | GET | `/api/suertes?hacienda_id=X` | Listar suertes por hacienda | `KioskForm` |
 | POST | `/api/weighings` | Persistir pesaje | `KioskForm` (Confirmar) |
@@ -314,11 +206,11 @@ Este es un mecanismo dual (frontend + backend) para robustez.
 | GET | `/api/emergency/status` | Estado modo manual (polling 5s) | `EmergencyBanner` |
 | GET | `/api/emergency/admins` | Listar supervisores | `EmergencyModal` |
 | POST | `/api/emergency/request` | Solicitar modo manual | `EmergencyModal` |
-| WS | `/ws/scale?token=<jwt>` | Peso en vivo | `ScaleReader`, `KioskForm` (auto-capture) |
+| WS | `/ws/scale?token=<jwt>` | Peso en vivo | `ScaleReader` |
 
 ---
 
-## 10. Arquitectura de componentes Svelte
+## 9. Arquitectura de componentes Svelte
 
 ### Arbol de componentes
 
@@ -360,11 +252,11 @@ App.svelte
 | `LogoutButton.svelte` | Boton fijo + modal confirmacion, llama auth.logout() |
 | `KioskLayout.svelte` | Layout con header (usuario, logout, emergency banner) + slot para contenido |
 | `AdminLayout.svelte` | Layout admin placeholder |
-| `KioskForm.svelte` | Formulario completo: campos texto, dropdowns, pesos, botones Confirmar/Reset, logica auto-capture PRINT |
-| `ScaleReader.svelte` | Indicador peso en vivo, indicador estabilidad, subscripcion WebSocket (sin cambios) |
-| `WeightField.svelte` | Input numerico + botones Tara/Leer (llaman API, no store directo). Props: `fieldName`, `bind:value`, `disabled` |
-| `ConfirmModal.svelte` | Modal generico con titulo, mensaje, botones Confirmar/Cancelar |
-| `HistoryTable.svelte` | Tabla responsive con datos de pesajes, controles de paginacion, filtro por rango de fechas |
+| `KioskForm.svelte` | Formulario completo: campos texto, dropdowns, pesos, botones Confirmar/Reset |
+| `ScaleReader.svelte` | Indicador peso en vivo, indicador estabilidad, subscripcion WebSocket |
+| `WeightField.svelte` | Input numerico + botones Tara/Leer, prop: `fieldName`, bind:value |
+| `ConfirmModal.svelte` | Modal generico con titulo, mensaje, botones Confirmar/Cancelar. Props: `show`, `title`, `message`, `onConfirm`, `onCancel` |
+| `HistoryTable.svelte` | Tabla responsive con datos de pesajes, controles de paginacion, filtro por rango de fechas, columna de acciones (opcional) |
 | `EmergencyBanner.svelte` | Banner condicional + polling 5s + boton "Solicitar" |
 | `EmergencyModal.svelte` | Dropdown supervisores, campo motivo, boton enviar |
 | `InactivityGuard.svelte` | Timer que chequea iat periodicamente, llama logout si expirado |
@@ -372,7 +264,7 @@ App.svelte
 
 ---
 
-## 11. Paleta de colores (consistente con login existente)
+## 10. Paleta de colores (consistente con login existente)
 
 ```css
 :root {
@@ -395,7 +287,7 @@ consistente con `src/login_page.py` (los estilos inline del login actual).
 
 ---
 
-## 12. Integracion con FastAPI (`src/main.py`)
+## 11. Integracion con FastAPI (`src/main.py`)
 
 Se modifica `src/main.py` para:
 
@@ -430,15 +322,9 @@ Se modifica `src/main.py` para:
 4. **Mantener endpoint `/login` existente** (para compatibilidad). No
    eliminarlo. El SPA lo reemplazara visualmente.
 
-5. **Anadir scale_router**:
-   ```python
-   from src.scale_api import router as scale_router
-   app.include_router(scale_router)
-   ```
-
 ---
 
-## 13. Pipeline de build y deploy
+## 12. Pipeline de build y deploy
 
 ### Desarrollo (maquina local)
 
@@ -471,7 +357,7 @@ git push → build frontend → Copy-Item a src/static/ → docker compose resta
 
 ---
 
-## 14. Alternativa descartada: HTMX + Jinja2 (SSR)
+## 13. Alternativa descartada: HTMX + Jinja2 (SSR)
 
 **Alternativa:** Usar HTMX con Jinja2 templates renderizados en el servidor,
 donde cada interaccion del usuario genera una peticion HTTP y el backend
@@ -499,27 +385,7 @@ devuelve HTML parcial.
 
 ---
 
-## 15. Alternativa descartada: Usar peso del WebSocket directamente para Leer
-
-**Alternativa:** En lugar de crear `POST /api/scale/command`, hacer que el
-boton "Leer" tome el peso directamente del WebSocket store (como estaba en la
-implementacion original).
-
-**Descartada por:**
-1. **RF-003 exige comando REXT**: El ERS de scale_integration (RF-003)
-   especifica que el boton Leer de la balanza debe enviar un comando REXT
-   al puerto RS485, el cual fuerza a la bascula a realizar una nueva lectura
-   y retornar el peso actual. Tomar el peso del WebSocket no envia ningun
-   comando y simplemente lee el ultimo valor en cache.
-2. **Respuesta sincrona**: REXT retorna el peso como respuesta directa del
-   comando, garantizando que el peso es del momento exacto del clic.
-3. **Separacion de responsabilidades**: El WebSocket es para actualizacion
-   pasiva en tiempo real (monitoreo). El comando HTTP es para lectura activa
-   bajo demanda del operador.
-
----
-
-## 16. Dependencias npm
+## 14. Dependencias npm
 
 | Paquete | Version | Proposito |
 |---------|---------|-----------|
@@ -533,24 +399,24 @@ autenticacion. Todo con API nativas del browser.
 
 ---
 
-## 17. Persistencia
+## 15. Persistencia
 
 Esta feature NO modifica la base de datos. Toda la persistencia es
 client-side (localStorage para JWT y rol) o via API existente en el backend.
 
 ---
 
-## 18. github_labels
+## 16. github_labels
 
 ```
-frontend, svelte, kiosk, login, weighing, scale
+frontend, svelte, kiosk, login, weighing
 ```
 
 ---
 
-## 19. Pagination and Date Filter Design
+## 17. Pagination and Date Filter Design
 
-### 19.1 API Response Format (Backend Contract)
+### 17.1 API Response Format (Backend Contract)
 
 Todos los endpoints de listado que devuelven multiples registros DEBEN
 soportar el siguiente formato de respuesta paginada:
@@ -565,7 +431,7 @@ soportar el siguiente formato de respuesta paginada:
 }
 ```
 
-### 19.2 Query Parameters
+### 17.2 Query Parameters
 
 | Parametro | Tipo | Default | Descripcion |
 |-----------|------|---------|-------------|
@@ -576,7 +442,7 @@ soportar el siguiente formato de respuesta paginada:
 | `start_date` | string (date) | null | Filtro fecha inicio (YYYY-MM-DD) |
 | `end_date` | string (date) | null | Filtro fecha fin (YYYY-MM-DD) |
 
-### 19.3 Modificaciones al backend
+### 17.3 Modificaciones al backend
 
 Se deben modificar los siguientes archivos de `src/`:
 
@@ -593,7 +459,7 @@ Se deben modificar los siguientes archivos de `src/`:
    `sort_by` (string, default "nombre"), `sort_order` (string, default "asc")
 2. Paginar los resultados y devolver formato `{items, total, page, page_size, total_pages}`
 
-### 19.4 Frontend: HistoryTable pagination controls
+### 17.4 Frontend: HistoryTable pagination controls
 
 El componente `HistoryTable.svelte` debe incluir:
 - Selector de rango de fechas (dos inputs `type="date"`) encima de la tabla
@@ -606,34 +472,10 @@ El componente `HistoryTable.svelte` debe incluir:
 - Estado de carga durante la peticion
 - Mensaje "No se encontraron registros" si la busqueda filtrada da 0 resultados
 
-### 19.5 Frontend: Haciendas dropdown
+### 17.5 Frontend: Haciendas dropdown
 
 El dropdown de Haciendas en `KioskForm.svelte` debe:
 - Cargar la primera pagina de haciendas al montar el componente
 - Si hay mas paginas, cargarlas en segundo plano para tener el listado completo
 - Opcionalmente, implementar busqueda incremental mientras el usuario escribe
 - Manejar estados de carga y error
-
----
-
-## 20. Analisis de impacto en features existentes
-
-### Feature 5 — scale_integration
-
-| Item | Archivo | Cambio requerido |
-|------|---------|-----------------|
-| ScaleService.send_command() | src/scale.py | Sin cambios (ya existe). Se consume desde `src/scale_api.py`. |
-| async_listener / _on_scale_data | src/scale.py, src/main.py | Sin cambios. El callback ya existe y difunde via WebSocket. |
-
-La feature 5 ya expone `ScaleService` como singleton en `app.state.scale_service`.
-No se requieren cambios en src/scale.py. El unico cambio es anadir `src/scale_api.py`
-que consume `app.state.scale_service.send_command()`.
-
-### Feature 9 — emergency_mode
-
-Sin cambios. La logica de emergency banner y modal ya esta implementada y no
-se modifica.
-
-### Feature 14 — frontend_admin_dashboard
-
-Sin cambios. El placeholder `/admin` sigue igual.

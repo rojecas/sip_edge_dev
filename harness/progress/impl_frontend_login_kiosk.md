@@ -191,3 +191,46 @@ emergencia.
 - [x] Skill svelte5 respetado: stores `.js` usan `derived`, templates `.svelte` usan `$storeName`
 - [x] No se usaron `$state`/`$derived` en archivos `.js`
 - [x] `get()` solo se usa en callbacks/event handlers (snapshot), nunca para tracking reactivo
+
+---
+
+## Fase 9 — Correccion REXT/TARE via API y auto-capture PRINT (2026-07-09)
+
+> Implementacion de T36-T43 del spec-validator cycle.
+> R43, R44, R45 (antes pendientes).
+
+### Mapa R<n> → Verificacion (nuevos)
+
+| R<n> | Descripcion | Verificacion |
+|------|-------------|--------------|
+| R43 | Backend POST /api/scale/command | `tests/test_scale_api.py` — 5 tests: REXT ok, TARE ok, unknown cmd 400, disconnect 503, timeout 503 |
+| R44 | Auto-capture PRINT via WebSocket callback | `frontend/src/components/KioskForm.svelte` — `onScaleReading` callback + notificacion temporal. Test: `KioskForm.test.js` "muestra notificacion temporal al recibir peso sin campo con foco" |
+| R45 | ScaleReader sin cambios (WebSocket live weight) | `ScaleReader.svelte` sin modificaciones. Verificado: ws.js mantiene `scaleStore` derivado con subscribe, ScaleReader usa `$scaleStore` |
+
+### Archivos creados
+
+| Archivo | Proposito |
+|---------|-----------|
+| `src/scale_api.py` | Endpoint `POST /api/scale/command` con modelo Pydantic y manejo de errores (400/503) |
+| `tests/test_scale_api.py` | 5 tests unitarios con mock ScaleService via TestClient |
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---------|--------|
+| `src/main.py` | `from src.scale_api import router as scale_router` + `app.include_router(scale_router)` |
+| `frontend/src/components/WeightField.svelte` | Boton "Leer" → `api.post(SCALE_COMMAND, {command: "REXT"})`. Boton "Tara" → `api.post(SCALE_COMMAND, {command: "TARE"})`. Estado `isLoading` para deshabilitar durante peticion. Removida dependencia directa de `scaleStore` en callbacks. |
+| `frontend/src/lib/ws.js` | Exportadas `_onScaleReading` variable interna + `onScaleReading(callback)` funcion. Callback invocado en `onmessage` tras actualizar store. |
+| `frontend/src/components/KioskForm.svelte` | Importados `onDestroy`, `onScaleReading`. Agregada funcion `handleScaleReading()`: detecta `document.activeElement` en `weight-input`, asigna peso al campo correspondiente, o muestra notificacion temporal "Peso recibido: XX.XXX kg" (3s). Animacion CSS `fadeIn`. |
+| `frontend/src/lib/constants.js` | Agregado `SCALE_COMMAND: "/api/scale/command"` |
+| `frontend/src/components/__tests__/WeightField.test.js` | Mock de `api.js` y `constants.js` agregados para que el componente renderice sin errores (ahora importa `api` y `ENDPOINTS`). |
+| `frontend/src/components/__tests__/KioskForm.test.js` | Mock de `ws.js` actualizado con `onScaleReading`. Nuevo test describe "Auto-capture PRINT (T41)": verifica notificacion temporal al recibir peso sin campo con foco. |
+| `harness/specs/13_frontend_login_kiosk/tasks.md` | Marcadas T36-T43 como `[x]` |
+
+### Verificacion
+
+- [x] `npm run build` exitoso: 158 modules, 0 errores (JS 133.93 kB, gzip 40.84 kB)
+- [x] `src/static/` actualizado con nuevo build
+- [x] Backend tests: 5/5 `test_scale_api.py` pasan; regresion tests (`test_scale`, `test_main`, `test_weighings`, `test_haciendas`, `test_auth`) pasan
+- [x] `./init.ps1` secciones 1-5: todos `[OK]`
+- [x] No se modifico `ScaleReader.svelte` — cumple R45

@@ -379,6 +379,9 @@ app.include_router(weighings_router)
 app.include_router(emergency_router)
 app.include_router(password_reset_router)
 
+from src.scale_api import router as scale_router
+app.include_router(scale_router)
+
 backup_router = APIRouter(prefix="/api/backup", tags=["backup"])
 
 

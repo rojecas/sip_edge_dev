@@ -31,6 +31,7 @@ export const ENDPOINTS = {
   ANOMALIES_HISTORY: "/api/anomalies/history",
   ANOMALIES_DETECT: "/api/anomalies",
   AGENT_QUERY: "/api/agent/query",
+  SCALE_COMMAND: "/api/scale/command",
 };
 
 export const CONFIG = {

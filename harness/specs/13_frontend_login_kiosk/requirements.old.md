@@ -1,7 +1,7 @@
 # Requirements — Frontend: Login, Kiosco de Pesaje y Logout
 
 > Feature 13. Acceptance: RF-F13-01 a RF-F13-10 + requisitos derivados de
-> RF-003 (scale_integration). EARS notation.
+> frontend-architecture.md secciones 3.1 y 6.1. EARS notation.
 
 ---
 
@@ -100,16 +100,13 @@ Cubre: RF-F13-04.
 
 ## R15
 CUANDO el operador hace clic en "Leer" junto a un campo de peso, el sistema
-DEBE enviar una peticion `POST /api/scale/command` con `{command: "REXT"}`.
-Al recibir la respuesta con `{net_weight, is_stable, unit}`, el sistema DEBE
-asignar `net_weight` al campo de peso correspondiente. Cubre: RF-F13-04,
-RF-003.
+DEBE tomar el valor actual del peso en vivo del WebSocket y asignarlo a ese
+campo. Cubre: RF-F13-04, RF-F13-05.
 
 ## R16
 CUANDO el operador hace clic en "Tara" junto a un campo de peso, el sistema
-DEBE enviar una peticion `POST /api/scale/command` con `{command: "TARE"}`.
-Al recibir la respuesta con `{result: "ok"}`, el sistema DEBE poner el campo
-de peso en cero. Cubre: RF-F13-04, RF-003.
+DEBE enviar el comando de tara a la bascula via API correspondiente y poner
+el campo de peso en cero. Cubre: RF-F13-04.
 
 ## R17
 MIENTRAS el operador esta en la vista `/kiosco`, el sistema DEBE mantener
@@ -277,24 +274,3 @@ frontend-architecture.md seccion 3.1.
 El modal de login NO DEBE permitir el envio del formulario si los campos
 "Usuario" o "Contrasena" estan vacios. El boton "Iniciar Sesion" DEBE estar
 deshabilitado mientras los campos requeridos esten vacios. Cubre: RF-F13-01.
-
-## R43
-El backend DEBE exponer un endpoint `POST /api/scale/command` que reciba
-`{command: str, value?: str}` y delegue en `ScaleService.send_command()`,
-retornando `{result: "ok"}` para comandos sin peso (TARE, ZERO, CLEAR) o
-`{net_weight, is_stable, unit}` para comandos con respuesta de peso (REXT,
-TMAN). Cubre: RF-003.
-
-## R44
-CUANDO la bascula envia datos asincronamente (boton PRINT) y el SPA esta en
-la vista `/kiosco`, el sistema DEBE auto-capturar el peso. SI el operador
-tiene un campo de peso con foco, el sistema DEBE asignar el peso recibido
-a ese campo automaticamente. SI ningun campo tiene foco, el sistema DEBE
-mostrar una notificacion temporal "Peso recibido: XX.XXX kg".
-Cubre: RF-003.
-
-## R45
-El sistema DEBE mantener el comportamiento actual del indicador de peso en
-vivo via WebSocket (sin cambios al ScaleReader). Las nuevas funcionalidades
-de comando REXT/TARE y auto-capture PRINT NO DEBEN interferir con la
-actualizacion en tiempo real del indicador de peso. Cubre: RF-F13-05, RF-003.

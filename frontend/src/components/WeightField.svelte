@@ -4,8 +4,13 @@
    * Props: fieldName, bind:value, disabled (true when emergency mode active = editable).
    * When disabled=true (normal mode), field is readonly — only updated via Tara/Leer.
    * When disabled=false (emergency mode), field is editable manually.
+   *
+   * CORREGIDO (T38): Boton "Leer" llama a POST /api/scale/command (REXT).
+   * Boton "Tara" llama a POST /api/scale/command (TARE).
+   * Botones se deshabilitan durante la peticion (isLoading).
    */
-  import { scaleStore } from "../lib/ws.js";
+  import { api } from "../lib/api.js";
+  import { ENDPOINTS } from "../lib/constants.js";
 
   let {
     fieldName = "",
@@ -16,15 +21,37 @@
     onReset = null,
   } = $props();
 
-  function handleTara() {
-    value = 0;
-    onTara?.();
+  let isLoading = $state(false);
+
+  async function handleTara() {
+    if (isLoading) return;
+    isLoading = true;
+    try {
+      const result = await api.post(ENDPOINTS.SCALE_COMMAND, { command: "TARE" });
+      if (result && result.result === "ok") {
+        value = 0;
+        onTara?.();
+      }
+    } catch (err) {
+      console.error(`Tara failed on ${fieldName}:`, err.message || err);
+    } finally {
+      isLoading = false;
+    }
   }
 
-  function handleLeer() {
-    if ($scaleStore.connected) {
-      value = $scaleStore.net_weight;
-      onLeer?.();
+  async function handleLeer() {
+    if (isLoading) return;
+    isLoading = true;
+    try {
+      const result = await api.post(ENDPOINTS.SCALE_COMMAND, { command: "REXT" });
+      if (result && result.net_weight !== undefined) {
+        value = result.net_weight;
+        onLeer?.();
+      }
+    } catch (err) {
+      console.error(`REXT failed on ${fieldName}:`, err.message || err);
+    } finally {
+      isLoading = false;
     }
   }
 
@@ -51,15 +78,16 @@
       type="button"
       class="btn-tara"
       onclick={handleTara}
+      disabled={isLoading}
       title="Tara (poner a cero)"
-    >Tara</button>
+    >{isLoading ? "..." : "Tara"}</button>
     <button
       type="button"
       class="btn-leer"
       onclick={handleLeer}
-      disabled={!$scaleStore.connected}
+      disabled={isLoading}
       title="Leer peso de la báscula"
-    >Leer</button>
+    >{isLoading ? "..." : "Leer"}</button>
     {#if onReset}
       <button
         type="button"
@@ -132,7 +160,8 @@
     white-space: nowrap;
   }
 
-  .btn-tara:hover { background: #2563eb; }
+  .btn-tara:hover:not(:disabled) { background: #2563eb; }
+  .btn-tara:disabled { opacity: 0.5; cursor: not-allowed; }
 
   .btn-leer {
     padding: 10px 18px;

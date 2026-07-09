@@ -1,7 +1,6 @@
 # Tasks — Frontend: Login, Kiosco de Pesaje y Logout
 
 > Marcar `[x]` al completar. Cada task referencia al menos un `R<n>`.
-> Tasks existentes marcadas como completadas `[x]`. Tasks nuevas pendientes `[ ]`.
 
 ---
 
@@ -55,8 +54,7 @@
   - Store reactivo `scaleStore` con `{net_weight, is_stable, unit, connected}`
   - Reconexion automatica hasta 5 intentos con intervalo 2s
   - `ws.disconnect()` — cierra conexion
-  - **NUEVO**: Exportar `onScaleReading(callback)` para auto-capture PRINT
-  Cubre: R17, R18, R35, R44.
+  Cubre: R17, R18, R35.
 
 - [x] T8 — Crear `frontend/src/lib/inactivity.js`:
   - Funcion `checkInactivity(jwtPayload, sessionTimeoutMinutes)` que compara `iat` vs tiempo actual
@@ -154,7 +152,7 @@
 
 ---
 
-## Fase 5 — Formulario de pesaje (/kiosco) — CORREGIDO
+## Fase 5 — Formulario de pesaje (/kiosco)
 
 - [x] T21 — Crear `frontend/src/components/KioskForm.svelte`:
   - Formulario con campos: Tractomula (text), Vagon (text), Guia (text)
@@ -165,19 +163,15 @@
   - Boton "Confirmar" (grande, destacado)
   - Boton "Reset" (con ConfirmModal)
   - Estados de carga y error en cada operacion
-  - **NUEVO**: Integrar callback `onScaleReading` para auto-capture PRINT
-  - **NUEVO**: Logica de deteccion de foco en campos de peso para asignacion automatica
-  - **NUEVO**: Notificacion temporal "Peso recibido: XX.XXX kg" si ningun campo tiene foco
-  Cubre: R14, R19, R20, R21, R32, R40, R44.
+  Cubre: R14, R15, R16, R19, R20, R21, R32, R40.
 
 - [x] T22 — Crear `frontend/src/components/WeightField.svelte`:
   - Props: `fieldName` (string), `bind:value` (number), `disabled` (boolean)
   - Input numerico con formato (3 decimales)
-  - **CORREGIDO**: Boton "Leer" → llama a `api.post("/api/scale/command", {command: "REXT"})` y asigna `net_weight` de la respuesta al campo
-  - **CORREGIDO**: Boton "Tara" → llama a `api.post("/api/scale/command", {command: "TARE"})` y pone el campo a 0 al recibir `{result: "ok"}`
-  - Botones deshabilitados durante la peticion (loading state)
+  - Boton "Tara" → pone el campo a 0
+  - Boton "Leer" → toma el peso actual del ScaleReader (store)
   - Input deshabilitado si modo normal, habilitado si modo manual
-  Cubre: R15, R16, R24, R25, R43.
+  Cubre: R15, R16, R24, R25.
 
 - [x] T23 — Crear `frontend/src/components/ScaleReader.svelte`:
   - Indicador de peso en vivo (fuente grande ~32px, destacado)
@@ -185,8 +179,7 @@
   - Conecta al WebSocket al montar el componente
   - Desconecta al desmontar
   - Muestra "Bascula desconectada" si ws.connected === false tras reintentos
-  - **Sin cambios** — esta feature no modifica ScaleReader
-  Cubre: R17, R18, R35, R45.
+  Cubre: R17, R18, R35.
 
 ---
 
@@ -255,59 +248,3 @@
 - [x] T34 — Ejecutar `./init.ps1` — todos los bloques `[OK]`. Cubre: verificacion Nivel 3.
 
 - [x] T35 — Verificar trazabilidad completa en `progress/impl_frontend_login_kiosk.md`: mapear cada `R<n>` a su test o verificacion manual. Cubre: trazabilidad.
-
----
-
-## Fase 9 — Correccion REXT/TARE via API y auto-capture PRINT (NUEVA)
-
-- [x] T36 — Crear `src/scale_api.py` con endpoint `POST /api/scale/command`:
-   - Modelo Pydantic `ScaleCommandRequest` con `command: str` y `value: str | None`
-   - Funcion `get_scale_service(request)` para obtener `app.state.scale_service`
-   - Endpoint que llama a `scale.send_command(body.command, body.value)`
-   - Manejo de errores: HTTP 400 para comando desconocido, HTTP 503 para desconexion
-   - Integrar router en `src/main.py` via `app.include_router(scale_router)`
-   Cubre: R43.
-
-- [x] T37 — Escribir tests para `POST /api/scale/command`:
-   - Test de envio de comando REXT exitoso (mock ScaleService)
-   - Test de envio de comando TARE exitoso
-   - Test de error: comando desconocido retorna 400
-   - Test de error: bascula desconectada retorna 503
-   Cubre: R43.
-
-- [x] T38 — Modificar `frontend/src/components/WeightField.svelte`:
-   - Boton "Leer": reemplazar lectura directa del store por llamada a `api.post("/api/scale/command", {command: "REXT"})`
-   - Boton "Tara": reemplazar `value = 0` local por llamada a `api.post("/api/scale/command", {command: "TARE"})`
-   - Anadir estado `isLoading` para deshabilitar botones durante la peticion
-   - Manejar errores de la API (mostrar en consola o notificacion)
-   - Importar `api` desde `../lib/api.js` (remover dependencia directa de `scaleStore`)
-   Cubre: R15, R16.
-
-- [x] T39 — Modificar `frontend/src/lib/ws.js` para exportar `onScaleReading(callback)`:
-   - Anadir variable interna `_onScaleReading`
-   - Exportar funcion `onScaleReading(callback)` que asigna el callback
-   - Dentro de `onmessage`, despues de actualizar el store, invocar `_onScaleReading` si existe
-   Cubre: R44.
-
-- [x] T40 — Modificar `frontend/src/components/KioskForm.svelte` para auto-capture PRINT:
-   - En `onMount`, suscribirse a `onScaleReading` callback
-   - En el callback: detectar si algun campo de peso tiene foco (`document.activeElement`)
-   - Si el elemento activo es un `weight-input`, determinar que campo de peso es y asignar el peso
-   - Si ningun campo tiene foco, mostrar notificacion temporal "Peso recibido: XX.XXX kg"
-   - La notificacion debe desaparecer tras 3 segundos
-   Cubre: R44.
-
-- [x] T41 — Escribir tests para auto-capture PRINT:
-   - Test: al recibir scale_reading con campo con foco, se asigna el peso
-   - Test: al recibir scale_reading sin campo con foco, se muestra notificacion temporal
-   Cubre: R44.
-
-- [x] T42 — Anadir endpoint `SCALE_COMMAND` a `frontend/src/lib/constants.js`:
-   - `SCALE_COMMAND: "/api/scale/command"`
-   Cubre: R43.
-
-- [x] T43 — Ejecutar build y verificacion:
-   - `npm run build` en frontend sin errores
-   - Tests de backend pasan
-   - `./init.ps1` — todos los bloques `[OK]`
-   Cubre: verificacion Nivel 1, Nivel 3.

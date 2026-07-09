@@ -65,6 +65,8 @@ vi.mock("../../stores/emergency.js", () => ({
   },
 }));
 
+let _captureCallback = null;
+
 vi.mock("../../lib/ws.js", () => ({
   scaleStore: {
     subscribe: vi.fn((cb) => {
@@ -76,6 +78,9 @@ vi.mock("../../lib/ws.js", () => ({
     is_stable: false,
     unit: "kg",
   },
+  onScaleReading: vi.fn((callback) => {
+    _captureCallback = callback;
+  }),
   connect: vi.fn(),
   disconnect: vi.fn(),
 }));
@@ -121,5 +126,29 @@ describe("KioskForm — R3: Reset general relegado a accion secundaria", () => {
     expect(screen.getByText("¿Está seguro de limpiar el formulario?")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Limpiar" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cancelar" })).toBeInTheDocument();
+  });
+});
+
+describe("KioskForm — Auto-capture PRINT (T41)", () => {
+  it("muestra notificacion temporal al recibir peso sin campo con foco", async () => {
+    render(KioskForm);
+    await waitFor(() => {
+      expect(screen.getByText("Confirmar Medidas")).toBeInTheDocument();
+    });
+
+    // Simulate scale_reading arriving when no weight field has focus
+    const blurable = document.body;
+    if (blurable && document.activeElement && document.activeElement !== document.body) {
+      document.activeElement.blur();
+    }
+
+    // Invoke the capture callback with a scale reading
+    if (_captureCallback) {
+      _captureCallback({ net_weight: 125.450, is_stable: true, unit: "kg" });
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText(/Peso recibido: 125.450 kg/)).toBeInTheDocument();
+    });
   });
 });
