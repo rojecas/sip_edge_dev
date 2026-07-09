@@ -562,7 +562,7 @@
             "name": "emergency_request_wrong_sms",
             "title": "Solicitud de modo manual desde Kiosko envÃƒÂ­a mensaje de error del LLM al admin",
             "type": "bug",
-            "status": "testing",
+            "status": "done",
             "description": "Al solicitar modo manual desde la vista Kiosko (POST /api/emergency/request), el administrador recibe en su telÃƒÂ©fono el mensaje 'Lo siento, el sistema de anÃƒÂ¡lisis no estÃƒÂ¡ disponible en este momento.' en lugar del mensaje esperado de solicitud de emergencia. El mensaje de error solo se genera en src/agent_orchestrator.py:175 dentro de handle_sms_query() cuando falla la conexiÃƒÂ³n al LLM (LlamaConnectionError).",
             "reproduction": [
                 "Abrir vista Kiosko como operador",
