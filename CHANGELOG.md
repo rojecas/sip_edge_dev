@@ -2,6 +2,11 @@
 
 > All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-07-08
+
+### Added
+- Feature #17 — Frontend - Reportes, Anomalías y Consola IA: módulo de analíticas del SPA con 3 nuevas vistas admin — Reportes (CRUD de plantillas con selector de destinatarios desde usuarios del sistema), Anomalías (historial paginado + panel "Detectar Ahora" con parámetros configurables) y Agente IA (consola tipo chat para consultas al agente inteligente). Incluye normalización de destinatarios con tabla pivote report_template_users.
+
 ## [1.2.0] - 2026-07-08
 
 ### Added
