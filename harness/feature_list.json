@@ -1,6 +1,6 @@
 {
     "project": "sip_edge",
-    "description": "Sistema Inteligente de Pesaje y Control de Materia Extra\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b1a (SIP-Edge)",
+    "description": "Sistema Inteligente de Pesaje y Control de Materia ExtraÃƒÆ’Ã‚Â±a (SIP-Edge)",
     "rules": {
         "one_feature_at_a_time": true,
         "require_tests_to_close": true,
@@ -21,13 +21,13 @@
         {
             "id": 1,
             "name": "system_config",
-            "title": "Configuraci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n del Sistema \u00c3\u0192\u00e2\u20ac\u0161\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u009d Puertos RS485/RS232 y GSM",
+            "title": "ConfiguraciÃƒÆ’Ã‚Â³n del Sistema Ãƒâ€šÃ¢â‚¬â€ Puertos RS485/RS232 y GSM",
             "type": "feature",
-            "description": "Interfaz Admin para configuraci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n din\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1mica de puertos hardware: RS485 (b\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1scula),\nRS232 (PC externo) y m\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3dem GSM. Par\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1metros: ruta,\nbaudrate,\nparidad,\ndata bits,\nstop bits. Prueba de conectividad serial/GSM con comando AT. Persistencia en config.yaml con carga autom\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1tica tras reinicio y sincronizaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n de reloj.",
+            "description": "Interfaz Admin para configuraciÃƒÆ’Ã‚Â³n dinÃƒÆ’Ã‚Â¡mica de puertos hardware: RS485 (bÃƒÆ’Ã‚Â¡scula),\nRS232 (PC externo) y mÃƒÆ’Ã‚Â³dem GSM. ParÃƒÆ’Ã‚Â¡metros: ruta,\nbaudrate,\nparidad,\ndata bits,\nstop bits. Prueba de conectividad serial/GSM con comando AT. Persistencia en config.yaml con carga automÃƒÆ’Ã‚Â¡tica tras reinicio y sincronizaciÃƒÆ’Ã‚Â³n de reloj.",
             "acceptance": [
                 "RF-015: Interfaz Admin para modificar rutas RS485,\nRS232,\nGSM,\nbaudrate,\nparidad",
-                "RF-016: Funci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n 'Test' para verificar comunicaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n serial (RS485/RS232) y GSM",
-                "RF-017: Guardado en config.yaml,\ncarga autom\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1tica tras reinicio,\nsincronizaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n de reloj"
+                "RF-016: FunciÃƒÆ’Ã‚Â³n 'Test' para verificar comunicaciÃƒÆ’Ã‚Â³n serial (RS485/RS232) y GSM",
+                "RF-017: Guardado en config.yaml,\ncarga automÃƒÆ’Ã‚Â¡tica tras reinicio,\nsincronizaciÃƒÆ’Ã‚Â³n de reloj"
             ],
             "sdd": true,
             "status": "done",
@@ -37,7 +37,7 @@
         {
             "id": 2,
             "name": "auth_rbac",
-            "title": "Autenticaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n,\nRBAC y Bloqueo por Inactividad",
+            "title": "AutenticaciÃƒÆ’Ã‚Â³n,\nRBAC y Bloqueo por Inactividad",
             "type": "feature",
             "sdd": true,
             "description": "Autenticacion JWT con hash bcrypt. RBAC con tres roles: admin (total),\noperator (solo pesaje),\ncorresponsal (sin login,\nsolo contacto SMS). Bloqueo por inactividad configurable en modo kiosco. Persistencia en MariaDB (tabla users completa) y config.yaml seccion session para timeout. Seed de admin inicial en primer arranque.",
@@ -57,10 +57,10 @@
         {
             "id": 3,
             "name": "user_management",
-            "title": "Gesti\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n de Usuarios (CRUD)",
+            "title": "GestiÃƒÆ’Ã‚Â³n de Usuarios (CRUD)",
             "type": "feature",
             "sdd": true,
-            "description": "Interfaz gr\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1fica Admin para Crear/Leer/Actualizar/Desactivar usuarios (Nombre,\nDocumento,\nRol,\nEstado). Desactivaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n l\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3gica sin eliminaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n f\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adsica.",
+            "description": "Interfaz grÃƒÆ’Ã‚Â¡fica Admin para Crear/Leer/Actualizar/Desactivar usuarios (Nombre,\nDocumento,\nRol,\nEstado). DesactivaciÃƒÆ’Ã‚Â³n lÃƒÆ’Ã‚Â³gica sin eliminaciÃƒÆ’Ã‚Â³n fÃƒÆ’Ã‚Â­sica.",
             "acceptance": [
                 "RF-021: CRUD de usuarios con campos Nombre,\nDocumento,\nRol,\nEstado"
             ],
@@ -73,14 +73,14 @@
         {
             "id": 4,
             "name": "farm_lot_crud",
-            "title": "Gesti\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n de Haciendas y Suertes",
+            "title": "GestiÃƒÆ’Ã‚Â³n de Haciendas y Suertes",
             "type": "feature",
             "sdd": true,
-            "description": "CRUD de Haciendas con borrado l\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3gico si existen registros asociados. Gesti\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n de Suertes/Lotes vinculados obligatoriamente a Hacienda padre. Selecci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n en cascada din\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1mica en el formulario de pesaje.",
+            "description": "CRUD de Haciendas con borrado lÃƒÆ’Ã‚Â³gico si existen registros asociados. GestiÃƒÆ’Ã‚Â³n de Suertes/Lotes vinculados obligatoriamente a Hacienda padre. SelecciÃƒÆ’Ã‚Â³n en cascada dinÃƒÆ’Ã‚Â¡mica en el formulario de pesaje.",
             "acceptance": [
-                "RF-006: CRUD de Haciendas,\nborrado l\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3gico si tiene registros",
-                "RF-007: Gesti\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n de Suertes vinculadas a Hacienda padre",
-                "RF-008: Carga din\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1mica de Suertes seg\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ban Hacienda seleccionada"
+                "RF-006: CRUD de Haciendas,\nborrado lÃƒÆ’Ã‚Â³gico si tiene registros",
+                "RF-007: GestiÃƒÆ’Ã‚Â³n de Suertes vinculadas a Hacienda padre",
+                "RF-008: Carga dinÃƒÆ’Ã‚Â¡mica de Suertes segÃƒÆ’Ã‚Âºn Hacienda seleccionada"
             ],
             "status": "done",
             "depends_on": [
@@ -91,14 +91,14 @@
         {
             "id": 5,
             "name": "scale_integration",
-            "title": "Integraci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n Serial con B\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1scula DINI ARGEO DFWLI-2",
+            "title": "IntegraciÃƒÆ’Ã‚Â³n Serial con BÃƒÆ’Ã‚Â¡scula DINI ARGEO DFWLI-2",
             "type": "feature",
             "sdd": true,
-            "description": "Capa de comunicaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n serial RS485 con balanza DINI ARGEO DFWLI-2. Comando-respuesta bidireccional. Timeout configurable 1-10s (default 3s). Escucha as\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adncrona con indicador de medida estable.",
+            "description": "Capa de comunicaciÃƒÆ’Ã‚Â³n serial RS485 con balanza DINI ARGEO DFWLI-2. Comando-respuesta bidireccional. Timeout configurable 1-10s (default 3s). Escucha asÃƒÆ’Ã‚Â­ncrona con indicador de medida estable.",
             "acceptance": [
-                "RF-003: Env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ado de comando al puerto RS485 y recepci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n de respuesta",
+                "RF-003: EnvÃƒÆ’Ã‚Â­o de comando al puerto RS485 y recepciÃƒÆ’Ã‚Â³n de respuesta",
                 "RF-003: Timeout configurable entre 1 y 10 segundos (default 3s)",
-                "Nuevo: Escucha as\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adncrona de datos entrantes desde la balanza (bot\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n PRINT)",
+                "Nuevo: Escucha asÃƒÆ’Ã‚Â­ncrona de datos entrantes desde la balanza (botÃƒÆ’Ã‚Â³n PRINT)",
                 "Nuevo: Exponer ScaleService como singleton consumible por otras capas"
             ],
             "status": "done",
@@ -110,16 +110,16 @@
         {
             "id": 6,
             "name": "weighing_capture",
-            "title": "Captura de Pesaje Multipaso con Confirmaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n y Env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ado RS232",
+            "title": "Captura de Pesaje Multipaso con ConfirmaciÃƒÆ’Ã‚Â³n y EnvÃƒÆ’Ã‚Â­o RS232",
             "type": "feature",
             "sdd": true,
-            "description": "Flujo de trabajo del operador en kiosco: seleccionar Hacienda+Suerte,\ningresar tractomula/vagon/guia,\ntarar y leer pesos en 3 pasos. Confirmar persiste en MariaDB y env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada trama RS232 al PC externo. Reset con confirmaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n en pantalla.",
+            "description": "Flujo de trabajo del operador en kiosco: seleccionar Hacienda+Suerte,\ningresar tractomula/vagon/guia,\ntarar y leer pesos en 3 pasos. Confirmar persiste en MariaDB y envÃƒÆ’Ã‚Â­a trama RS232 al PC externo. Reset con confirmaciÃƒÆ’Ã‚Â³n en pantalla.",
             "acceptance": [
                 "RF-004: Persistencia en MariaDB con tabla weighings (tractomula,\nvagon,\nguia,\nhacienda,\nsuerte,\n3 pesos,\nusuario)",
-                "RF-005: Transacci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n at\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3mica commit/rollback al confirmar",
+                "RF-005: TransacciÃƒÆ’Ã‚Â³n atÃƒÆ’Ã‚Â³mica commit/rollback al confirmar",
                 "Nuevo: Focus management por campo activo (como entrada de teclado)",
-                "Nuevo: Bot\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n Confirmar persiste + env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada trama RS232 al PC",
-                "Nuevo: Bot\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n Reset con confirmaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n en pantalla"
+                "Nuevo: BotÃƒÆ’Ã‚Â³n Confirmar persiste + envÃƒÆ’Ã‚Â­a trama RS232 al PC",
+                "Nuevo: BotÃƒÆ’Ã‚Â³n Reset con confirmaciÃƒÆ’Ã‚Â³n en pantalla"
             ],
             "status": "done",
             "depends_on": [
@@ -135,11 +135,11 @@
             "title": "Servicio de Notificaciones y Reportes SMS",
             "type": "feature",
             "sdd": true,
-            "description": "Env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ado de SMS v\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada m\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3dulo GSM con comandos AT. Reportes programados de resumen de turno (06:00,\n14:00,\n22:00 y horarios configurables). Alertas de seguridad inmediatas por intentos de operaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n no autorizados.",
+            "description": "EnvÃƒÆ’Ã‚Â­o de SMS vÃƒÆ’Ã‚Â­a mÃƒÆ’Ã‚Â³dulo GSM con comandos AT. Reportes programados de resumen de turno (06:00,\n14:00,\n22:00 y horarios configurables). Alertas de seguridad inmediatas por intentos de operaciÃƒÆ’Ã‚Â³n no autorizados.",
             "acceptance": [
-                "RF-012: Env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ado de SMS a listado preconfigurado de usuarios autorizados",
+                "RF-012: EnvÃƒÆ’Ã‚Â­o de SMS a listado preconfigurado de usuarios autorizados",
                 "RF-013: Reportes programados de turno (06:00,\n14:00,\n22:00) con horarios configurables",
-                "RF-014: Notificaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n inmediata al administrador cuando un usuario acumule 3 o m\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1s intentos fallidos de inicio de sesi\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n consecutivos"
+                "RF-014: NotificaciÃƒÆ’Ã‚Â³n inmediata al administrador cuando un usuario acumule 3 o mÃƒÆ’Ã‚Â¡s intentos fallidos de inicio de sesiÃƒÆ’Ã‚Â³n consecutivos"
             ],
             "status": "done",
             "depends_on": [
@@ -179,19 +179,19 @@
             "title": "Modo Manual de Emergencia",
             "type": "feature",
             "sdd": true,
-            "description": "Modo manual de emergencia con dos or\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adgenes de activaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n. El analista solicita desde el kiosco,\nel supervisor autoriza por SMS. Peso editable durante modo manual. Persistencia ante cortes de energ\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada.",
+            "description": "Modo manual de emergencia con dos orÃƒÆ’Ã‚Â­genes de activaciÃƒÆ’Ã‚Â³n. El analista solicita desde el kiosco,\nel supervisor autoriza por SMS. Peso editable durante modo manual. Persistencia ante cortes de energÃƒÆ’Ã‚Â­a.",
             "acceptance": [
                 "RF-020a: El analista puede solicitar modo manual desde el kiosco mediante un modal",
-                "RF-020b: Al enviar la solicitud,\nSIP-Edge env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada un SMS al admin seleccionado",
+                "RF-020b: Al enviar la solicitud,\nSIP-Edge envÃƒÆ’Ã‚Â­a un SMS al admin seleccionado",
                 "RF-020c: El supervisor autoriza respondiendo al SMS con 'manual on'",
                 "RF-020d: El supervisor puede activar modo manual directamente por SMS",
-                "RF-020e: El campo de peso es editable mientras el modo manual est\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a9 activo",
+                "RF-020e: El campo de peso es editable mientras el modo manual estÃƒÆ’Ã‚Â© activo",
                 "RF-020f: El supervisor puede extender el tiempo restante",
                 "RF-020g: El supervisor puede suspender el modo manual anticipadamente",
-                "RF-020h: El modo manual se desactiva autom\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1ticamente al alcanzar el tiempo autorizado",
-                "RF-020i: El sistema permite m\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00baltiples solicitudes simult\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1neas",
-                "RF-020j: Cada acci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n queda registrada en emergency_mode_log",
-                "RF-020k: El estado del modo manual persiste ante cortes de energ\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada"
+                "RF-020h: El modo manual se desactiva automÃƒÆ’Ã‚Â¡ticamente al alcanzar el tiempo autorizado",
+                "RF-020i: El sistema permite mÃƒÆ’Ã‚Âºltiples solicitudes simultÃƒÆ’Ã‚Â¡neas",
+                "RF-020j: Cada acciÃƒÆ’Ã‚Â³n queda registrada en emergency_mode_log",
+                "RF-020k: El estado del modo manual persiste ante cortes de energÃƒÆ’Ã‚Â­a"
             ],
             "status": "done",
             "depends_on": [
@@ -204,14 +204,14 @@
         {
             "id": 10,
             "name": "backup_system",
-            "title": "Sistema de Respaldos y Exportaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n",
+            "title": "Sistema de Respaldos y ExportaciÃƒÆ’Ã‚Â³n",
             "type": "feature",
             "sdd": true,
-            "description": "Rutina diaria de volcado (dump.sql.gz) con rotaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n FIFO de 30 d\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adas. Exportaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n a medios externos USB/SD con verificaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n CRC32. Tabla backup_logs. Endpoints API para monitoreo y disparo manual.",
+            "description": "Rutina diaria de volcado (dump.sql.gz) con rotaciÃƒÆ’Ã‚Â³n FIFO de 30 dÃƒÆ’Ã‚Â­as. ExportaciÃƒÆ’Ã‚Â³n a medios externos USB/SD con verificaciÃƒÆ’Ã‚Â³n CRC32. Tabla backup_logs. Endpoints API para monitoreo y disparo manual.",
             "acceptance": [
-                "RF-018: Volcado diario dump.sql.gz con rotaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n FIFO de 30 d\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adas",
-                "RF-019: Copia de respaldos a USB/SD con verificaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n CRC32",
-                "RF-023: Tabla backup_logs con registro de cada ejecuci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n",
+                "RF-018: Volcado diario dump.sql.gz con rotaciÃƒÆ’Ã‚Â³n FIFO de 30 dÃƒÆ’Ã‚Â­as",
+                "RF-019: Copia de respaldos a USB/SD con verificaciÃƒÆ’Ã‚Â³n CRC32",
+                "RF-023: Tabla backup_logs con registro de cada ejecuciÃƒÆ’Ã‚Â³n",
                 "RF-024: Endpoint GET /api/backup/status (admin)",
                 "RF-025: Endpoint POST /api/backup/run (admin)"
             ],
@@ -222,14 +222,14 @@
         {
             "id": 11,
             "name": "rs232_transmission",
-            "title": "Transmisi\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n de Datos a PC v\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada RS232",
+            "title": "TransmisiÃƒÆ’Ã‚Â³n de Datos a PC vÃƒÆ’Ã‚Â­a RS232",
             "type": "feature",
             "sdd": true,
-            "description": "M\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3dulo de transmisi\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n RS232 al PC externo. Consumido por weighing_capture al presionar Confirmar. Formato fijo CSV con 15 campos.",
+            "description": "MÃƒÆ’Ã‚Â³dulo de transmisiÃƒÆ’Ã‚Â³n RS232 al PC externo. Consumido por weighing_capture al presionar Confirmar. Formato fijo CSV con 15 campos.",
             "acceptance": [
-                "RF-022: Env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ado de trama RS232 al PC externo tras cada registro exitoso de pesaje",
+                "RF-022: EnvÃƒÆ’Ã‚Â­o de trama RS232 al PC externo tras cada registro exitoso de pesaje",
                 "RF-022: Formato fijo CSV con 15 campos separados por coma",
-                "RF-022: Vagon es el identificador alfanum\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a9rico del vag\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n"
+                "RF-022: Vagon es el identificador alfanumÃƒÆ’Ã‚Â©rico del vagÃƒÆ’Ã‚Â³n"
             ],
             "status": "done",
             "depends_on": [
@@ -241,16 +241,16 @@
         {
             "id": 12,
             "name": "password_reset_sms",
-            "title": "Restablecimiento de Contrase\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b1a v\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada SMS",
+            "title": "Restablecimiento de ContraseÃƒÆ’Ã‚Â±a vÃƒÆ’Ã‚Â­a SMS",
             "type": "feature",
             "sdd": true,
-            "description": "Restablecimiento remoto de contrase\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b1a v\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada SMS. El admin env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada 'reset password <username>'. PIN de 4 d\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adgitos v\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1lido por 1 hora. Modal de cambio en login.",
+            "description": "Restablecimiento remoto de contraseÃƒÆ’Ã‚Â±a vÃƒÆ’Ã‚Â­a SMS. El admin envÃƒÆ’Ã‚Â­a 'reset password <username>'. PIN de 4 dÃƒÆ’Ã‚Â­gitos vÃƒÆ’Ã‚Â¡lido por 1 hora. Modal de cambio en login.",
             "acceptance": [
                 "RF-NUEVO: Admin puede iniciar reset enviando SMS 'reset password <username>'",
-                "RF-NUEVO: Sistema valida que el usuario existe y tiene tel\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a9fono registrado",
-                "RF-NUEVO: Sistema genera un PIN de 4 d\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adgitos con expiraci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n de 1 hora",
-                "RF-NUEVO: En el login,\nenlace 'Olvid\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3 su contrase\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b1a' abre modal con usuario + PIN",
-                "RF-NUEVO: Al validar PIN correcto,\npermite cambiar la contrase\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b1a",
+                "RF-NUEVO: Sistema valida que el usuario existe y tiene telÃƒÆ’Ã‚Â©fono registrado",
+                "RF-NUEVO: Sistema genera un PIN de 4 dÃƒÆ’Ã‚Â­gitos con expiraciÃƒÆ’Ã‚Â³n de 1 hora",
+                "RF-NUEVO: En el login,\nenlace 'OlvidÃƒÆ’Ã‚Â³ su contraseÃƒÆ’Ã‚Â±a' abre modal con usuario + PIN",
+                "RF-NUEVO: Al validar PIN correcto,\npermite cambiar la contraseÃƒÆ’Ã‚Â±a",
                 "RF-NUEVO: Columnas force_password_change,\nreset_pin,\nreset_pin_expires_at en users"
             ],
             "status": "done",
@@ -266,18 +266,18 @@
             "title": "Frontend - Login,\nKiosco de Pesaje y Logout",
             "type": "feature",
             "sdd": true,
-            "description": "SPA con Svelte 5 que implementa el flujo completo del kiosco industrial: modal de login JWT,\nformulario multipaso de pesaje con WebSocket de b\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1scula en vivo,\nhistorial de pesajes,\nemergencia,\ny logout.",
+            "description": "SPA con Svelte 5 que implementa el flujo completo del kiosco industrial: modal de login JWT,\nformulario multipaso de pesaje con WebSocket de bÃƒÆ’Ã‚Â¡scula en vivo,\nhistorial de pesajes,\nemergencia,\ny logout.",
             "acceptance": [
                 "RF-F13-01: El SPA arranca en Chromium kiosco mode y muestra un modal de login si no hay JWT",
                 "RF-F13-02: Login exitoso redirige a /kiosco (operator) o /admin (admin)",
-                "RF-F13-03: Bot\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n 'Cerrar sesi\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n' siempre visible,\nlogout vuelve al modal login",
+                "RF-F13-03: BotÃƒÆ’Ã‚Â³n 'Cerrar sesiÃƒÆ’Ã‚Â³n' siempre visible,\nlogout vuelve al modal login",
                 "RF-F13-04: Formulario de pesaje con campos tractomula,\nvagon,\nguia,\nHacienda->Suerte,\n3 pesos",
-                "RF-F13-05: Peso en vivo v\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada WebSocket /ws/scale con indicador de estabilidad",
+                "RF-F13-05: Peso en vivo vÃƒÆ’Ã‚Â­a WebSocket /ws/scale con indicador de estabilidad",
                 "RF-F13-06: Confirmar persiste via POST /api/weighings,\nReset via POST /api/weighings/reset",
                 "RF-F13-07: /kiosco/historial muestra tabla con pesajes del operador",
                 "RF-F13-08: Banner de emergencia consulta GET /api/emergency/status cada 5s",
-                "RF-F13-09: Modal solicitud emergencia lista supervisores y env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada POST /api/emergency/request",
-                "RF-F13-10: Flujo 'Olvid\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3 su contrase\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b1a' con PIN de 4 d\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adgitos"
+                "RF-F13-09: Modal solicitud emergencia lista supervisores y envÃƒÆ’Ã‚Â­a POST /api/emergency/request",
+                "RF-F13-10: Flujo 'OlvidÃƒÆ’Ã‚Â³ su contraseÃƒÆ’Ã‚Â±a' con PIN de 4 dÃƒÆ’Ã‚Â­gitos"
             ],
             "status": "done",
             "depends_on": [
@@ -291,17 +291,17 @@
         {
             "id": 14,
             "name": "frontend_admin_dashboard",
-            "title": "Frontend Admin \u00c3\u0192\u00e2\u20ac\u0161\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u009d Dashboard y Navegaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n (14a)",
+            "title": "Frontend Admin Ãƒâ€šÃ¢â‚¬â€ Dashboard y NavegaciÃƒÆ’Ã‚Â³n (14a)",
             "type": "feature",
             "sdd": true,
-            "description": "Fundaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n del m\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3dulo administrativo: dashboard con cards de acceso r\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1pido,\nsidebar de navegaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n lateral con secci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n activa,\nenrutamiento RBAC,\nnavegaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n directa por URL,\ne interceptor 401. Corresponde a la subdivisi\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n 14a de la feature 14 original.",
+            "description": "FundaciÃƒÆ’Ã‚Â³n del mÃƒÆ’Ã‚Â³dulo administrativo: dashboard con cards de acceso rÃƒÆ’Ã‚Â¡pido,\nsidebar de navegaciÃƒÆ’Ã‚Â³n lateral con secciÃƒÆ’Ã‚Â³n activa,\nenrutamiento RBAC,\nnavegaciÃƒÆ’Ã‚Â³n directa por URL,\ne interceptor 401. Corresponde a la subdivisiÃƒÆ’Ã‚Â³n 14a de la feature 14 original.",
             "acceptance": [
                 "RF-F14-01a: Dashboard con 5 cards (Config,\nUsuarios,\nHaciendas,\nSuertes,\nBackup) con iconos y enlaces",
-                "RF-F14-01b: Sidebar de navegaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n lateral visible en todas las rutas /admin/*",
-                "RF-F14-01c: Sidebar resalta la secci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n activa visualmente",
+                "RF-F14-01b: Sidebar de navegaciÃƒÆ’Ã‚Â³n lateral visible en todas las rutas /admin/*",
+                "RF-F14-01c: Sidebar resalta la secciÃƒÆ’Ã‚Â³n activa visualmente",
                 "RF-F14-01d: Solo usuarios con rol admin pueden acceder a rutas /admin/*",
-                "RF-F14-01e: Navegaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n directa por hash a cada sub-ruta admin funciona",
-                "RF-F14-01f: HTTP 401 redirige al login con mensaje 'Sesi\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n expirada o no autorizada' en todas las vistas admin"
+                "RF-F14-01e: NavegaciÃƒÆ’Ã‚Â³n directa por hash a cada sub-ruta admin funciona",
+                "RF-F14-01f: HTTP 401 redirige al login con mensaje 'SesiÃƒÆ’Ã‚Â³n expirada o no autorizada' en todas las vistas admin"
             ],
             "status": "done",
             "depends_on": [
@@ -312,19 +312,19 @@
         {
             "id": 15,
             "name": "frontend_admin_operations",
-            "title": "Frontend Admin \u00c3\u0192\u00e2\u20ac\u0161\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u009d Configuraci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n y Backup (14b)",
+            "title": "Frontend Admin Ãƒâ€šÃ¢â‚¬â€ ConfiguraciÃƒÆ’Ã‚Â³n y Backup (14b)",
             "type": "feature",
             "sdd": true,
-            "description": "Panel de configuraci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n del sistema (RS485,\nRS232,\nGSM,\ntimeouts) con botones de prueba,\ny panel de backups con historial y ejecuci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n. Corresponde a la subdivisi\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n 14b de la feature 14 original.",
+            "description": "Panel de configuraciÃƒÆ’Ã‚Â³n del sistema (RS485,\nRS232,\nGSM,\ntimeouts) con botones de prueba,\ny panel de backups con historial y ejecuciÃƒÆ’Ã‚Â³n. Corresponde a la subdivisiÃƒÆ’Ã‚Â³n 14b de la feature 14 original.",
             "acceptance": [
                 "RF-F14-02a: /admin/config muestra formularios RS485,\nRS232,\nGSM con selects de valores predefinidos",
                 "RF-F14-02b: /admin/config carga GET /api/config al montar y pre-puebla campos",
-                "RF-F14-02c: Guardar configuraci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada PUT /api/config con manejo de \u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a9xito/error",
+                "RF-F14-02c: Guardar configuraciÃƒÆ’Ã‚Â³n envÃƒÆ’Ã‚Â­a PUT /api/config con manejo de ÃƒÆ’Ã‚Â©xito/error",
                 "RF-F14-02d: Botones Test llaman POST /api/config/test/{port} con resultado inline",
                 "RF-F14-02e: Session timeout (PUT /api/setup/session) y scale timeout (PUT /api/setup/scale)",
-                "RF-F14-02f: /admin/backup muestra historial de \u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00baltimos 10 backups via GET /api/backup/status",
-                "RF-F14-02g: Bot\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n 'Ejecutar Backup' env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada POST /api/backup/run con deshabilitado 30s en \u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a9xito",
-                "RF-F14-02h: Bot\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n 'Refrescar' recarga la tabla de backups"
+                "RF-F14-02f: /admin/backup muestra historial de ÃƒÆ’Ã‚Âºltimos 10 backups via GET /api/backup/status",
+                "RF-F14-02g: BotÃƒÆ’Ã‚Â³n 'Ejecutar Backup' envÃƒÆ’Ã‚Â­a POST /api/backup/run con deshabilitado 30s en ÃƒÆ’Ã‚Â©xito",
+                "RF-F14-02h: BotÃƒÆ’Ã‚Â³n 'Refrescar' recarga la tabla de backups"
             ],
             "status": "done",
             "depends_on": [
@@ -335,22 +335,22 @@
         {
             "id": 16,
             "name": "frontend_admin_masterdata",
-            "title": "Frontend Admin \u00c3\u0192\u00e2\u20ac\u0161\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u009d CRUD de Datos Maestros (14c)",
+            "title": "Frontend Admin Ãƒâ€šÃ¢â‚¬â€ CRUD de Datos Maestros (14c)",
             "type": "feature",
             "sdd": true,
-            "description": "CRUD completo de datos maestros: usuarios (crear,\neditar,\ndesactivar),\nhaciendas (soft-delete con paginaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n),\nsuertes (filtrable por hacienda). Incluye auto-recarga tras CRUD,\nmanejo de errores de red y soft-delete. Corresponde a la subdivisi\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n 14c de la feature 14 original.",
+            "description": "CRUD completo de datos maestros: usuarios (crear,\neditar,\ndesactivar),\nhaciendas (soft-delete con paginaciÃƒÆ’Ã‚Â³n),\nsuertes (filtrable por hacienda). Incluye auto-recarga tras CRUD,\nmanejo de errores de red y soft-delete. Corresponde a la subdivisiÃƒÆ’Ã‚Â³n 14c de la feature 14 original.",
             "acceptance": [
                 "RF-F14-03a: /admin/usuarios lista usuarios via GET /api/users en tabla paginada",
-                "RF-F14-03b: Modal crear usuario con campos Usuario,\nContrase\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b1a,\nNombre,\nDocumento,\nRol",
+                "RF-F14-03b: Modal crear usuario con campos Usuario,\nContraseÃƒÆ’Ã‚Â±a,\nNombre,\nDocumento,\nRol",
                 "RF-F14-03c: Modal editar usuario con campos pre-poblados + Activo checkbox",
-                "RF-F14-03d: Desactivar usuario con confirmaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n modal + DELETE /api/users/{id}",
+                "RF-F14-03d: Desactivar usuario con confirmaciÃƒÆ’Ã‚Â³n modal + DELETE /api/users/{id}",
                 "RF-F14-03e: /admin/haciendas lista haciendas activas paginadas via GET /api/haciendas",
-                "RF-F14-03f: CRUD haciendas con soft-delete y confirmaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n",
+                "RF-F14-03f: CRUD haciendas con soft-delete y confirmaciÃƒÆ’Ã‚Â³n",
                 "RF-F14-03g: /admin/suertes con dropdown de hacienda y tabla filtrada",
-                "RF-F14-03h: CRUD suertes con validaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n (c\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3digo max 4 chars)",
-                "RF-F14-03i: Auto-recarga de tabla tras cada operaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n CRUD exitosa",
-                "RF-F14-03j: Error de red muestra mensaje + bot\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n Reintentar",
-                "RF-F14-03k: Soft-delete manejado por backend,\nfrontend env\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00ada DELETE"
+                "RF-F14-03h: CRUD suertes con validaciÃƒÆ’Ã‚Â³n (cÃƒÆ’Ã‚Â³digo max 4 chars)",
+                "RF-F14-03i: Auto-recarga de tabla tras cada operaciÃƒÆ’Ã‚Â³n CRUD exitosa",
+                "RF-F14-03j: Error de red muestra mensaje + botÃƒÆ’Ã‚Â³n Reintentar",
+                "RF-F14-03k: Soft-delete manejado por backend,\nfrontend envÃƒÆ’Ã‚Â­a DELETE"
             ],
             "status": "done",
             "depends_on": [
@@ -361,18 +361,18 @@
         {
             "id": 17,
             "name": "frontend_analytics",
-            "title": "Frontend - Reportes,\nAnomal\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adas y Consola IA",
+            "title": "Frontend - Reportes,\nAnomalÃƒÆ’Ã‚Â­as y Consola IA",
             "type": "feature",
             "sdd": true,
-            "description": "M\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3dulo de anal\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adticas del SPA: CRUD de plantillas de reportes programados con m\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a9tricas seleccionables,\nhistorial de anomal\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adas,\ny consola de consultas al agente inteligente.",
+            "description": "MÃƒÆ’Ã‚Â³dulo de analÃƒÆ’Ã‚Â­ticas del SPA: CRUD de plantillas de reportes programados con mÃƒÆ’Ã‚Â©tricas seleccionables,\nhistorial de anomalÃƒÆ’Ã‚Â­as,\ny consola de consultas al agente inteligente.",
             "acceptance": [
                 "RF-F15-01: /admin/reportes lista las plantillas de reportes via GET /api/reports/templates",
-                "RF-F15-02: Modal de creaci\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n/edici\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n de plantilla con nombre,\nschedule,\nSMS,\nmetrics",
+                "RF-F15-02: Modal de creaciÃƒÆ’Ã‚Â³n/ediciÃƒÆ’Ã‚Â³n de plantilla con nombre,\nschedule,\nSMS,\nmetrics",
                 "RF-F15-03: /admin/anomalias muestra tabla paginada con GET /api/anomalies/history",
                 "RF-F15-04: /admin/agente muestra interfaz tipo chat con POST /api/agent/query",
-                "RF-F15-05: Bot\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b3n 'Detectar ahora' con par\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1metros configurables"
+                "RF-F15-05: BotÃƒÆ’Ã‚Â³n 'Detectar ahora' con parÃƒÆ’Ã‚Â¡metros configurables"
             ],
-            "status": "testing",
+            "status": "done",
             "depends_on": [
                 16
             ],
@@ -384,7 +384,7 @@
             "title": "Campo tipo de cosecha en registro de pesaje",
             "type": "feature",
             "sdd": true,
-            "description": "Agregar campo tipo_cosecha (ENUM: Manual - Incendio,\nManual - Quemado,\nManual - Verde,\nMecanico - Incendio,\nMecanico - Verde,\nNo convencional - Verde) a tabla weighings. Select en formulario de kiosco. Filtro en an\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00a1lisis estad\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00adsticos.",
+            "description": "Agregar campo tipo_cosecha (ENUM: Manual - Incendio,\nManual - Quemado,\nManual - Verde,\nMecanico - Incendio,\nMecanico - Verde,\nNo convencional - Verde) a tabla weighings. Select en formulario de kiosco. Filtro en anÃƒÆ’Ã‚Â¡lisis estadÃƒÆ’Ã‚Â­sticos.",
             "acceptance": [
                 "La tabla weighings tiene columna tipo_cosecha ENUM con 6 valores: Manual - Incendio,\nManual - Quemado,\nManual - Verde,\nMecanico - Incendio,\nMecanico - Verde,\nNo convencional - Verde",
                 "Columna tipo_cosecha NOT NULL,\ndefault Mecanico - Verde",
@@ -403,9 +403,9 @@
         {
             "id": 19,
             "name": "watchdog_sd_notify",
-            "title": "Watchdog mal configurado \u00c3\u0192\u00e2\u20ac\u0161\u00c3\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u009d servicio reiniciado cada 30s por falta de sd_notify",
+            "title": "Watchdog mal configurado Ãƒâ€šÃ¢â‚¬â€ servicio reiniciado cada 30s por falta de sd_notify",
             "type": "bug",
-            "description": "El servicio sip-edge tiene WatchdogSec=30 configurado en su unidad systemd,\npero uvicorn/FastAPI no implementa sd_notify(). systemd nunca recibe la se\u00c3\u0192\u00c6\u2019\u00c3\u201a\u00c2\u00b1al WATCHDOG=1 y mata el proceso cada 30s con SIGABRT.",
+            "description": "El servicio sip-edge tiene WatchdogSec=30 configurado en su unidad systemd,\npero uvicorn/FastAPI no implementa sd_notify(). systemd nunca recibe la seÃƒÆ’Ã‚Â±al WATCHDOG=1 y mata el proceso cada 30s con SIGABRT.",
             "reproduction": "1. ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42\n2. sudo journalctl -u sip-edge -n 50\n3. Observar: 'Watchdog timeout (limit 30s)!' seguido de 'Killing process uvicorn with signal SIGABRT'\n4. El servicio se reinicia en ciclo infinito cada ~30s",
             "affected_feature_ids": [
                 6,
@@ -438,7 +438,7 @@
             "title": "Paginacion en endpoints y tablas de Usuarios y Backups",
             "type": "feature",
             "sdd": true,
-            "description": "Agregar soporte de paginacion a dos endpoints y sus tablas correspondientes. (1) Usuarios: GET /api/users con response paginado {items,\ntotal,\npage,\npage_size,\ntotal_pages} y reactivar UI de paginacion en AdminUsers.svelte. Justificacion: 3 turnos \u00c3\u0192\u00e2\u20ac\u201d multiples operadores + admins + corresponsales SMS = 20-50+ usuarios,\ntabla plana inmanejable. (2) Backups: GET /api/backup/status con response paginado y UI de paginacion en AdminBackup.svelte. Justificacion: rotacion FIFO de 30 dias genera al menos 30 backups + backups manuales iniciados por el admin = 40+ registros. Ambos endpoints se estandarizan con el mismo formato paginado que ya usan haciendas,\nsuertes y pesajes.",
+            "description": "Agregar soporte de paginacion a dos endpoints y sus tablas correspondientes. (1) Usuarios: GET /api/users con response paginado {items,\ntotal,\npage,\npage_size,\ntotal_pages} y reactivar UI de paginacion en AdminUsers.svelte. Justificacion: 3 turnos Ãƒâ€” multiples operadores + admins + corresponsales SMS = 20-50+ usuarios,\ntabla plana inmanejable. (2) Backups: GET /api/backup/status con response paginado y UI de paginacion en AdminBackup.svelte. Justificacion: rotacion FIFO de 30 dias genera al menos 30 backups + backups manuales iniciados por el admin = 40+ registros. Ambos endpoints se estandarizan con el mismo formato paginado que ya usan haciendas,\nsuertes y pesajes.",
             "acceptance": [
                 "GET /api/users?page=1&page_size=20 devuelve {items: [...],\ntotal: N,\npage: 1,\npage_size: 20,\ntotal_pages: M}",
                 "GET /api/users sin parametros usa defaults (page=1,\npage_size=20)",
@@ -560,15 +560,15 @@
         {
             "id": 26,
             "name": "emergency_request_wrong_sms",
-            "title": "Solicitud de modo manual desde Kiosko env\u00c3\u00ada mensaje de error del LLM al admin",
+            "title": "Solicitud de modo manual desde Kiosko envÃ­a mensaje de error del LLM al admin",
             "type": "bug",
             "status": "triaged",
-            "description": "Al solicitar modo manual desde la vista Kiosko (POST /api/emergency/request), el administrador recibe en su tel\u00c3\u00a9fono el mensaje 'Lo siento, el sistema de an\u00c3\u00a1lisis no est\u00c3\u00a1 disponible en este momento.' en lugar del mensaje esperado de solicitud de emergencia. El mensaje de error solo se genera en src/agent_orchestrator.py:175 dentro de handle_sms_query() cuando falla la conexi\u00c3\u00b3n al LLM (LlamaConnectionError).",
+            "description": "Al solicitar modo manual desde la vista Kiosko (POST /api/emergency/request), el administrador recibe en su telÃ©fono el mensaje 'Lo siento, el sistema de anÃ¡lisis no estÃ¡ disponible en este momento.' en lugar del mensaje esperado de solicitud de emergencia. El mensaje de error solo se genera en src/agent_orchestrator.py:175 dentro de handle_sms_query() cuando falla la conexiÃ³n al LLM (LlamaConnectionError).",
             "reproduction": [
                 "Abrir vista Kiosko como operador",
                 "Solicitar modo manual (seleccionar supervisor, escribir motivo)",
                 "Esperar ~15-30 segundos",
-                "Observar que el admin recibe 'Lo siento, el sistema de an\u00c3\u00a1lisis no est\u00c3\u00a1 disponible en este momento.' en vez de la solicitud de emergencia",
+                "Observar que el admin recibe 'Lo siento, el sistema de anÃ¡lisis no estÃ¡ disponible en este momento.' en vez de la solicitud de emergencia",
                 "Verificar que el modo manual no se activa aunque el admin responda 'manual on'"
             ],
             "affected_feature_ids": [
