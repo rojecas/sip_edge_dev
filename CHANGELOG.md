@@ -2,6 +2,11 @@
 
 > All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2026-07-09
+
+### Fixed
+- Bug #26 — Solicitud de modo manual desde Kiosko envía mensaje de error del LLM al admin (SMS duplicado corregido — race condition entre `send_sms()` y `SmsSendQueue` eliminada; handler catch-all AI removido del dispatcher v2; fecha dinámica en LLM; unidades kg/toneladas en UI de kiosko).
+
 ## [1.3.0] - 2026-07-08
 
 ### Added
