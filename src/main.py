@@ -1,4 +1,4 @@
-"""SIP-Edge: Sistema Inteligente de Pesaje y Control de Materia Extrana."""
+ï»¿"""SIP-Edge: Sistema Inteligente de Pesaje y Control de Materia Extrana."""
 import asyncio
 import json
 import logging
@@ -97,7 +97,6 @@ def _resolve_event_loop() -> asyncio.AbstractEventLoop:
 
 
 def _on_scale_data(data: dict, clients: set[WebSocket]) -> None:
-    logger.info("[TRACE-D] CALLBACK INVOKED with: %s", data)
     message = json.dumps({
         "type": "scale_reading",
         "data": {
@@ -167,8 +166,8 @@ async def lifespan(app: FastAPI):
     ) = load_config(CONFIG_PATH)
     from src.scale import ScaleService
 
-    # Configurar logging TEMPRANO — antes de cualquier inicializacion
-    # que pueda loggear (Bug 3 fix — estaba despues de ScaleService.start()).
+    # Configurar logging TEMPRANO â€” antes de cualquier inicializacion
+    # que pueda loggear (Bug 3 fix â€” estaba despues de ScaleService.start()).
     logging.basicConfig(level=logging.INFO, force=True)
     logging.getLogger("src.agent_orchestrator").setLevel(logging.INFO)
     logging.getLogger("src.sms_send_queue").setLevel(logging.INFO)
@@ -208,7 +207,7 @@ async def lifespan(app: FastAPI):
     # Inyectar persistencia en sms_service
     app.state.sms_service.set_persistence_service(app.state.sms_persistence)
 
-    # Inicializar SmsSendQueue (F27) GÇö cola de envio asincrona
+    # Inicializar SmsSendQueue (F27) Î“Ã‡Ã¶ cola de envio asincrona
     app.state.sms_send_queue = SmsSendQueue(
         persistence=app.state.sms_persistence,
         sms_service=app.state.sms_service,
@@ -230,7 +229,7 @@ async def lifespan(app: FastAPI):
     app.state.sms_service.set_template_service(app.state.report_template_service)
     app.state.sms_service.start_scheduler()
 
-    # Inicializar IncomingSmsDispatcherV2 (F27) GÇö reemplaza v1
+    # Inicializar IncomingSmsDispatcherV2 (F27) Î“Ã‡Ã¶ reemplaza v1
     app.state.sms_dispatcher = IncomingSmsDispatcherV2(
         modem_index=modem_index, dev_mode=dev_mode,
         persistence=app.state.sms_persistence,
@@ -316,17 +315,17 @@ async def lifespan(app: FastAPI):
     )
 
     # Registrar handlers en dispatcher v2 (F27: orden importa)
-    # 1. Emergency GÇö workflow_type='emergency'
+    # 1. Emergency Î“Ã‡Ã¶ workflow_type='emergency'
     app.state.sms_dispatcher.register_handler(
         app.state.emergency_service.process_incoming_sms,
         workflow_type="emergency",
     )
-    # 2. Password reset GÇö workflow_type='password_reset'
+    # 2. Password reset Î“Ã‡Ã¶ workflow_type='password_reset'
     app.state.sms_dispatcher.register_handler(
         app.state.password_reset_service.handle_incoming_sms,
         workflow_type="password_reset",
     )
-    # 3. AI query GÇö retorna False si falla, no es catch-all
+    # 3. AI query Î“Ã‡Ã¶ retorna False si falla, no es catch-all
     app.state.sms_dispatcher.register_handler(
         lambda phone, text, message_id=None, conversation_id=None: app.state.agent_orchestrator.handle_sms_query(phone, text),
         workflow_type="ai_query",
@@ -457,7 +456,7 @@ async def run_backup_endpoint(
 app.include_router(backup_router)
 
 # ------------------------------------------------------------------
-# Agent Router GÇö POST /api/agent/query (T21)
+# Agent Router Î“Ã‡Ã¶ POST /api/agent/query (T21)
 # ------------------------------------------------------------------
 
 agent_router = APIRouter(prefix="/api/agent", tags=["agent"])
@@ -556,7 +555,7 @@ async def agent_query(
 app.include_router(agent_router)
 
 # ------------------------------------------------------------------
-# Report Templates Router GÇö CRUD (T22)
+# Report Templates Router Î“Ã‡Ã¶ CRUD (T22)
 # ------------------------------------------------------------------
 
 reports_router = APIRouter(prefix="/api/reports", tags=["reports"])
@@ -636,7 +635,7 @@ async def delete_template(
 app.include_router(reports_router)
 
 # ------------------------------------------------------------------
-# Anomaly Router GÇö GET /api/anomalies (T23)
+# Anomaly Router Î“Ã‡Ã¶ GET /api/anomalies (T23)
 # ------------------------------------------------------------------
 
 anomaly_router = APIRouter(prefix="/api/anomalies", tags=["anomalies"])
@@ -730,7 +729,7 @@ async def get_anomaly_history(
 app.include_router(anomaly_router)
 
 # ------------------------------------------------------------------
-# Static files mount GÇö serve SPA from src/static/
+# Static files mount Î“Ã‡Ã¶ serve SPA from src/static/
 # ------------------------------------------------------------------
 _static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 if os.path.isdir(_static_dir):
@@ -959,7 +958,7 @@ async def test_port(
 
 
 # ------------------------------------------------------------------
-# Catch-all route GÇö serve SPA index.html for non-API/WS/login/health
+# Catch-all route Î“Ã‡Ã¶ serve SPA index.html for non-API/WS/login/health
 # MUST be registered AFTER all other routes.
 # ------------------------------------------------------------------
 @app.api_route("/{full_path:path}", methods=["GET"])
