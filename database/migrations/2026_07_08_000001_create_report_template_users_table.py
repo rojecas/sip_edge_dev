@@ -13,8 +13,8 @@ from sqlalchemy.sql import text
 def upgrade(connection: Connection) -> None:
     connection.execute(text("""
         CREATE TABLE IF NOT EXISTS report_template_users (
-            template_id BIGINT UNSIGNED NOT NULL,
-            user_id BIGINT UNSIGNED NOT NULL,
+            template_id BIGINT NOT NULL,
+            user_id BIGINT NOT NULL,
             PRIMARY KEY (template_id, user_id),
             CONSTRAINT fk_rtu_template FOREIGN KEY (template_id)
                 REFERENCES report_templates(id) ON DELETE CASCADE,
