@@ -99,6 +99,7 @@ class ScaleService:
         self._callback = None
         self._timeout = config.timeout_seconds
         self._dev_mode = dev_mode
+        self._command_active = False
 
     def update_timeout(self, timeout_seconds: int) -> None:
         self._timeout = timeout_seconds
@@ -155,27 +156,35 @@ class ScaleService:
             cmd_str = f"00{base}{value}\r\n"
         else:
             cmd_str = f"00{base}\r\n"
-        with self._lock:
-            if self._serial is None or not self._serial.is_open:
-                raise ScaleConnectionError("Serial port not open")
-            try:
-                self._serial.reset_input_buffer()
-                self._serial.write(cmd_str.encode("ascii"))
-                self._serial.flush()
-            except (serial.SerialException, OSError) as e:
-                raise ScaleConnectionError(f"Write error: {e}") from e
-            try:
-                response = self._serial.readline()
-            except serial.SerialTimeoutException as e:
-                raise ScaleTimeoutError(
-                    f"No response within {self._timeout}s"
-                ) from e
-        if not response:
-            raise ScaleTimeoutError(f"No response within {self._timeout}s")
-        decoded = response.decode("ascii", errors="replace").strip()
-        if decoded == "OK":
-            return {"result": "ok"}
-        return _parse_response(decoded)
+        self._command_active = True
+        try:
+            with self._lock:
+                if self._serial is None or not self._serial.is_open:
+                    raise ScaleConnectionError("Serial port not open")
+                try:
+                    self._serial.reset_input_buffer()
+                    self._serial.write(cmd_str.encode("ascii"))
+                    self._serial.flush()
+                except (serial.SerialException, OSError) as e:
+                    raise ScaleConnectionError(f"Write error: {e}") from e
+                try:
+                    response = self._serial.readline()
+                except serial.SerialTimeoutException as e:
+                    raise ScaleTimeoutError(
+                        f"No response within {self._timeout}s"
+                    ) from e
+                except Exception as e:
+                    raise ScaleConnectionError(
+                        f"Serial read error: {e}"
+                    ) from e
+            if not response:
+                raise ScaleTimeoutError(f"No response within {self._timeout}s")
+            decoded = response.decode("ascii", errors="replace").strip()
+            if decoded == "OK":
+                return {"result": "ok"}
+            return _parse_response(decoded)
+        finally:
+            self._command_active = False
 
     def async_listener(self, callback) -> None:
         self._callback = callback
@@ -218,7 +227,7 @@ class ScaleService:
 
         while self._running:
             try:
-                if self._serial is not None and self._serial.is_open:
+                if not self._command_active and self._serial is not None and self._serial.is_open:
                     line = self._serial.readline()
                     if line:
                         decoded = line.decode("ascii", errors="replace").strip()
