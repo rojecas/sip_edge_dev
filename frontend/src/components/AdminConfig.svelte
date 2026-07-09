@@ -1,4 +1,4 @@
-<script>
+﻿<script>
   /**
    * AdminConfig — System configuration form for RS485, RS232, GSM, and timeouts.
    */
@@ -27,22 +27,11 @@
   let saveMsg = $state("");
   let saveError = $state("");
 
-  // Session timeout save state
-  let savingSession = $state(false);
-  let sessionMsg = $state("");
-  let sessionError = $state("");
-
-  // Scale timeout save state
-  let savingScale = $state(false);
-  let scaleMsg = $state("");
-  let scaleError = $state("");
-
   // Test states
   let testing = $state({ rs485: false, rs232: false, gsm: false });
   let testResult = $state({ rs485: "", rs232: "", gsm: "" });
   let testError = $state({ rs485: "", rs232: "", gsm: "" });
 
-  // Load config on mount
   onMount(() => {
     loadConfig();
   });
@@ -52,18 +41,10 @@
     loadError = "";
     try {
       const data = await api.get(ENDPOINTS.CONFIG);
-      if (data.rs485) {
-        rs485 = { ...rs485, ...data.rs485 };
-      }
-      if (data.rs232) {
-        rs232 = { ...rs232, ...data.rs232 };
-      }
-      if (data.gsm) {
-        gsm = { ...gsm, ...data.gsm };
-      }
-      if (data.session_timeout_minutes !== undefined) {
-        sessionTimeout = data.session_timeout_minutes;
-      }
+      if (data.rs485) { rs485 = { ...rs485, ...data.rs485 }; }
+      if (data.rs232) { rs232 = { ...rs232, ...data.rs232 }; }
+      if (data.gsm) { gsm = { ...gsm, ...data.gsm }; }
+      if (data.session_timeout_minutes !== undefined) { sessionTimeout = data.session_timeout_minutes; }
       if (data.scale_timeout_seconds !== undefined || data.timeout_seconds !== undefined) {
         scaleTimeout = data.scale_timeout_seconds ?? data.timeout_seconds;
       }
@@ -79,56 +60,25 @@
     saveMsg = "";
     saveError = "";
     try {
+      // Save ports + GSM
       await api.put(ENDPOINTS.CONFIG, {
         rs485: { ...rs485 },
         rs232: { ...rs232 },
         gsm: { ...gsm },
+      });
+      // Save session timeout
+      await api.put(ENDPOINTS.SETUP_SESSION, {
+        session_timeout_minutes: sessionTimeout,
+      });
+      // Save scale timeout
+      await api.put(ENDPOINTS.SETUP_SCALE, {
+        timeout_seconds: scaleTimeout,
       });
       saveMsg = "Configuración guardada exitosamente.";
     } catch (err) {
       saveError = err instanceof ApiError ? err.message : "Error de conexión al guardar configuración.";
     } finally {
       saving = false;
-    }
-  }
-
-  async function saveSessionTimeout() {
-    if (sessionTimeout < 1) {
-      sessionError = "El timeout debe ser al menos 1 minuto.";
-      return;
-    }
-    savingSession = true;
-    sessionMsg = "";
-    sessionError = "";
-    try {
-      await api.put(ENDPOINTS.SETUP_SESSION, {
-        session_timeout_minutes: sessionTimeout,
-      });
-      sessionMsg = "Session timeout guardado exitosamente.";
-    } catch (err) {
-      sessionError = err instanceof ApiError ? err.message : "Error de conexión al guardar session timeout.";
-    } finally {
-      savingSession = false;
-    }
-  }
-
-  async function saveScaleTimeout() {
-    if (scaleTimeout < 1 || scaleTimeout > 10) {
-      scaleError = "El timeout debe estar entre 1 y 10 segundos.";
-      return;
-    }
-    savingScale = true;
-    scaleMsg = "";
-    scaleError = "";
-    try {
-      await api.put(ENDPOINTS.SETUP_SCALE, {
-        timeout_seconds: scaleTimeout,
-      });
-      scaleMsg = "Scale timeout guardado exitosamente.";
-    } catch (err) {
-      scaleError = err instanceof ApiError ? err.message : "Error de conexión al guardar scale timeout.";
-    } finally {
-      savingScale = false;
     }
   }
 
@@ -164,56 +114,18 @@
     <section class="config-section">
       <h2>Puerto RS485 (Báscula)</h2>
       <div class="form-grid">
-        <label>
-          Path
-          <input type="text" bind:value={rs485.path} placeholder="/dev/ttyACM0" />
-        </label>
-        <label>
-          Baudrate
-          <select bind:value={rs485.baudrate}>
-            {#each BAUD_RATES as b}
-              <option value={b}>{b}</option>
-            {/each}
-          </select>
-        </label>
-        <label>
-          Paridad
-          <select bind:value={rs485.parity}>
-            {#each PARITY_VALUES as p}
-              <option value={p}>{p}</option>
-            {/each}
-          </select>
-        </label>
-        <label>
-          Data Bits
-          <select bind:value={rs485.data_bits}>
-            {#each DATA_BITS as d}
-              <option value={d}>{d}</option>
-            {/each}
-          </select>
-        </label>
-        <label>
-          Stop Bits
-          <select bind:value={rs485.stop_bits}>
-            {#each STOP_BITS as s}
-              <option value={s}>{s}</option>
-            {/each}
-          </select>
-        </label>
+        <label>Path <input type="text" bind:value={rs485.path} placeholder="/dev/ttyACM0" /></label>
+        <label>Baudrate <select bind:value={rs485.baudrate}>{#each BAUD_RATES as b}<option value={b}>{b}</option>{/each}</select></label>
+        <label>Paridad <select bind:value={rs485.parity}>{#each PARITY_VALUES as p}<option value={p}>{p}</option>{/each}</select></label>
+        <label>Data Bits <select bind:value={rs485.data_bits}>{#each DATA_BITS as d}<option value={d}>{d}</option>{/each}</select></label>
+        <label>Stop Bits <select bind:value={rs485.stop_bits}>{#each STOP_BITS as s}<option value={s}>{s}</option>{/each}</select></label>
       </div>
       <div class="test-row">
-        <button
-          class="btn btn-test"
-          disabled={testing.rs485}
-          onclick={() => testPort("rs485")}
-        >
+        {#if testResult.rs485}<span class="test-ok">{testResult.rs485}</span>{/if}
+        {#if testError.rs485}<span class="test-fail">{testError.rs485}</span>{/if}
+        <button class="btn btn-test-orange" disabled={testing.rs485} onclick={() => testPort("rs485")}>
           {testing.rs485 ? "Probando..." : "Test RS485"}
         </button>
-        {#if testResult.rs485}
-          <span class="test-ok">{testResult.rs485}</span>
-        {:else if testError.rs485}
-          <span class="test-fail">{testError.rs485}</span>
-        {/if}
       </div>
     </section>
 
@@ -221,176 +133,65 @@
     <section class="config-section">
       <h2>Puerto RS232 (PC Externo)</h2>
       <div class="form-grid">
-        <label>
-          Path
-          <input type="text" bind:value={rs232.path} placeholder="/dev/ttyACM1" />
-        </label>
-        <label>
-          Baudrate
-          <select bind:value={rs232.baudrate}>
-            {#each BAUD_RATES as b}
-              <option value={b}>{b}</option>
-            {/each}
-          </select>
-        </label>
-        <label>
-          Paridad
-          <select bind:value={rs232.parity}>
-            {#each PARITY_VALUES as p}
-              <option value={p}>{p}</option>
-            {/each}
-          </select>
-        </label>
-        <label>
-          Data Bits
-          <select bind:value={rs232.data_bits}>
-            {#each DATA_BITS as d}
-              <option value={d}>{d}</option>
-            {/each}
-          </select>
-        </label>
-        <label>
-          Stop Bits
-          <select bind:value={rs232.stop_bits}>
-            {#each STOP_BITS as s}
-              <option value={s}>{s}</option>
-            {/each}
-          </select>
-        </label>
+        <label>Path <input type="text" bind:value={rs232.path} placeholder="/dev/ttyACM1" /></label>
+        <label>Baudrate <select bind:value={rs232.baudrate}>{#each BAUD_RATES as b}<option value={b}>{b}</option>{/each}</select></label>
+        <label>Paridad <select bind:value={rs232.parity}>{#each PARITY_VALUES as p}<option value={p}>{p}</option>{/each}</select></label>
+        <label>Data Bits <select bind:value={rs232.data_bits}>{#each DATA_BITS as d}<option value={d}>{d}</option>{/each}</select></label>
+        <label>Stop Bits <select bind:value={rs232.stop_bits}>{#each STOP_BITS as s}<option value={s}>{s}</option>{/each}</select></label>
       </div>
       <div class="test-row">
-        <button
-          class="btn btn-test"
-          disabled={testing.rs232}
-          onclick={() => testPort("rs232")}
-        >
+        {#if testResult.rs232}<span class="test-ok">{testResult.rs232}</span>{/if}
+        {#if testError.rs232}<span class="test-fail">{testError.rs232}</span>{/if}
+        <button class="btn btn-test-orange" disabled={testing.rs232} onclick={() => testPort("rs232")}>
           {testing.rs232 ? "Probando..." : "Test RS232"}
         </button>
-        {#if testResult.rs232}
-          <span class="test-ok">{testResult.rs232}</span>
-        {:else if testError.rs232}
-          <span class="test-fail">{testError.rs232}</span>
-        {/if}
       </div>
     </section>
 
     <!-- GSM Section -->
     <section class="config-section">
       <h2>Módem GSM</h2>
-      <div class="form-grid form-grid-sm">
-        <label>
-          Modem Index
-          <input type="number" bind:value={gsm.modem_index} min="0" />
-        </label>
+      <div class="form-grid-gsm">
+        <label>Modem Index <input type="number" bind:value={gsm.modem_index} min="0" /></label>
       </div>
       <div class="test-row">
-        <button
-          class="btn btn-test"
-          disabled={testing.gsm}
-          onclick={() => testPort("gsm")}
-        >
+        {#if testResult.gsm}<span class="test-ok">{testResult.gsm}</span>{/if}
+        {#if testError.gsm}<span class="test-fail">{testError.gsm}</span>{/if}
+        <button class="btn btn-test-orange" disabled={testing.gsm} onclick={() => testPort("gsm")}>
           {testing.gsm ? "Probando..." : "Test GSM"}
         </button>
-        {#if testResult.gsm}
-          <span class="test-ok">{testResult.gsm}</span>
-        {:else if testError.gsm}
-          <span class="test-fail">{testError.gsm}</span>
-        {/if}
       </div>
     </section>
-
-    <!-- Global Save Button for ports -->
-    <div class="save-global">
-      <button class="btn btn-primary" disabled={saving} onclick={saveConfig}>
-        {saving ? "Guardando..." : "Guardar Configuración"}
-      </button>
-      {#if saveMsg}
-        <span class="save-ok">{saveMsg}</span>
-      {:else if saveError}
-        <span class="save-fail">{saveError}</span>
-      {/if}
-    </div>
 
     <!-- Timeouts Section -->
     <section class="config-section">
       <h2>Timeouts</h2>
       <div class="timeout-row">
-        <div class="timeout-item">
-          <label>
-            Session Timeout (minutos)
-            <input
-              type="number"
-              bind:value={sessionTimeout}
-              min="1"
-            />
-          </label>
-          <button
-            class="btn btn-secondary"
-            disabled={savingSession}
-            onclick={saveSessionTimeout}
-          >
-            {savingSession ? "Guardando..." : "Guardar Session Timeout"}
-          </button>
-          {#if sessionMsg}
-            <span class="save-ok">{sessionMsg}</span>
-          {:else if sessionError}
-            <span class="save-fail">{sessionError}</span>
-          {/if}
-        </div>
-        <div class="timeout-item">
-          <label>
-            Scale Timeout (segundos)
-            <input
-              type="number"
-              bind:value={scaleTimeout}
-              min="1"
-              max="10"
-            />
-          </label>
-          <button
-            class="btn btn-secondary"
-            disabled={savingScale}
-            onclick={saveScaleTimeout}
-          >
-            {savingScale ? "Guardando..." : "Guardar Scale Timeout"}
-          </button>
-          {#if scaleMsg}
-            <span class="save-ok">{scaleMsg}</span>
-          {:else if scaleError}
-            <span class="save-fail">{scaleError}</span>
-          {/if}
-        </div>
+        <label>Session Timeout (minutos) <input type="number" bind:value={sessionTimeout} min="1" /></label>
+        <label>Scale Timeout (segundos) <input type="number" bind:value={scaleTimeout} min="1" max="10" /></label>
       </div>
     </section>
+
+    <!-- Single Save Button -->
+    <div class="save-global">
+      <button class="btn btn-primary" disabled={saving} onclick={saveConfig}>
+        {saving ? "Guardando..." : "Guardar Configuración"}
+      </button>
+      {#if saveMsg}<span class="save-ok">{saveMsg}</span>{/if}
+      {#if saveError}<span class="save-fail">{saveError}</span>{/if}
+    </div>
   {/if}
 </div>
 
 <style>
   .config-page {
-    max-width: 800px;
+    max-width: 1100px;
   }
 
-  h1 {
-    font-size: 24px;
-    margin-bottom: 24px;
-  }
-
-  h2 {
-    font-size: 17px;
-    margin: 0 0 16px;
-  }
-
-  .loading {
-    color: var(--text-secondary);
-    font-size: 15px;
-    padding: 24px 0;
-  }
-
-  .error-box {
-    color: var(--error);
-    font-size: 14px;
-    margin-bottom: 12px;
-  }
+  h1 { font-size: 24px; margin-bottom: 24px; }
+  h2 { font-size: 17px; margin: 0 0 16px; }
+  .loading { color: var(--text-secondary); font-size: 15px; padding: 24px 0; }
+  .error-box { color: var(--error); font-size: 14px; margin-bottom: 12px; }
 
   .config-section {
     background: var(--bg-secondary);
@@ -402,14 +203,15 @@
 
   .form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: 16px;
     margin-bottom: 16px;
   }
 
-  .form-grid-sm {
-    grid-template-columns: 1fr;
-    max-width: 300px;
+  .form-grid-gsm {
+    display: flex;
+    max-width: 250px;
+    margin-bottom: 16px;
   }
 
   label {
@@ -429,70 +231,38 @@
     font-size: 14px;
   }
 
-  input:focus, select:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
-  select {
-    cursor: pointer;
-  }
+  input:focus, select:focus { outline: none; border-color: var(--accent); }
+  select { cursor: pointer; }
 
   .test-row {
     display: flex;
     align-items: center;
     gap: 12px;
+    justify-content: flex-end;
     flex-wrap: wrap;
   }
 
-  .test-ok {
-    color: var(--success);
-    font-size: 14px;
-    font-weight: 500;
-  }
-
-  .test-fail {
-    color: var(--error);
-    font-size: 14px;
-    font-weight: 500;
-  }
+  .test-ok { color: var(--success); font-size: 14px; font-weight: 500; }
+  .test-fail { color: var(--error); font-size: 14px; font-weight: 500; }
 
   .save-global {
     display: flex;
     align-items: center;
     gap: 16px;
-    margin-bottom: 20px;
+    margin-top: 4px;
     flex-wrap: wrap;
   }
 
-  .save-ok {
-    color: var(--success);
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  .save-fail {
-    color: var(--error);
-    font-size: 13px;
-    font-weight: 500;
-  }
+  .save-ok { color: var(--success); font-size: 13px; font-weight: 500; }
+  .save-fail { color: var(--error); font-size: 13px; font-weight: 500; }
 
   .timeout-row {
     display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .timeout-item {
-    display: flex;
-    align-items: center;
-    gap: 16px;
+    gap: 32px;
     flex-wrap: wrap;
   }
 
-  .timeout-item label {
-    min-width: 200px;
-  }
+  .timeout-row label { min-width: 220px; }
 
   .btn {
     padding: 10px 20px;
@@ -505,37 +275,27 @@
     white-space: nowrap;
   }
 
-  .btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+
+  .btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
+  .btn-secondary:hover:not(:disabled) { background: var(--border); }
+
+  .btn-test-orange {
+    background: #e67e22;
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
   }
 
-  .btn-primary {
-    background: var(--accent);
-    color: white;
-  }
-
-  .btn-primary:hover:not(:disabled) {
-    background: var(--accent-hover);
-  }
-
-  .btn-secondary {
-    background: var(--bg-input);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-  }
-
-  .btn-secondary:hover:not(:disabled) {
-    background: var(--border);
-  }
-
-  .btn-test {
-    background: var(--bg-input);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-  }
-
-  .btn-test:hover:not(:disabled) {
-    border-color: var(--accent);
-  }
+  .btn-test-orange:hover:not(:disabled) { background: #d35400; }
+  .btn-test-orange:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>

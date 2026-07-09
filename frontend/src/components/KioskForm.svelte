@@ -331,7 +331,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
 
   <!-- Pesos -->
   <div class="form-section">
-    <h3>Pesos</h3>
+    <h3>Pesos (kg)</h3>
     <div class="weights-grid">
       <WeightField fieldName="Peso Muestra" bind:value={pesoMuestra} disabled={!isEmergencyMode} onReset={handleResetPesoMuestra} />
       <WeightField fieldName="Peso Mineral" bind:value={pesoMineral} disabled={!isEmergencyMode} onReset={handleResetPesoMineral} />
@@ -355,7 +355,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
       onclick={handleConfirm}
       disabled={!isFormValid() || isSubmitting}
     >
-      {isSubmitting ? "Registrando..." : "Confirmar Pesaje"}
+      {isSubmitting ? "Registrando..." : "Confirmar Medidas"}
     </button>
   </div>
 </div>
@@ -495,7 +495,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
   .form-actions {
     display: flex;
     gap: 16px;
-    justify-content: flex-end;
+    justify-content: center;
     margin-top: 8px;
   }
 
@@ -533,7 +533,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
     padding: 8px 20px;
     border: none;
     border-radius: 6px;
-    background: #cc0000;
+    background: #e67e22;
     color: #ffffff;
     font-size: 13px;
     font-weight: 700;
@@ -542,15 +542,15 @@ import EmergencyModal from "./EmergencyModal.svelte";
   }
 
   .btn-emergency:hover {
-    background: #990000;
+    background: #d35400;
   }
 
   .btn-clear-all {
     padding: 8px 20px;
-    border: 1px solid var(--border);
+    border: none;
     border-radius: 6px;
-    background: transparent;
-    color: var(--text-secondary);
+    background: #e74c3c;
+    color: #ffffff;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -558,7 +558,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
   }
 
   .btn-clear-all:hover:not(:disabled) {
-    background: var(--bg-input);
+    background: #c0392b;
   }
 
   .btn-clear-all:disabled {

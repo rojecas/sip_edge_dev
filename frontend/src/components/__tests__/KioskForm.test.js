@@ -89,7 +89,7 @@ describe("KioskForm — R3: Reset general relegado a accion secundaria", () => {
   it("no muestra boton de reset en el area de acciones primarias (.form-actions)", async () => {
     render(KioskForm);
     await waitFor(() => {
-      expect(screen.getByText("Confirmar Pesaje")).toBeInTheDocument();
+      expect(screen.getByText("Confirmar Medidas")).toBeInTheDocument();
     });
     const formActions = document.querySelector(".form-actions");
     expect(formActions).not.toBeNull();

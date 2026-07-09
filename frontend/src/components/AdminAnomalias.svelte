@@ -15,7 +15,7 @@
   let currentPage = $state(1);
   let totalPages = $state(1);
   let totalItems = $state(0);
-  let pageSize = $state(20);
+  let pageSize = $state(10);
 
   // ── Detect on demand state ─────────────────────────────────────
   let detectPanelOpen = $state(false);
@@ -241,7 +241,6 @@
       <table>
         <thead>
           <tr>
-            <th>ID</th>
             <th>Capa</th>
             <th>Z-Score</th>
             <th>Valor Métrica</th>
@@ -254,7 +253,6 @@
         <tbody>
           {#each anomalias as a}
             <tr>
-              <td>{a.id}</td>
               <td>{a.layer}</td>
               <td>{formatZScore(a.z_score)}</td>
               <td>{formatNumber(a.metric_value)}</td>

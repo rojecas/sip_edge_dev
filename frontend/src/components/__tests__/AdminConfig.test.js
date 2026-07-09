@@ -218,7 +218,7 @@ describe("AdminConfig", () => {
     it("envia PUT /api/setup/session al guardar", async () => {
       api.put.mockResolvedValue({});
       await setupTimeouts();
-      screen.getByRole("button", { name: "Guardar Session Timeout" }).click();
+      screen.getByRole("button", { name: "Guardar Configuración" }).click();
       expect(api.put).toHaveBeenCalledWith("/api/setup/session", {
         session_timeout_minutes: 30,
       });
@@ -227,9 +227,9 @@ describe("AdminConfig", () => {
     it("muestra mensaje de exito", async () => {
       api.put.mockResolvedValue({});
       await setupTimeouts();
-      screen.getByRole("button", { name: "Guardar Session Timeout" }).click();
+      screen.getByRole("button", { name: "Guardar Configuración" }).click();
       await waitFor(() => {
-        expect(screen.getByText(/Session timeout guardado/i)).toBeInTheDocument();
+        expect(screen.getByText(/Configuración guardada/i)).toBeInTheDocument();
       });
     });
   });
@@ -245,7 +245,7 @@ describe("AdminConfig", () => {
     it("envia PUT /api/setup/scale al guardar", async () => {
       api.put.mockResolvedValue({});
       await setupTimeouts();
-      screen.getByRole("button", { name: "Guardar Scale Timeout" }).click();
+      screen.getByRole("button", { name: "Guardar Configuración" }).click();
       expect(api.put).toHaveBeenCalledWith("/api/setup/scale", {
         timeout_seconds: 5,
       });
@@ -254,9 +254,9 @@ describe("AdminConfig", () => {
     it("muestra mensaje de exito", async () => {
       api.put.mockResolvedValue({});
       await setupTimeouts();
-      screen.getByRole("button", { name: "Guardar Scale Timeout" }).click();
+      screen.getByRole("button", { name: "Guardar Configuración" }).click();
       await waitFor(() => {
-        expect(screen.getByText(/Scale timeout guardado/i)).toBeInTheDocument();
+        expect(screen.getByText(/Configuración guardada/i)).toBeInTheDocument();
       });
     });
   });

@@ -157,7 +157,6 @@
       <table>
         <thead>
           <tr>
-            <th>ID</th>
             <th>Nombre</th>
             <th>Schedule</th>
             <th>Métricas</th>
@@ -168,7 +167,6 @@
         <tbody>
           {#each plantillas as p}
             <tr>
-              <td>{p.id}</td>
               <td class="col-name">{p.name || "—"}</td>
               <td class="col-schedule">{formatSchedule(p.schedule)}</td>
               <td class="col-metrics">{formatMetrics(p.metrics)}</td>

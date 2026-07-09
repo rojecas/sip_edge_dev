@@ -1,7 +1,7 @@
-<script>
+﻿<script>
   /**
    * ScaleReader — Live weight indicator from WebSocket.
-   * Shows weight, stability indicator, and connection status.
+   * Shows weight and connection status via border color.
    */
   import { onMount, onDestroy } from "svelte";
   import { scaleStore, connect, disconnect } from "../lib/ws.js";
@@ -28,16 +28,6 @@
     <span class="weight-value">{formatWeight($scaleStore.net_weight)}</span>
     <span class="weight-unit">{$scaleStore.unit}</span>
   </div>
-
-  <div class="status-row">
-    {#if !$scaleStore.connected}
-      <span class="status disconnected">Báscula desconectada</span>
-    {:else if $scaleStore.is_stable}
-      <span class="status stable">Estable</span>
-    {:else}
-      <span class="status unstable">Inestable</span>
-    {/if}
-  </div>
 </div>
 
 <style>
@@ -60,7 +50,6 @@
     align-items: baseline;
     justify-content: center;
     gap: 8px;
-    margin-bottom: 8px;
   }
 
   .weight-value {
@@ -75,31 +64,5 @@
     font-size: 20px;
     color: var(--text-secondary);
     font-weight: 400;
-  }
-
-  .status-row {
-    font-size: 14px;
-  }
-
-  .status {
-    display: inline-block;
-    padding: 4px 14px;
-    border-radius: 12px;
-    font-weight: 600;
-  }
-
-  .status.stable {
-    background: rgba(81, 207, 102, 0.15);
-    color: var(--success);
-  }
-
-  .status.unstable {
-    background: rgba(255, 212, 59, 0.15);
-    color: var(--warning);
-  }
-
-  .status.disconnected {
-    background: rgba(255, 107, 107, 0.15);
-    color: var(--error);
   }
 </style>

@@ -153,7 +153,6 @@
       <table>
         <thead>
           <tr>
-            <th>ID</th>
             <th>Archivo</th>
             <th>Tamaño</th>
             <th>Checksum Local</th>
@@ -166,7 +165,6 @@
         <tbody>
           {#each backups as b}
             <tr>
-              <td>{b.id}</td>
               <td class="col-file" title={b.filename || ""}>{b.filename || "—"}</td>
               <td>{formatBytes(b.file_size)}</td>
               <td class="col-checksum" title={b.local_checksum || ""}>{b.local_checksum || "—"}</td>

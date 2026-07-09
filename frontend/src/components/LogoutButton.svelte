@@ -1,7 +1,6 @@
-<script>
+﻿<script>
   /**
-   * LogoutButton — Always visible in top-right corner.
-   * Shows ConfirmModal before logging out.
+   * LogoutButton — Shows ConfirmModal before logging out.
    */
   import { authStore } from "../stores/auth.js";
   import { navigate } from "../lib/router.js";
@@ -25,7 +24,7 @@
 </script>
 
 <button class="logout-btn" onclick={handleLogout} title="Cerrar sesión">
-  Cerrar sesión
+  <span class="logout-icon">🚪</span> Cerrar sesión
 </button>
 
 {#if showConfirm}
@@ -46,6 +45,9 @@
     top: 16px;
     right: 16px;
     z-index: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     padding: 10px 20px;
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -54,6 +56,11 @@
     font-size: 14px;
     cursor: pointer;
     transition: background 0.2s, border-color 0.2s;
+  }
+
+  .logout-icon {
+    font-size: 16px;
+    line-height: 1;
   }
 
   .logout-btn:hover {

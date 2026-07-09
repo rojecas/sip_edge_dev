@@ -121,10 +121,10 @@
 
   .btn-tara {
     padding: 10px 18px;
-    border: 1px solid var(--border);
+    border: none;
     border-radius: 8px;
-    background: var(--bg-secondary);
-    color: var(--warning);
+    background: #3b82f6;
+    color: #ffffff;
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
@@ -132,15 +132,13 @@
     white-space: nowrap;
   }
 
-  .btn-tara:hover {
-    background: var(--bg-input);
-  }
+  .btn-tara:hover { background: #2563eb; }
 
   .btn-leer {
     padding: 10px 18px;
     border: none;
     border-radius: 8px;
-    background: var(--accent);
+    background: #22c55e;
     color: white;
     font-size: 14px;
     font-weight: 700;
@@ -150,7 +148,7 @@
   }
 
   .btn-leer:hover:not(:disabled) {
-    background: var(--accent-hover);
+    background: #16a34a;
   }
 
   .btn-leer:disabled {
@@ -160,18 +158,16 @@
 
   .btn-reset-peso {
     padding: 10px 14px;
-    border: 1px solid var(--error);
+    border: none;
     border-radius: 8px;
-    background: transparent;
-    color: var(--error);
+    background: #ef4444;
+    color: #ffffff;
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s;
     white-space: nowrap;
   }
 
-  .btn-reset-peso:hover {
-    background: rgba(255, 107, 107, 0.1);
-  }
+  .btn-reset-peso:hover { background: #dc2626; }
 </style>

@@ -306,7 +306,7 @@
     border-radius: 12px;
     padding: 28px;
     width: 100%;
-    max-width: 560px;
+    max-width: 750px;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
@@ -387,15 +387,15 @@
 
   .checkbox-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 4px 8px;
     margin-top: 8px;
   }
 
   .checkbox-list {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px 12px;
     margin-top: 8px;
   }
 

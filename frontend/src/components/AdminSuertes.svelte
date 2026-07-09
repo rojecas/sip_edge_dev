@@ -41,7 +41,7 @@
   let currentPage = $state(1);
   let totalPages = $state(1);
   let totalItems = $state(0);
-  let pageSize = $state(20);
+  let pageSize = $state(10);
 
   // Load haciendas for dropdown on mount
   onMount(() => { loadHaciendas(); });
@@ -247,8 +247,6 @@ function showResult(msg, isError = false) {
       <table>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Hacienda ID</th>
             <th>Código Suerte</th>
             <th>Creado</th>
             <th>Actualizado</th>
@@ -258,14 +256,12 @@ function showResult(msg, isError = false) {
         <tbody>
           {#each suertes as s}
             <tr>
-              <td>{s.id}</td>
-              <td>{s.hacienda_id}</td>
               <td>{s.codigo_suerte || "—"}</td>
               <td>{formatDate(s.created_at)}</td>
               <td>{formatDate(s.updated_at)}</td>
               <td class="actions-cell">
-                <button class="btn-sm btn-edit" onclick={() => openEdit(s)}>Editar</button>
-                <button class="btn-sm btn-delete" onclick={() => openDelete(s)}>Eliminar</button>
+                <button class="btn-action" onclick={() => openEdit(s)} title="Editar">✏️</button>
+                <button class="btn-action" onclick={() => openDelete(s)} title="Eliminar">🗑️</button>
               </td>
             </tr>
           {/each}
@@ -346,9 +342,6 @@ function showResult(msg, isError = false) {
   .btn-primary:hover { background: var(--accent-hover); }
   .btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
   .btn-secondary:hover { background: var(--border); }
-  .btn-sm { padding: 5px 12px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-  .btn-edit { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
-  .btn-edit:hover { background: var(--border); }
-  .btn-delete { background: transparent; color: var(--error); border: 1px solid var(--error); }
-  .btn-delete:hover { background: rgba(255, 107, 107, 0.1); }
+  .btn-action { background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px 6px; border-radius: 4px; transition: background 0.2s; }
+  .btn-action:hover { background: var(--bg-input); }
 </style>

@@ -12,7 +12,7 @@
   let items = $state([]);
   let total = $state(0);
   let page = $state(1);
-  let pageSize = $state("20");
+  let pageSize = $state("10");
   let totalPages = $state(1);
 
   // Filters

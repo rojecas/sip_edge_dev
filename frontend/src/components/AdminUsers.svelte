@@ -16,7 +16,7 @@
   let currentPage = $state(1);
   let totalPages = $state(1);
   let totalItems = $state(0);
-  let pageSize = $state(20);
+  let pageSize = $state(10);
 
   // Success/result message
   let resultMsg = $state("");
@@ -198,7 +198,6 @@
       <table>
         <thead>
           <tr>
-            <th>ID</th>
             <th>Usuario</th>
             <th>Nombre Completo</th>
             <th>Código Empresa</th>
@@ -212,7 +211,6 @@
         <tbody>
           {#each users as u}
             <tr>
-              <td>{u.id}</td>
               <td>{u.username || "—"}</td>
               <td>{u.full_name || "—"}</td>
               <td>{u.employee_code || "—"}</td>
@@ -221,8 +219,8 @@
               <td>{u.is_active ? "Sí" : "No"}</td>
               <td>{formatDate(u.updated_at)}</td>
               <td class="actions-cell">
-                <button class="btn-sm btn-edit" onclick={() => openEdit(u)}>Editar</button>
-                <button class="btn-sm btn-delete" onclick={() => openDeactivate(u)}>Desactivar</button>
+                <button class="btn-action" onclick={() => openEdit(u)} title="Editar">✏️</button>
+                <button class="btn-action" onclick={() => openDeactivate(u)} title="Desactivar">🗑️</button>
               </td>
             </tr>
           {/each}
@@ -407,35 +405,11 @@
     background: var(--border);
   }
 
-  .btn-sm {
-    padding: 5px 12px;
-    border: none;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.2s;
+  .btn-action {
+    background: none; border: none; cursor: pointer; font-size: 16px;
+    padding: 4px 6px; border-radius: 4px; transition: background 0.2s;
   }
-
-  .btn-edit {
-    background: var(--bg-input);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-  }
-
-  .btn-edit:hover {
-    background: var(--border);
-  }
-
-  .btn-delete {
-    background: transparent;
-    color: var(--error);
-    border: 1px solid var(--error);
-  }
-
-  .btn-delete:hover {
-    background: rgba(255, 107, 107, 0.1);
-  }
+  .btn-action:hover { background: var(--bg-input); }
 
   .pagination {
     display: flex;

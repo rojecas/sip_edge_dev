@@ -20,7 +20,7 @@ def init_db(database_url: str = None) -> None:
         user = os.environ["DB_USER"]
         password = os.environ["DB_PASSWORD"]
         name = os.environ["DB_NAME"]
-        database_url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{name}"
+        database_url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{name}?charset=utf8mb4"
     logger.info("Initializing database connection")
     engine = create_engine(database_url)
     SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
