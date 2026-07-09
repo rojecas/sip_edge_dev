@@ -22,8 +22,8 @@
   }
 
   function handleLeer() {
-    if (scaleStore.connected) {
-      value = scaleStore.net_weight;
+    if ($scaleStore.connected) {
+      value = $scaleStore.net_weight;
       onLeer?.();
     }
   }
@@ -57,7 +57,7 @@
       type="button"
       class="btn-leer"
       onclick={handleLeer}
-      disabled={!scaleStore.connected}
+      disabled={!$scaleStore.connected}
       title="Leer peso de la báscula"
     >Leer</button>
     {#if onReset}
