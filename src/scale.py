@@ -267,6 +267,7 @@ class ScaleService:
         self._process_async_queue()
 
     def _process_async_queue(self) -> None:
+        logger.info("[TRACE-C] _process_async_queue called! queue_size=%d", self._async_queue.qsize())
         while not self._async_queue.empty():
             try:
                 data = self._async_queue.get_nowait()
