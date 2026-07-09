@@ -227,8 +227,15 @@ class ScaleService:
 
         while self._running:
             try:
-                if not self._command_active and self._serial is not None and self._serial.is_open:
-                    line = self._serial.readline()
+                if self._serial is not None and self._serial.is_open:
+                    # Acquire lock to avoid racing with send_command
+                    if self._lock.acquire(blocking=False):
+                        try:
+                            line = self._serial.readline()
+                        finally:
+                            self._lock.release()
+                    else:
+                        line = ""
                     if line:
                         decoded = line.decode("ascii", errors="replace").strip()
                         if decoded:
