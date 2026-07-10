@@ -85,7 +85,7 @@ y aplica el caso correspondiente.
 3. Cuando termine -> lanza **1 `reviewer`** que verifica trazabilidad tests <-> requirements
    y que `tasks.md` queda completo.
 4. Cuando el reviewer apruebe -> cambia el status a `testing`. **PARAS.**
-   Pregunta al humano: "Implementacion lista. **autorizo cierre**?"
+   Anuncia: "Feature en `testing` — avisame cuando termines las pruebas."
 5. Cuando el humano autorice el cierre -> lanza **1 subagente `release-manager (register)`**
    pasandole `id` y `name`.
 
@@ -112,7 +112,7 @@ Sesion interrumpida. Pregunta al humano si reanudas al implementer o abortas.
 3. Cuando el `bug-fixer` reporta `done`:
    a. Lanza **1 `reviewer`** con instrucciones de revision de bug (verificar `reproduction` cubierto por test, no exigir trazabilidad R<n>).
    b. Si el reviewer aprueba -> cambia el status a `testing`. **PARAS.**
-      Pregunta al humano: "Bug listo. **autorizo cierre**?"
+      Anuncia: "Bug en `testing` — avisame cuando termines las pruebas."
    c. Si el reviewer rechaza -> reabre con `triaged` para que el bug-fixer corrija.
 4. Cuando el humano autorice el cierre (desde `testing`):
    a. Lanza **1 subagente `release-manager (register)`** pasandole `id` y `name`.
@@ -130,7 +130,7 @@ Sesion interrumpida. Pregunta al humano si reanudar al `bug-fixer` o abortar.
    en `feature_list.json`, crea `harness/progress/plan-<name>.md` antes de tocar codigo".
 3. Cuando termine -> lanza **1 `reviewer`**.
 4. Cuando el reviewer apruebe -> cambia el status a `testing`. **PARAS.**
-   Pregunta al humano: "Implementacion lista. **autorizo cierre**?"
+   Anuncia: "Feature en `testing` — avisame cuando termines las pruebas."
 5. Cuando el humano autorice el cierre -> lanza **1 subagente `release-manager (register)`**
    pasandole `id` y `name`.
 

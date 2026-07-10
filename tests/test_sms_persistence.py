@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from src.models import Base, SmsConversation, SmsMessage
+from src.models import Base, SmsConversation, SmsMessage, User
 from src.sms_persistence import SmsPersistenceError, SmsPersistenceService
 
 
@@ -318,6 +318,52 @@ class TestSmsPersistence(unittest.TestCase):
         self.assertIsNotNone(retrieved)
         self.assertEqual(retrieved.id, msg.id)
         self.assertEqual(retrieved.body, "Hello")
+
+
+    # ==================================================================
+    # get_user_role_by_phone (Bug #31 regression)
+    # ==================================================================
+
+    def _create_test_user(self, username, role, phone):
+        """Helper: crea un usuario de prueba directamente en la BD."""
+        db = self.Session()
+        try:
+            user = User(
+                username=username,
+                password_hash="test_hash",
+                full_name="Test User",
+                role=role,
+                phone=phone,
+                is_active=True,
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            return user
+        finally:
+            db.close()
+
+    def test_get_user_role_by_phone_returns_role(self):
+        """get_user_role_by_phone retorna el rol cuando el telefono existe."""
+        self._create_test_user("admin_test", "admin", "+573001234567")
+        self._create_test_user("op_test", "operator", "+573007654321")
+
+        self.assertEqual(
+            self.svc.get_user_role_by_phone("+573001234567"), "admin",
+        )
+        self.assertEqual(
+            self.svc.get_user_role_by_phone("+573007654321"), "operator",
+        )
+
+    def test_get_user_role_by_phone_returns_none_for_unknown(self):
+        """get_user_role_by_phone retorna None si el telefono no esta registrado."""
+        result = self.svc.get_user_role_by_phone("+573009999999")
+        self.assertIsNone(result)
+
+    def test_get_user_role_by_phone_returns_none_when_no_users(self):
+        """get_user_role_by_phone retorna None cuando la tabla users esta vacia."""
+        result = self.svc.get_user_role_by_phone("+573001111111")
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

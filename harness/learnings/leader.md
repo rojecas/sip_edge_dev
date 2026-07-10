@@ -6,3 +6,8 @@
 - Despues de spec-validator, el estado es `spec-reviewed`, NO `approved`.
 - El humano sigue siendo la puerta entre `spec-reviewed` e `in_progress`.
 - Siempre preservar respaldo de archivos originales (`.old.md`) antes de sobreescribir.
+
+## Sesion 2026-07-09 - Correccion de fase testing
+- JAMAS preguntar autorizo cierre al entrar en testing
+- testing significa: el humano prueba. Solo anuncias Feature/Bug en testing - avisame cuando termines las pruebas
+- El humano dira autorizo cierre cuando este listo

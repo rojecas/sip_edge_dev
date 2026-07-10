@@ -665,7 +665,7 @@
             "name": "watchdog_sd_notify",
             "title": "Watchdog mata el proceso cada 30s - sd_notify existe pero nunca se llama",
             "type": "bug",
-            "status": "untriaged",
+            "status": "done",
             "description": "El servicio sip-edge tiene WatchdogSec=30 en systemd, pero nadie llama a sd_notify.notify() en main.py. El watchdog nunca recibe WATCHDOG=1 y mata el proceso con SIGABRT cada ~30s, causando ERR_CONNECTION_REFUSED a los clientes.",
             "reproduction": [
                 "1. Dejar el servicio corriendo por mas de 30 segundos",
@@ -681,6 +681,31 @@
             "files_to_modify": [
                 "src/main.py: agregar tarea asincrona que llame sd_notify.notify() cada 15s",
                 "src/sd_notify.py: sin cambios (ya implementado correctamente)"
+            ]
+        },
+        {
+            "id": 31,
+            "name": "sms_dispatcher_v2_crashes",
+            "title": "Dispatcher v2 crashea en get_user_role_by_phone - SMS entrantes no se procesan",
+            "type": "bug",
+            "status": "testing",
+            "description": "El metodo get_user_role_by_phone() es llamado en sms_dispatcher_v2.py:299 pero nunca fue implementado en SmsPersistenceService. Causa AttributeError que aborta _dispatch() despues de persistir el SMS pero antes de delegar a handlers.",
+            "reproduction": [
+                "1. Enviar SMS de comando desde telefono admin",
+                "2. SMS aparece en sms_messages con status=received y handler=NULL",
+                "3. Conversacion queda sin procesar",
+                "4. Logs muestran AttributeError",
+                "5. Comando nunca se ejecuta"
+            ],
+            "affected_feature_ids": [
+                7,
+                9,
+                12,
+                27
+            ],
+            "files_to_modify": [
+                "src/sms_persistence.py: agregar get_user_role_by_phone()",
+                "tests/test_sms_persistence.py: agregar test"
             ]
         }
     ]

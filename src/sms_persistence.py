@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from src.models import SmsConversation, SmsMessage
+from src.models import SmsConversation, SmsMessage, User
 
 logger = logging.getLogger(__name__)
 
@@ -320,5 +320,37 @@ class SmsPersistenceService:
                 .filter(SmsMessage.id == message_id)
                 .first()
             )
+        finally:
+            db.close()
+
+    # ------------------------------------------------------------------
+    # Usuarios (whitelist SMS)
+    # ------------------------------------------------------------------
+
+    def get_user_role_by_phone(self, phone: str) -> str | None:
+        """Busca el rol de un usuario por su numero de telefono.
+
+        Normaliza el numero antes de buscar: elimina prefijo +,
+        espacios, y prueba con/sin codigo de pais (57 para Colombia).
+
+        Args:
+            phone: Numero de telefono del remitente (formato mmcli).
+
+        Returns:
+            El rol del usuario (str) o None si no se encuentra.
+        """
+        db: Session = self._db_session_factory()
+        try:
+            clean = phone.strip().lstrip("+").replace(" ", "")
+            variants = [clean]
+            if clean.startswith("57") and len(clean) > 2:
+                variants.append(clean[2:])
+            elif len(clean) == 10:
+                variants.append("57" + clean)
+            for v in variants:
+                user = db.query(User).filter(User.phone == v).first()
+                if user is not None:
+                    return user.role
+            return None
         finally:
             db.close()
