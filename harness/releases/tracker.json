@@ -2,6 +2,13 @@
   "project_version": "1.3.1",
   "pending": [
     {
+      "id": 13,
+      "type": "feature",
+      "name": "frontend_login_kiosk",
+      "title": "Frontend - Login, Kiosco de Pesaje y Logout",
+      "completed_at": "2026-07-09"
+    },
+    {
       "id": 29,
       "type": "bug",
       "name": "scale_service_async_crashes",

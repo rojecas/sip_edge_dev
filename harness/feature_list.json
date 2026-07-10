@@ -1,4 +1,4 @@
-﻿{
+{
     "project": "sip_edge",
     "description": "Sistema Inteligente de Pesaje y Control de Materia ExtraÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a (SIP-Edge)",
     "rules": {
@@ -280,7 +280,7 @@
                 "RF-F13-09: Modal solicitud emergencia lista supervisores y envÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­a POST /api/emergency/request",
                 "RF-F13-10: Flujo 'OlvidÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³ su contraseÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â±a' con PIN de 4 dÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­gitos"
             ],
-            "status": "testing",
+            "status": "done",
             "depends_on": [
                 2,
                 5,
@@ -659,6 +659,29 @@
                 "src/scale.py: start() - verificar log faltante"
             ],
             "github_issue": "https://github.com/rojecas/sip_edge/issues/23"
+        },
+        {
+            "id": 30,
+            "name": "watchdog_sd_notify",
+            "title": "Watchdog mata el proceso cada 30s - sd_notify existe pero nunca se llama",
+            "type": "bug",
+            "status": "untriaged",
+            "description": "El servicio sip-edge tiene WatchdogSec=30 en systemd, pero nadie llama a sd_notify.notify() en main.py. El watchdog nunca recibe WATCHDOG=1 y mata el proceso con SIGABRT cada ~30s, causando ERR_CONNECTION_REFUSED a los clientes.",
+            "reproduction": [
+                "1. Dejar el servicio corriendo por mas de 30 segundos",
+                "2. Observar en journalctl: code=killed, status=6/ABRT",
+                "3. Los clientes ven ERR_CONNECTION_REFUSED durante el reinicio",
+                "4. El ciclo se repite cada ~35s (30s watchdog + 5s RestartSec)"
+            ],
+            "affected_feature_ids": [
+                5,
+                6,
+                13
+            ],
+            "files_to_modify": [
+                "src/main.py: agregar tarea asincrona que llame sd_notify.notify() cada 15s",
+                "src/sd_notify.py: sin cambios (ya implementado correctamente)"
+            ]
         }
     ]
 }
