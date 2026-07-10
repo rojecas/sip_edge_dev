@@ -7,6 +7,10 @@
   import { scaleStore, connect, disconnect } from "../lib/ws.js";
   import { authStore } from "../stores/auth.js";
 
+  let { pesoMuestra = 0, pesoMineral = 0, pesoVegetal = 0 } = $props();
+
+  let netoCana = $derived(Number(pesoMuestra) - Number(pesoMineral) - Number(pesoVegetal));
+
   onMount(() => {
     if (authStore.token) {
       connect(authStore.token);
@@ -64,5 +68,26 @@
     font-size: 20px;
     color: var(--text-secondary);
     font-weight: 400;
+  }
+
+  .neto-display {
+    margin-top: 4px;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .neto-label {
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .neto-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+    font-family: "Courier New", monospace;
   }
 </style>

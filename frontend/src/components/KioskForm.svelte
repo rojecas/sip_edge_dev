@@ -266,7 +266,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
 </script>
 
 <div class="kiosk-form">
-  <ScaleReader />
+  <ScaleReader pesoMuestra={pesoMuestra} pesoMineral={pesoMineral} pesoVegetal={pesoVegetal} />
 
   <div class="form-grid">
     <!-- Columna izquierda: datos del vehículo -->
