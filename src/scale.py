@@ -228,12 +228,13 @@ class ScaleService:
         while self._running:
             try:
                 if self._serial is not None and self._serial.is_open:
-                    # Acquire lock to avoid racing with send_command
-                    if self._lock.acquire(blocking=False):
+                    if not self._command_active:
+                        saved_timeout = self._serial.timeout
                         try:
+                            self._serial.timeout = 0.2
                             line = self._serial.readline()
                         finally:
-                            self._lock.release()
+                            self._serial.timeout = saved_timeout
                     else:
                         line = ""
                     if line:
