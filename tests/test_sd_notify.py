@@ -98,3 +98,42 @@ class TestSdNotify(unittest.TestCase):
         """Verifica que main.py pueda importar sd_notify correctamente."""
         from src.sd_notify import notify
         self.assertIsNotNone(notify)
+
+    def test_watchdog_heartbeat_interval_is_15_seconds(self):
+        """Verifica que el heartbeat usa 15s (mitad de WatchdogSec=30),
+        no 25s, y que envia la primera notificacion inmediatamente."""
+        import os
+        main_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "src", "main.py",
+        )
+        with open(main_path, "r", encoding="utf-8") as f:
+            source = f.read()
+
+        # 1. La funcion _watchdog_heartbeat existe
+        self.assertIn("def _watchdog_heartbeat():", source)
+
+        # 2. El intervalo es 15s, NO 25s
+        self.assertIn("asyncio.sleep(15)", source)
+        self.assertNotIn("asyncio.sleep(25)", source)
+
+        # 3. La primera notificacion es INMEDIATA (sd_notify antes del primer sleep)
+        #    Extraemos la funcion y verificamos que sd_notify() aparece antes
+        #    del primer asyncio.sleep dentro de ella.
+        func_start = source.index("def _watchdog_heartbeat():")
+        # Encontrar el siguiente 'yield' o fin de lifespan como limite
+        try:
+            func_end = source.index("\n    yield", func_start)
+        except ValueError:
+            func_end = len(source)
+        func_body = source[func_start:func_end]
+
+        # Dentro del cuerpo de la funcion: sd_notify() debe aparecer
+        # antes del primer asyncio.sleep(15)
+        first_notify = func_body.index("sd_notify()")
+        first_sleep = func_body.index("asyncio.sleep(15)")
+        self.assertLess(
+            first_notify, first_sleep,
+            "sd_notify() debe aparecer ANTES del primer asyncio.sleep(15) "
+            "(primera notificacion inmediata)",
+        )

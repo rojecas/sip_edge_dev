@@ -177,6 +177,25 @@ async def lifespan(app: FastAPI):
     global _event_loop
     _event_loop = asyncio.get_running_loop()
 
+    # --- Watchdog heartbeat para systemd sd_notify ---
+    # Debe crearse TEMPRANO: systemd comienza a contar WatchdogSec
+    # desde que el proceso arranca, no desde el primer WATCHDOG=1.
+    async def _watchdog_heartbeat():
+        """Envia WATCHDOG=1 cada 15s para evitar que systemd mate el proceso."""
+        # Primera notificacion inmediata — el watchdog ya esta corriendo.
+        sd_notify()
+        while True:
+            try:
+                await asyncio.sleep(15)
+                sd_notify()
+            except asyncio.CancelledError:
+                break
+            except Exception:
+                logger.exception("Watchdog heartbeat error")
+
+    watchdog_task = asyncio.create_task(_watchdog_heartbeat())
+    # -------------------------------------------------
+
     dev_mode = os.environ.get("DEV_MODE", "false").lower() in ("true", "1", "yes")
     app.state.scale_service = ScaleService(
         app.state.scale_config, app.state.config.rs485, dev_mode=dev_mode
@@ -332,21 +351,6 @@ async def lifespan(app: FastAPI):
     )
     # Iniciar dispatcher v2 de SMS entrantes (el v1 NO se inicia)
     await app.state.sms_dispatcher.start()
-
-    # --- Watchdog heartbeat para systemd sd_notify ---
-    async def _watchdog_heartbeat():
-        """Envia WATCHDOG=1 cada 25s para evitar que systemd mate el proceso."""
-        while True:
-            try:
-                await asyncio.sleep(25)
-                sd_notify()
-            except asyncio.CancelledError:
-                break
-            except Exception:
-                logger.exception("Watchdog heartbeat error")
-
-    watchdog_task = asyncio.create_task(_watchdog_heartbeat())
-    # -------------------------------------------------
 
     yield
 

@@ -688,7 +688,7 @@
             "name": "sms_dispatcher_v2_crashes",
             "title": "Dispatcher v2 crashea en get_user_role_by_phone - SMS entrantes no se procesan",
             "type": "bug",
-            "status": "testing",
+            "status": "done",
             "description": "El metodo get_user_role_by_phone() es llamado en sms_dispatcher_v2.py:299 pero nunca fue implementado en SmsPersistenceService. Causa AttributeError que aborta _dispatch() despues de persistir el SMS pero antes de delegar a handlers.",
             "reproduction": [
                 "1. Enviar SMS de comando desde telefono admin",
