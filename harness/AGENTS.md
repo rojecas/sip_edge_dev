@@ -62,6 +62,7 @@
    - implementer.md para el implementer
    - reviewer.md para el reviewer
    - spec-author.md para el spec-author
+- spec-validator.md para el spec-validator (subagente general)
 
 ## 2. Flujo de trabajo: Como descomponer tareas
 

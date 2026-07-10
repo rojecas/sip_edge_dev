@@ -1,3 +1,11 @@
+# === UTF-8 encoding guard (added 2026-07-09) ===
+# Mitiga corrupcion de caracteres en Windows: fuerza ACP 65001 (UTF-8)
+# y configura el console output encoding. Requiere reboot tras el cambio de registry.
+try { chcp 65001 2>&1 | Out-Null } catch { }
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::InputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 <#
 .SYNOPSIS
   init.ps1 -- Verificacion e inicializacion del entorno de sip_edge

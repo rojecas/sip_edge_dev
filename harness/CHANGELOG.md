@@ -1,4 +1,47 @@
-﻿## [1.18.0] — 2026-07-02
+## [1.19.0] — 2026-07-09
+
+### Added
+- harness/init.ps1 — UTF-8 encoding guard al inicio del script. Fuerza
+  chcp 65001 y configura [Console]::OutputEncoding a UTF-8 para mitigar
+  corrupcion de caracteres (mojibake) en entornos Windows donde el shell
+  opera con CP-1252. Idem en harness/scripts/close.ps1.
+- harness/docs/specs.md — Nuevo estado spec-reviewed en la tabla de
+  estados y en el pipeline SDD. El spec-validator (subagente general)
+  valida el spec contra el ERS antes de la aprobacion humana.
+- harness/docs/specs.md — Documentacion del spec-validator con dos
+  variantes: Variante A (spec nuevo: revisa R<n> contra RF del ERS,
+  cierra gaps, confirma cobertura semantica) y Variante B (auditor +
+  corrector: corrige archivos, renombra originales a *.old.md para
+  features con gaps ERS vs SDD conocidos).
+
+### Changed
+- harness/docs/specs.md — Pipeline SDD actualizado:
+  spec_ready -> [spec-validator] -> spec-reviewed -> HUMANO aprueba -> in_progress.
+  Puerta 1 renombrada a Validacion del spec-validator y aprobacion humana.
+
+### Fixed
+- harness/docs/specs.md — Corrupcion masiva de encoding (UTF-8 interpretado
+  como CP-1252/Latin-1/FFFD). Corregidos 14 patrones de doble/triple
+  codificacion a nivel de bytes: acentos, flechas, em-dashes, box-drawing.
+  Archivo paso de ~12KB funcionales a 281 lineas limpias con todos los
+  caracteres Unicode correctos.
+- harness/learnings/ — Nuevos archivos de lecciones sembrados con contenido
+  inicial: implementer.md (encoding en Windows, escritura de JSON), reviewer.md
+  (trazabilidad, encoding en revision), spec-author.md (trazabilidad ERS->R<n>,
+  tamano de specs) y spec-validator.md (variantes A y B).
+- harness/.opencode/agents/leader.md — Nueva seccion "Ciclo de aprendizaje
+  post-cierre". El lider ahora DEBE destilar las lecciones de la seccion
+  `Lecciones / pitfalls` de cada closure en `harness/learnings/<rol>.md`
+  tras completar el registro del release-manager.
+- harness/AGENTS.md — Paso 9 ampliado: ahora incluye `spec-validator.md` en
+  la lista de archivos de lecciones a leer al iniciar.
+- harness/docs/sessions.md — Templates A2.1 y A2.2 actualizados con una nota
+  que recuerda al lider que DEBE destilar las lecciones del closure en
+  `harness/learnings/`.
+
+
+
+## [1.18.0] — 2026-07-02
 
 ### Added
 - harness/AGENTS.md — Nueva regla dura "Deploy + smoke test post-implementacion".

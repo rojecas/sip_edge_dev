@@ -25,7 +25,8 @@
 
 <div class="scale-reader" class:disconnected={!$scaleStore.connected}>
   <div class="weight-display">
-    <span class="weight-value">{formatWeight($scaleStore.net_weight)}</span>
+    <span class="weight-label">Cana neta</span>
+    <span class="weight-value">{netoCana.toFixed(3)}</span>
     <span class="weight-unit">{$scaleStore.unit}</span>
   </div>
 </div>

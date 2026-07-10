@@ -85,6 +85,10 @@ y como verificarlo**.
 
 ## Lecciones / pitfalls
 - <algo que salio mal o que se aprendio>
+
+> Tras el cierre, el lider DEBE destilar estas lecciones en
+> `harness/learnings/<rol>.md` segun el protocolo de aprendizaje
+> post-cierre definido en `harness/.opencode/agents/leader.md`.
 ```
 
 #### A2.2 â€” Cierre de bug
@@ -119,6 +123,10 @@ y como verificarlo**.
 
 ## Lecciones / pitfalls
 - <algo que salio mal o que se aprendio>
+
+> Tras el cierre, el lider DEBE destilar estas lecciones en
+> `harness/learnings/<rol>.md` segun el protocolo de aprendizaje
+> post-cierre definido en `harness/.opencode/agents/leader.md`.
 ```
 
 ### A3 â€” Registro de bloqueo (`harness/progress/blocked-<name>.md`)

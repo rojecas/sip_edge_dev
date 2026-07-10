@@ -1,3 +1,8 @@
+# === UTF-8 encoding guard (added 2026-07-09) ===
+try { chcp 65001 2>&1 | Out-Null } catch { }
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 <#
 .SYNOPSIS
   close.ps1 -- Cierre de sesion limpio para sip_edge

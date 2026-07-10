@@ -117,3 +117,21 @@ Cuando lances subagentes, instruyeles para que **escriban sus resultados en arch
 - ❌ Aceptar resultados de subagentes que vengan en chat sin referencia a archivo.
 - ❌ Lanzar `spec-author` para un bug. Los bugs van por `bug-fixer`.
 - ❌ Lanzar `bug-fixer` para una feature con `sdd: true`.
+
+## Ciclo de aprendizaje post-cierre
+
+Cuando el `release-manager (register)` haya terminado (Casos B, F o H), si el
+item tiene un archivo de cierre (`harness/progress/closure-<name>.md`):
+
+1. Lee la seccion `## Lecciones / pitfalls` del closure.
+2. Si la seccion tiene contenido sustantivo (no placeholder), destila cada
+   leccion en `harness/learnings/<rol>.md`:
+   - Lecciones de implementacion -> `implementer.md`
+   - Lecciones de revision -> `reviewer.md`
+   - Lecciones de diseno de spec -> `spec-author.md`
+   - Lecciones de validacion ERS -> `spec-validator.md`
+   - Lecciones generales (aplican a todos los roles) -> `common.md`
+3. Cada leccion se agrega como una nueva seccion `## <titulo descriptivo>`
+   con bullets.
+4. Si la leccion ya existe (mismo titulo), no duplicar.
+5. Mantener las lecciones ordenadas por fecha (mas recientes primero).
