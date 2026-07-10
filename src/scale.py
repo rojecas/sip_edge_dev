@@ -157,6 +157,7 @@ class ScaleService:
         else:
             cmd_str = f"00{base}\r\n"
         self._command_active = True
+        time.sleep(0.35)  # drain any in-flight async readline (timeout=0.2s)
         try:
             with self._lock:
                 if self._serial is None or not self._serial.is_open:
