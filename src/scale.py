@@ -100,6 +100,8 @@ class ScaleService:
         self._timeout = config.timeout_seconds
         self._dev_mode = dev_mode
         self._command_active = False
+        self._response_event = threading.Event()
+        self._response_data = None
 
     def update_timeout(self, timeout_seconds: int) -> None:
         self._timeout = timeout_seconds
@@ -156,8 +158,9 @@ class ScaleService:
             cmd_str = f"00{base}{value}\r\n"
         else:
             cmd_str = f"00{base}\r\n"
+        self._response_event.clear()
+        self._response_data = None
         self._command_active = True
-        time.sleep(0.35)  # drain any in-flight async readline (timeout=0.2s)
         try:
             with self._lock:
                 if self._serial is None or not self._serial.is_open:
@@ -168,22 +171,20 @@ class ScaleService:
                     self._serial.flush()
                 except (serial.SerialException, OSError) as e:
                     raise ScaleConnectionError(f"Write error: {e}") from e
-                try:
-                    response = self._serial.readline()
-                except serial.SerialTimeoutException as e:
-                    raise ScaleTimeoutError(
-                        f"No response within {self._timeout}s"
-                    ) from e
-                except Exception as e:
-                    raise ScaleConnectionError(
-                        f"Serial read error: {e}"
-                    ) from e
-            if not response:
-                raise ScaleTimeoutError(f"No response within {self._timeout}s")
-            decoded = response.decode("ascii", errors="replace").strip()
-            if decoded == "OK":
-                return {"result": "ok"}
-            return _parse_response(decoded)
+            if not self._response_event.wait(timeout=self._timeout):
+                raise ScaleTimeoutError(
+                    f"No response within {self._timeout}s"
+                )
+            data = self._response_data
+            if data is None:
+                raise ScaleTimeoutError(
+                    f"No response within {self._timeout}s"
+                )
+            if not isinstance(data, dict):
+                raise ScaleProtocolError(
+                    f"Unexpected response type: {type(data).__name__}"
+                )
+            return data
         finally:
             self._command_active = False
 
@@ -229,25 +230,26 @@ class ScaleService:
         while self._running:
             try:
                 if self._serial is not None and self._serial.is_open:
-                    if not self._command_active:
-                        saved_timeout = self._serial.timeout
-                        try:
-                            self._serial.timeout = 0.2
-                            line = self._serial.readline()
-                        finally:
-                            self._serial.timeout = saved_timeout
-                    else:
-                        line = ""
+                    line = self._serial.readline()
                     if line:
                         decoded = line.decode("ascii", errors="replace").strip()
                         if decoded:
-                            try:
-                                parsed = _parse_response(decoded)
-                                self._async_queue.put(parsed)
-                            except ScaleProtocolError:
-                                logger.warning(
-                                    "Ignoring unparseable async line: %s", decoded
-                                )
+                            if decoded == "OK":
+                                parsed = {"result": "ok"}
+                            else:
+                                try:
+                                    parsed = _parse_response(decoded)
+                                except ScaleProtocolError:
+                                    logger.warning(
+                                        "Ignoring unparseable async line: %s", decoded
+                                    )
+                                    parsed = None
+                            if parsed is not None:
+                                if self._command_active:
+                                    self._response_data = parsed
+                                    self._response_event.set()
+                                else:
+                                    self._async_queue.put(parsed)
                 # Drain queue inside the while loop so callbacks fire in
                 # real time (Bug 2a fix — was outside the loop before).
                 self._process_async_queue()
