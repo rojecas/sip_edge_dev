@@ -1,3 +1,14 @@
+## [1.19.1] — 2026-07-09
+
+### Fixed
+- harness/AGENTS.md — Casos B, F, H: eliminada pregunta prematura
+  "autorizo cierre?" al entrar en status `testing`. Reemplazada por
+  "avisame cuando termines las pruebas". El humano es quien decide
+  cuando autorizar el cierre, no el lider.
+- harness/learnings/leader.md — Nueva regla: JAMAS preguntar
+  "autorizo cierre" al entrar en `testing`. El lider solo anuncia
+  el cambio de estado y espera.
+
 ## [1.19.0] — 2026-07-09
 
 ### Added

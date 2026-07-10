@@ -1,44 +1,26 @@
-# Sesion cerrada - 2026-07-09 - Feature 13 completada
+# Sesion cerrada - 2026-07-09 - Bugs #30 y #31 resueltos
 
 ## Resumen
-Sesion dedicada a completar Feature 13 (frontend_login_kiosk):
-1. Fase 9: implementacion T36-T43 (scale_api endpoint, REXT/TARE via API, auto-capture PRINT)
-2. Correccion de regresion KioskForm ($derived emergencyStore)
-3. Refactor scale.py a arquitectura single-reader (4 iteraciones)
-4. ScaleReader: indicador de peso neto de cana
-5. Documentacion de learnings en AGENTS.md y common.md
-6. Cierre formal de F13 y Bug #29
+Sesion dedicada a preparacion para despliegue:
+1. Bug #30 (watchdog_sd_notify): fix + deploy + pruebas con balanza virtual
+2. Bug #31 (sms_dispatcher_v2_crashes): get_user_role_by_phone implementado
+3. Correccion de harness: AGENTS.md ya no pregunta "autorizo cierre" en testing
 
 ## Entregables
 
-### Codigo
-| Archivo | Cambio |
-|---------|--------|
-| src/scale_api.py | Nuevo: POST /api/scale/command |
-| tests/test_scale_api.py | Nuevo: 5 tests unitarios |
-| src/scale.py | Refactor: single-reader (async_reader unico lector, send_command escribe y espera Event) |
-| WeightField.svelte | Leer/Tara via API (REXT/TARE) + isLoading |
-| KioskForm.svelte | Auto-capture PRINT + fix regresion $emergencyStore |
-| ws.js | Export onScaleReading callback |
-| ScaleReader.svelte | Peso neto cana (muestra - mineral - vegetal) |
-| main.py | Import scale_router |
+### Bugs resueltos
+| Bug | Causa raiz | Fix |
+|-----|-----------|-----|
+| B30 | _watchdog_heartbeat al final de lifespan + delay 25s | Movida al inicio, primera notificacion inmediata, intervalo 15s |
+| B31 | get_user_role_by_phone() no implementado en SmsPersistenceService | Metodo agregado con normalizacion de telefono (+57 -> sin prefijo) |
 
 ### Harness
 | Archivo | Cambio |
 |---------|--------|
-| AGENTS.md | Paso 9: leer learnings/ al iniciar |
-| learnings/common.md | +Secciones 4 (line endings) y 5 (subagentes) |
-| .opencode/agents/leader.md | Regla de learnings para subagentes |
-| manual_tests_F13.md | 33 pruebas manuales documentadas |
-| feature_list.json | F13: done, Bug #29: done, Bug #30: untriaged |
-
-## Lecciones / pitfalls
-- Corrupcion de feature_list.json por usar -replace en JSON -> siempre usar Python json.load/dump
-- Set-Content sin -Encoding corrompe archivos UTF-8 -> usar Python con encoding explicito
-- Line endings: el repo usa LF, verificar antes de modificar con Python
-- Subagentes no leen AGENTS.md -> el lider debe instruirles explicitamente sobre learnings/
-- scale.py: dos hilos en mismo serial causan condiciones de carrera -> arquitectura single-reader
-- sd_notify.py existe pero nunca se llama -> Bug #30
+| AGENTS.md | Casos B, F, H: "autorizo cierre?" -> "avisame cuando termines las pruebas" |
+| learnings/leader.md | Nueva regla: no preguntar autorizo cierre al entrar en testing |
+| VERSION | 1.19.0 -> 1.19.1 |
+| CHANGELOG.md | Entry 1.19.1 |
 
 ## Pendiente
-- Bug #30 (watchdog_sd_notify): agregar tarea asincrona en main.py que llame sd_notify.notify() cada 15s
+- F28 (ai_multi_turn): pending, SDD activo
