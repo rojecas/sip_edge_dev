@@ -21,10 +21,6 @@
     disconnect();
   });
 
-  function formatWeight(val) {
-    if (val === null || val === undefined) return "0.000";
-    return Number(val).toFixed(3);
-  }
 </script>
 
 <div class="scale-reader" class:disconnected={!$scaleStore.connected}>
@@ -56,6 +52,15 @@
     gap: 8px;
   }
 
+  .weight-label {
+    font-size: 16px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-right: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
   .weight-value {
     font-size: 40px;
     font-weight: 700;
@@ -68,26 +73,5 @@
     font-size: 20px;
     color: var(--text-secondary);
     font-weight: 400;
-  }
-
-  .neto-display {
-    margin-top: 4px;
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: 6px;
-  }
-
-  .neto-label {
-    font-size: 14px;
-    color: var(--accent);
-    font-weight: 600;
-  }
-
-  .neto-value {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--accent);
-    font-family: "Courier New", monospace;
   }
 </style>
