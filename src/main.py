@@ -64,6 +64,7 @@ from src.sms_incoming import IncomingSmsDispatcher  # Legacy v1, kept for test r
 from src.sms_persistence import SmsPersistenceService
 from src.sms_dispatcher_v2 import IncomingSmsDispatcherV2
 from src.sms_send_queue import SmsSendQueue
+from src.ai_multi_turn import AiMultiTurnService
 from src.emergency_mode import EmergencyModeService, emergency_router
 from src.password_reset import PasswordResetService, password_reset_router
 from src.report_templates import TemplateNotFoundError
@@ -317,6 +318,12 @@ async def lifespan(app: FastAPI):
     from src.sql_tools import SqlTools
     app.state.sql_tools = SqlTools(db_session_factory=_db.SessionLocal)
 
+    # Inicializar AiMultiTurnService (F28)
+    app.state.ai_multi_turn = AiMultiTurnService(
+        db_session_factory=_db.SessionLocal,
+        persistence=app.state.sms_persistence,
+    )
+
     # Inicializar AnomalyDetector
     from src.anomaly_detector import AnomalyDetector
     app.state.anomaly_detector = AnomalyDetector(
@@ -331,6 +338,7 @@ async def lifespan(app: FastAPI):
         sql_tools=app.state.sql_tools,
         sms_service=app.state.sms_service,
         db_session_factory=_db.SessionLocal,
+        ai_multi_turn_service=app.state.ai_multi_turn,
     )
 
     # Registrar handlers en dispatcher v2 (F27: orden importa)
@@ -346,13 +354,41 @@ async def lifespan(app: FastAPI):
     )
     # 3. AI query ΓÇö retorna False si falla, no es catch-all
     app.state.sms_dispatcher.register_handler(
-        lambda phone, text, message_id=None, conversation_id=None: app.state.agent_orchestrator.handle_sms_query(phone, text),
+        lambda phone, text, message_id=None, conversation_id=None:
+            app.state.agent_orchestrator.handle_sms_query(
+                phone, text, message_id, conversation_id,
+            ),
         workflow_type="ai_query",
     )
     # Iniciar dispatcher v2 de SMS entrantes (el v1 NO se inicia)
     await app.state.sms_dispatcher.start()
 
+    # F28: Tarea diaria de archivado de conversaciones AI antiguas
+    async def _archive_old_ai_conversations():
+        """Ejecuta archivado de conversaciones AI completadas > 90 dias."""
+        while True:
+            try:
+                count = app.state.ai_multi_turn.archive_old_conversations()
+                if count > 0:
+                    logger.info(
+                        "Archivadas %d conversaciones AI antiguas", count,
+                    )
+            except Exception:
+                logger.exception("Error en archivado de conversaciones AI")
+            try:
+                await asyncio.sleep(86400)  # 24 horas
+            except asyncio.CancelledError:
+                break
+
+    archive_task = asyncio.create_task(_archive_old_ai_conversations())
+
     yield
+
+    archive_task.cancel()
+    try:
+        await archive_task
+    except asyncio.CancelledError:
+        pass
 
     watchdog_task.cancel()
     try:

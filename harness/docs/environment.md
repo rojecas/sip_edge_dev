@@ -230,6 +230,39 @@ El frontend es un SPA construido con Svelte 5.
   npm test
   ```
 
+
+## ReCamera 2002w 64GB (Seeed Studio)
+
+Cámara AI edge conectada al EdgeBox. Usada para captura cenital de imágenes
+de muestras de materia extraña (Feature 32: sample_imaging).
+
+| Parámetro | Valor |
+|-----------|-------|
+| **IP Ethernet** | 192.168.1.44 (DHCP del router) |
+| **IP USB (RNDIS)** | 192.168.42.1 (cuando conectada por USB-C) |
+| **AP WiFi** | SSID reCamera_XXXXXX, IP 192.168.16.1, pass 12345678 |
+| **MAC Ethernet** | 2c:f7:f1:21:3c:b2 |
+| **MAC WiFi** | 60:ff:9e:02:f5:9b (AzureWave) |
+| **WebUI** | http://192.168.1.44/ o http://192.168.42.1/ |
+| **Password WebUI** | sipedge1234* |
+| **Firmware** | 0.2.4 (actualizado desde 0.2.1 vía OTA) |
+| **Puertos** | 22 (SSH), 80 (WebUI), 554 (RTSP), 1880 (Node-RED), 9090 (terminal) |
+
+### Acceso desde EdgeBox
+`ash
+# Vía Ethernet
+curl http://192.168.1.44/
+curl http://192.168.1.44/api/version
+
+# Vía USB (requiere firmware >= 0.2.2)
+curl http://192.168.42.1/
+`
+
+### Notas
+- Firmware < 0.2.2 tiene bug CDC ACM vs NCM en Linux (NETDEV WATCHDOG timeout en usb0).
+- Para actualizar: WebUI → Sidebar → System → Software Update → Check → Apply.
+- Modo AP WiFi solo disponible si no está conectada por Ethernet o USB.
+
 ---
 
 ## 5. Comandos utiles

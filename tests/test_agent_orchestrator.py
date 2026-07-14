@@ -300,3 +300,292 @@ class TestAgentOrchestratorConstruction(_OrchTestBase):
             db_session_factory=self.SessionLocal,
         )
         self.assertIsNotNone(orch)
+
+
+# ======================================================================
+# F28: Tests de multiturno
+# ======================================================================
+
+class _MultiTurnTestBase(unittest.TestCase):
+    """Base para tests de multiturno con AiMultiTurnService."""
+
+    def setUp(self):
+        self.engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(bind=self.engine)
+        self.SessionLocal = sessionmaker(bind=self.engine)
+
+        # Crear usuario corresponsal con telefono
+        db = self.SessionLocal()
+        try:
+            u = User(username="corr", password_hash="h", role="corresponsal",
+                     full_name="Corresponsal", phone="+573001234567")
+            operator = User(username="op", password_hash="h", role="operator",
+                           full_name="Operador")
+            h = Hacienda(codigo="H001", nombre="Hacienda")
+            db.add_all([u, operator, h])
+            db.flush()
+            s = Suerte(hacienda_id=h.id, codigo_suerte="S01")
+            db.add(s)
+            db.flush()
+
+            w = Weighing(
+                fecha=date(2026, 6, 15),
+                hora=time(8, 0, 0),
+                tractomula="T1", vagon="V1", numero_guia="G1",
+                hacienda_id=h.id, suerte_id=s.id,
+                peso_muestra=100.0, peso_mineral=5.0, peso_vegetal_extrano=2.0,
+                usuario_id=operator.id,
+            )
+            db.add(w)
+            db.commit()
+            db.refresh(w)
+            self.weighing = w
+        finally:
+            db.close()
+
+        # Mocks
+        self.mock_llm = mock.MagicMock()
+        self.mock_sql_tools = mock.MagicMock()
+        self.mock_sms = mock.MagicMock()
+
+        # Crear persistencia y AiMultiTurnService
+        from src.sms_persistence import SmsPersistenceService
+        self.persistence = SmsPersistenceService(db_session_factory=self.SessionLocal)
+
+        from src.ai_multi_turn import AiMultiTurnService
+        self.ai_multi_turn = AiMultiTurnService(
+            db_session_factory=self.SessionLocal,
+            persistence=self.persistence,
+        )
+
+        from src.agent_orchestrator import AgentOrchestrator
+        self.orchestrator = AgentOrchestrator(
+            llm_client=self.mock_llm,
+            sql_tools=self.mock_sql_tools,
+            sms_service=self.mock_sms,
+            db_session_factory=self.SessionLocal,
+            ai_multi_turn_service=self.ai_multi_turn,
+        )
+
+
+class TestHandleSmsQueryMultiTurn(_MultiTurnTestBase):
+    """T8: Tests de multiturno en handle_sms_query."""
+
+    def test_handle_sms_query_multiturn_uses_conversation(self):
+        """R1: Verifica que se crea/usa conversacion ai_query."""
+        self.mock_llm.chat_completion.return_value = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": "Hola, en que puedo ayudarte?",
+                },
+            }],
+        }
+        self.mock_sms.send_sms.return_value = True
+
+        self.orchestrator.handle_sms_query("+573001234567", "hola")
+
+        # Verificar que se creo una conversacion ai_query
+        conv = self.persistence.get_active_conversation_by_peer(
+            "+573001234567", "ai_query",
+        )
+        self.assertIsNotNone(conv)
+        self.assertEqual(conv.status, "active")
+
+    def test_handle_sms_query_multiturn_with_history(self):
+        """R4: Envia historial completo al LLM."""
+        # Primero crear una conversacion con historial previo
+        conv = self.persistence.create_conversation(
+            peer_number="+573001234567",
+            workflow_type="ai_query",
+            metadata={
+                "message_history": [
+                    {"user": "cuantos pesajes hoy?", "assistant": "Hoy hubo 25 pesajes."},
+                ],
+            },
+        )
+
+        self.mock_llm.chat_completion.return_value = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": "Ayer hubo 30 pesajes.",
+                },
+            }],
+        }
+        self.mock_sms.send_sms.return_value = True
+
+        self.orchestrator.handle_sms_query(
+            "+573001234567", "y ayer?",
+            conversation_id=conv.id,
+        )
+
+        # Verificar que la llamada al LLM incluye el historial
+        call_args = self.mock_llm.chat_completion.call_args
+        messages_sent = call_args[0][0]
+        # Debe haber al menos system, user historico, assistant historico, nuevo user
+        self.assertGreaterEqual(len(messages_sent), 4)
+        # El segundo mensaje debe ser el historico del usuario
+        self.assertEqual(messages_sent[1]["content"], "cuantos pesajes hoy?")
+
+    def test_handle_sms_query_farewell_completes_conversation(self):
+        """R8: Despedida marca conversacion como completed."""
+        conv = self.persistence.create_conversation(
+            peer_number="+573001234567",
+            workflow_type="ai_query",
+            status="active",
+        )
+
+        self.mock_llm.chat_completion.return_value = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": "De nada, hasta luego!",
+                },
+            }],
+        }
+        self.mock_sms.send_sms.return_value = True
+
+        self.orchestrator.handle_sms_query(
+            "+573001234567", "gracias!",
+            conversation_id=conv.id,
+        )
+
+        # La conversacion debe estar completed
+        updated = self.persistence.get_conversation(conv.id)
+        self.assertEqual(updated.status, "completed")
+
+    def test_handle_sms_query_tool_call_logged(self):
+        """R6: tool_calls se registran en sms_ai_tool_log."""
+        conv = self.persistence.create_conversation(
+            peer_number="+573001234567",
+            workflow_type="ai_query",
+            status="active",
+        )
+        msg = self.persistence.create_message(
+            conversation_id=conv.id,
+            direction="received",
+            peer_number="+573001234567",
+            body="cuantos pesajes?",
+            status="received",
+        )
+
+        self.mock_llm.chat_completion.side_effect = [
+            {
+                "choices": [{
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [{
+                            "id": "call_1",
+                            "type": "function",
+                            "function": {
+                                "name": "get_basic_stats",
+                                "arguments": '{"fecha_inicio":"2026-06-01","fecha_fin":"2026-06-15"}',
+                            },
+                        }],
+                    },
+                }],
+            },
+            {
+                "choices": [{
+                    "message": {
+                        "role": "assistant",
+                        "content": "Hay 42 pesajes con promedio 107 kg.",
+                    },
+                }],
+            },
+        ]
+        self.mock_sql_tools.execute_tool.return_value = {
+            "count": 42, "avg": 107.0,
+        }
+        self.mock_sms.send_sms.return_value = True
+
+        self.orchestrator.handle_sms_query(
+            "+573001234567", "cuantos pesajes?",
+            message_id=msg.id,
+            conversation_id=conv.id,
+        )
+
+        # Verificar tool log
+        from src.models import SmsAiToolLog
+        db = self.SessionLocal()
+        try:
+            logs = db.query(SmsAiToolLog).filter(
+                SmsAiToolLog.conversation_id == conv.id,
+            ).all()
+            self.assertGreaterEqual(len(logs), 1)
+            self.assertEqual(logs[0].tool_name, "get_basic_stats")
+        finally:
+            db.close()
+
+    def test_handle_sms_query_fifo_rotation(self):
+        """R3: Multiples exchanges rotan FIFO."""
+        conv = self.persistence.create_conversation(
+            peer_number="+573001234567",
+            workflow_type="ai_query",
+            status="active",
+            metadata={
+                "message_history": [
+                    {"user": f"msg{i}", "assistant": f"resp{i}"}
+                    for i in range(9)
+                ],
+            },
+        )
+
+        self.mock_llm.chat_completion.return_value = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": "Respuesta numero 10.",
+                },
+            }],
+        }
+        self.mock_sms.send_sms.return_value = True
+
+        self.orchestrator.handle_sms_query(
+            "+573001234567", "msg9",
+            conversation_id=conv.id,
+        )
+
+        # El historial debe tener 10 exchanges
+        updated = self.persistence.get_conversation(conv.id)
+        history = self.ai_multi_turn.get_message_history(updated)
+        self.assertEqual(len(history), 10)
+        self.assertEqual(history[0]["user"], "msg0")
+
+        # Enviar uno mas — debe FIFO
+        self.orchestrator.handle_sms_query(
+            "+573001234567", "msg10",
+            conversation_id=conv.id,
+        )
+        updated = self.persistence.get_conversation(conv.id)
+        history = self.ai_multi_turn.get_message_history(updated)
+        self.assertEqual(len(history), 10)
+        self.assertEqual(history[0]["user"], "msg1")
+
+    def test_handle_sms_query_legacy_compatibility(self):
+        """R7: Sin message_id/conversation_id funciona en modo legacy."""
+        self.mock_llm.chat_completion.return_value = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": "Hola!",
+                },
+            }],
+        }
+        self.mock_sms.send_sms.return_value = True
+
+        # Sin message_id ni conversation_id — modo legacy
+        result = self.orchestrator.handle_sms_query("+573001234567", "hola")
+        self.assertTrue(result)
+
+        # Se debe haber creado una conversacion ai_query
+        conv = self.persistence.get_active_conversation_by_peer(
+            "+573001234567", "ai_query",
+        )
+        self.assertIsNotNone(conv)

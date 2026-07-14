@@ -45,7 +45,7 @@ class SmsPersistenceService:
         if workflow_type not in ("emergency", "password_reset", "ai_query", "unknown"):
             raise SmsPersistenceError(f"workflow_type invalido: {workflow_type}")
 
-        if status not in ("active", "completed", "expired", "cancelled", "failed"):
+        if status not in ("active", "completed", "expired", "cancelled", "failed", "archived"):
             raise SmsPersistenceError(f"status invalido: {status}")
 
         db: Session = self._db_session_factory()
@@ -110,7 +110,7 @@ class SmsPersistenceService:
         self, conversation_id: int, status: str,
     ) -> None:
         """Actualiza el status de una conversacion."""
-        if status not in ("active", "completed", "expired", "cancelled", "failed"):
+        if status not in ("active", "completed", "expired", "cancelled", "failed", "archived"):
             raise SmsPersistenceError(f"status invalido: {status}")
 
         db: Session = self._db_session_factory()
@@ -319,6 +319,60 @@ class SmsPersistenceService:
                 db.query(SmsMessage)
                 .filter(SmsMessage.id == message_id)
                 .first()
+            )
+        finally:
+            db.close()
+
+    def get_conversation(
+        self, conversation_id: int,
+    ) -> SmsConversation | None:
+        """Recupera una conversacion por ID."""
+        db: Session = self._db_session_factory()
+        try:
+            return (
+                db.query(SmsConversation)
+                .filter(SmsConversation.id == conversation_id)
+                .first()
+            )
+        finally:
+            db.close()
+
+    def get_messages_by_conversation(
+        self, conversation_id: int, limit: int = 50,
+    ) -> list[SmsMessage]:
+        """Recupera los mensajes de una conversacion, ordenados por fecha."""
+        db: Session = self._db_session_factory()
+        try:
+            return (
+                db.query(SmsMessage)
+                .filter(SmsMessage.conversation_id == conversation_id)
+                .order_by(SmsMessage.created_at.asc())
+                .limit(limit)
+                .all()
+            )
+        finally:
+            db.close()
+
+    def update_conversation_metadata(
+        self, conversation_id: int, metadata: dict,
+    ) -> None:
+        """Actualiza la columna metadata de una conversacion."""
+        db: Session = self._db_session_factory()
+        try:
+            conv = (
+                db.query(SmsConversation)
+                .filter(SmsConversation.id == conversation_id)
+                .first()
+            )
+            if conv is None:
+                raise SmsPersistenceError(
+                    f"Conversacion {conversation_id} no encontrada"
+                )
+            conv.conv_metadata = metadata
+            conv.last_activity = datetime.now(timezone.utc)
+            db.commit()
+            logger.debug(
+                "Metadata de conversacion %s actualizada", conversation_id,
             )
         finally:
             db.close()

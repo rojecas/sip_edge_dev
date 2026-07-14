@@ -1,6 +1,6 @@
 {
     "project": "sip_edge",
-    "description": "Sistema Inteligente de Pesaje y Control de Materia Extra??????????????????????????????????????a (SIP-Edge)",
+    "description": "Sistema Inteligente de Pesaje y Control de Materia Extraña (SIP-Edge)",
     "rules": {
         "one_feature_at_a_time": true,
         "require_tests_to_close": true,
@@ -632,7 +632,7 @@
                 27,
                 8
             ],
-            "status": "pending"
+            "status": "testing"
         },
         {
             "id": 29,
@@ -706,6 +706,110 @@
                 "src/sms_persistence.py: agregar get_user_role_by_phone()",
                 "tests/test_sms_persistence.py: agregar test"
             ]
+        },
+        {
+            "id": 32,
+            "name": "sample_imaging",
+            "title": "Captura de Imágenes para Inspección Visual de Muestras (Dataset IA)",
+            "type": "feature",
+            "sdd": true,
+            "status": "pending",
+            "description": "Integra cámara ReCamera 2002w (WiFi AdHoc) con disparo por GPIO en el flujo de pesaje. La imagen cenital se captura después de Leer Muestra y antes de Tara Mineral. Las imágenes se almacenan en SSD (/mnt/ssd/captures/YYYY-MMM-DD/) con tabla imagen_captures en MariaDB para trazabilidad. El admin puede detener/reanudar captura y montar/desmontar el SSD desde la app sin comandos Linux. Exportación con metadata.csv para dataset de entrenamiento de red neuronal.",
+            "acceptance": [
+                "RF-V14-23: Cámara ReCamera 2002w conectada por WiFi AdHoc al EdgeBox",
+                "RF-V14-24: Disparo por señal digital en entrada GPIO del EdgeBox",
+                "RF-V14-25: Fotografía cenital de la muestra extendida en bandeja",
+                "RF-V14-26: Captura post-Leer Muestra, pre-Tara Mineral en el flujo",
+                "RF-V14-27: Proceso de pesaje independiente de la captura de imágenes",
+                "RF-V14-28: Asociación imagen ↔ pesaje al confirmar",
+                "RF-V14-29: Almacenamiento en /mnt/ssd/captures/YYYY-MMM-DD/HHMMSS_<id>.jpg",
+                "RF-V14-30: Tabla imagen_captures en MariaDB con FK a weighings + metadata JSON",
+                "RF-V14-31: Manejo de SSD no montado/lleno con notificación SMS",
+                "RF-V14-32: POST /api/imaging/stop sin afectar pesaje",
+                "RF-V14-33: POST /api/imaging/unmount — desmontaje lógico desde la app",
+                "RF-V14-34: POST /api/imaging/mount — montaje lógico desde la app",
+                "RF-V14-35: GET /api/imaging/status",
+                "RF-V14-36: Flujo de exportación en 7 pasos con detección de desconexión",
+                "RF-V14-37: Registro de exported_by y exported_at al desmontar",
+                "RF-V14-38: Asociación de imagen con 3 pesos para dataset etiquetado",
+                "RF-V14-39: metadata.csv/json por lote de exportación"
+            ],
+            "depends_on": [
+                6,
+                13
+            ],
+            "ers_ref": "ERS_V1.4_Adendas.md §B"
+        },
+        {
+            "id": 33,
+            "name": "sql_tools_v2",
+            "title": "Herramientas Estadísticas v2 — Nuevas Métricas, Filtros y Agrupación",
+            "type": "feature",
+            "sdd": true,
+            "status": "pending",
+            "description": "Extiende el catálogo de herramientas SQL con 4 nuevas métricas (tiempo promedio de pesaje, tasa de rechazo, top haciendas, comparativo de períodos) y modifica 3 herramientas existentes agregando parámetros de agrupación (día/semana/mes/turno) y filtro por vehículo (tractomula/vagon). Incluye shortcuts de fecha (hoy, ayer, últimos 7 días, mes actual).",
+            "acceptance": [
+                "RF-V14-01: Shortcuts de rango de fecha (hoy, ayer, últimos 7 días, mes actual, personalizado)",
+                "RF-V14-02: Parámetro de agrupación (día, semana, mes, turno) en tools existentes",
+                "RF-V14-03: Filtro por vehículo (tractomula, vagon) en tools de consulta",
+                "RF-V14-04: Nueva tool get_avg_weighing_time — tiempo promedio entre pesajes",
+                "RF-V14-05: Nueva tool get_anomaly_rate — tasa de rechazo (% anomalías vs total)",
+                "RF-V14-06: Nueva tool get_top_haciendas — ranking de N haciendas por peso",
+                "RF-V14-07: Nueva tool get_period_comparison — Δ y Δ% vs período anterior",
+                "RF-V14-08: Desviación estándar incluida en resúmenes SMS"
+            ],
+            "depends_on": [
+                8
+            ],
+            "ers_ref": "ERS_V1.4_Adendas.md §A.1-A.2"
+        },
+        {
+            "id": 34,
+            "name": "alert_monitor",
+            "title": "Monitor de Alertas Automáticas — Anomalías, Caída, Outliers, Inactividad",
+            "type": "feature",
+            "sdd": true,
+            "status": "pending",
+            "description": "Implementa el AlertMonitor: un motor de evaluación periódica que verifica 4 condiciones (anomalía > X%, caída de producción >20%, outliers 3σ, inactividad 2h) y envía SMS de alerta al admin cuando se disparan. Incluye tabla alert_log para evitar duplicados y configuración de umbrales en config.yaml. Documenta el impacto en tiempo de respuesta del LLM local al incrementar TOOL_DEFINITIONS.",
+            "acceptance": [
+                "RF-V14-09: Alerta por Z-Score > umbral configurable (default 15%)",
+                "RF-V14-10: Alerta por caída de producción >20% vs promedio 7 días",
+                "RF-V14-11: Alerta por outlier fuera de 3 desviaciones estándar",
+                "RF-V14-12: Alerta por inactividad >2h en horario laboral activo",
+                "RF-V14-13: Deduplicación de alertas (no reenviar misma condición)",
+                "RF-V14-14: Umbrales configurables en config.yaml sección alerts",
+                "NFR-V14-01: Documentación del impacto de tools en prompt del LLM local",
+                "NFR-V14-02: Tiempo de respuesta SMS ≤ 60 segundos"
+            ],
+            "depends_on": [
+                33,
+                7
+            ],
+            "ers_ref": "ERS_V1.4_Adendas.md §A.3, A.5"
+        },
+        {
+            "id": 35,
+            "name": "sms_scheduling_v2",
+            "title": "Programación SMS v2 — Flujos Diario, Condicional y Semanal",
+            "type": "feature",
+            "sdd": true,
+            "status": "pending",
+            "description": "Implementa 3 flujos de envío SMS programados: (1) 6:00 am diario con resumen del día anterior, (2) cada 4 horas condicional solo si hay alertas, (3) lunes 7:00 am con resumen semanal. Agrega plantillas pre-hechas (Gerencia, Operaciones, Calidad), zona horaria GMT-5, días activos configurables (L-V, L-S) y formato de números es_CO. Todo SMS incluye resumen ejecutivo de 3 bullets.",
+            "acceptance": [
+                "RF-V14-15: SMS diario 6:00 am — resumen del día anterior",
+                "RF-V14-16: SMS cada 4h condicional — solo si hay novedades",
+                "RF-V14-17: SMS lunes 7:00 am — resumen semanal",
+                "RF-V14-18: Formato 3-bullet executive summary en todo SMS",
+                "RF-V14-19: Plantillas pre-hechas: Gerencia, Operaciones, Calidad",
+                "RF-V14-20: Zona horaria America/Bogota (GMT-5)",
+                "RF-V14-21: Días activos configurables (L-V, L-S)",
+                "RF-V14-22: Formato números es_CO (1.234,56)"
+            ],
+            "depends_on": [
+                34,
+                27
+            ],
+            "ers_ref": "ERS_V1.4_Adendas.md §A.4"
         }
     ]
 }

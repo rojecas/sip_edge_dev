@@ -51,9 +51,9 @@
 
 ## C7 — Spec Driven Development
 
-- [ ] Toda feature con `"sdd": true` en estado `spec_ready`, `in_progress`
-      o `done` tiene su carpeta `harness/specs/<name>/` con los 3 archivos:
-      `requirements.md`, `design.md`, `tasks.md`.
+- [ ] Toda feature con `"sdd": true` en estado `spec_ready`, `spec-reviewed`,
+      `in_progress`, `testing` o `done` tiene su carpeta `harness/specs/<name>/`
+      con los 3 archivos: `requirements.md`, `design.md`, `tasks.md`.
 - [ ] `requirements.md` usa EARS estricto (ver `harness/docs/specs.md`).
 - [ ] Toda feature `done` con `"sdd": true` tiene todas sus tasks marcadas
       `[x]` en `tasks.md`.

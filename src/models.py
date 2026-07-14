@@ -277,7 +277,7 @@ class SmsConversation(Base):
         nullable=False,
     )
     status = Column(
-        Enum("active", "completed", "expired", "cancelled", "failed"),
+        Enum("active", "completed", "expired", "cancelled", "failed", "archived"),
         nullable=False,
         default="active",
     )
@@ -324,5 +324,48 @@ class SmsMessage(Base):
     __table_args__ = (
         Index("idx_conv_id", "conversation_id"),
         Index("idx_direction_status", "direction", "status"),
+        {"sqlite_autoincrement": True},
+    )
+
+
+class SmsAiToolLog(Base):
+    """Registro de tool_calls ejecutados durante consultas AI multiturno.
+
+    Cada fila captura una invocacion de herramienta SQL por el LLM
+    durante una consulta AI via SMS, con referencia a la conversacion
+    y al mensaje entrante que la disparo.
+    """
+
+    __tablename__ = "sms_ai_tool_log"
+
+    id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
+    conversation_id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("sms_conversations.id"),
+        nullable=False,
+        index=True,
+    )
+    incoming_msg_id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("sms_messages.id"),
+        nullable=False,
+        index=True,
+    )
+    tool_name = Column(String(64), nullable=False)
+    tool_args = Column(JSON, nullable=False)
+    tool_result = Column(JSON, nullable=False)
+    duration_ms = Column(Integer, nullable=False)
+    created_at = Column(
+        TIMESTAMP, nullable=False, server_default=func.current_timestamp()
+    )
+
+    __table_args__ = (
+        Index("idx_sms_ai_tool_log_conv", "conversation_id"),
+        Index("idx_sms_ai_tool_log_msg", "incoming_msg_id"),
+        Index("idx_sms_ai_tool_log_created", "created_at"),
         {"sqlite_autoincrement": True},
     )
