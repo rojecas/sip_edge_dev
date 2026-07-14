@@ -1,26 +1,26 @@
-# Sesion cerrada - 2026-07-09 - Bugs #30 y #31 resueltos
+# Sesion en curso - 2026-07-13 - Despliegue EdgeBox #2
 
-## Resumen
-Sesion dedicada a preparacion para despliegue:
-1. Bug #30 (watchdog_sd_notify): fix + deploy + pruebas con balanza virtual
-2. Bug #31 (sms_dispatcher_v2_crashes): get_user_role_by_phone implementado
-3. Correccion de harness: AGENTS.md ya no pregunta "autorizo cierre" en testing
+## Progreso
+- Diagnostico inicial completado → /home/sipedge/diagnostico_inicial.md
+- IP corregida: solo 192.168.1.42/24, DHCP desactivado
+- Fase 1 (Usuarios): COMPLETADA
+  - admin, sipedge, bkmngr creados
+  - Grupos asignados (dialout, video, i2c, gpio, tty, plugdev, sudo)
+  - Auto-login sipedge en LightDM
+  - Clave SSH copiada a sipedge
+  - Usuario pi bloqueado por seguridad
 
-## Entregables
+## Pendiente proxima sesion
+- [ ] Fase 2 — Hardware: watchdog 30s, RTC, modem 4G, scripts red
+- [ ] Fase 3 — Software Base: MariaDB, Python, repo, venv, .env, config.yaml
+- [ ] Fase 4 — Servicios: sip-edge.service, quectel-init, cron backup
+- [ ] Fase 5 — llama.cpp
 
-### Bugs resueltos
-| Bug | Causa raiz | Fix |
-|-----|-----------|-----|
-| B30 | _watchdog_heartbeat al final de lifespan + delay 25s | Movida al inicio, primera notificacion inmediata, intervalo 15s |
-| B31 | get_user_role_by_phone() no implementado en SmsPersistenceService | Metodo agregado con normalizacion de telefono (+57 -> sin prefijo) |
-
-### Harness
-| Archivo | Cambio |
-|---------|--------|
-| AGENTS.md | Casos B, F, H: "autorizo cierre?" -> "avisame cuando termines las pruebas" |
-| learnings/leader.md | Nueva regla: no preguntar autorizo cierre al entrar en testing |
-| VERSION | 1.19.0 -> 1.19.1 |
-| CHANGELOG.md | Entry 1.19.1 |
-
-## Pendiente
-- F28 (ai_multi_turn): pending, SDD activo
+## Estado EdgeBox #2
+| Item | Valor |
+|------|-------|
+| IP | 192.168.1.42 |
+| Usuario | sipedge (sudo) |
+| SSH | `ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42` |
+| SO | Debian 13 aarch64, kernel 6.18 |
+| Disco libre | 21 GB |
