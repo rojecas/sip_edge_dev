@@ -108,7 +108,7 @@ de servicio, sin BD, sin configuración de hardware.
 | Kernel | 6.12.75 | 6.18.34 | 🆕 más nuevo |
 | RAM | 7.6 GB | 7.6 GB | ✅ |
 | Disco eMMC | 29 GB | 29 GB | ✅ |
-| Hostname | SIP-Edge | edgebox | ⚠️ diferente |
+| Hostname | SIP-Edge | SIP-Edge | ✅ coinciden |
 
 ### 3.2 Red
 
@@ -263,4 +263,50 @@ activo, SMS funcional, watchdog a 30s, RTC detectado, SSD disponible.
 
 Las diferencias son menores (hostname, modelos extra, hwclock service) y no
 afectan la operación. Este EdgeBox está listo para pruebas de aceptación.
+
+
+---
+
+## 6. Fixes Post-Informe (2026-07-14)
+
+### 6.1 Emojis no visibles en el frontend
+**Sintoma:** Iconos del SPA aparecian como cuadrados vacios.
+**Causa:** Chromium en modo kiosco no tenia fuente de emojis.
+**Fix:** `apt install fonts-noto-color-emoji` + `fc-cache -fv` + restart lightdm.
+**Estado:** ✅ Corregido. Iconos visibles.
+
+### 6.2 save-hwclock.service no creado
+**Sintoma:** RTC no persistia la hora entre reinicios.
+**Causa:** `hwclock` no instalado (requiere `util-linux-extra` en Debian 13).
+**Fix:** Instalar `util-linux-extra`, crear unidad systemd oneshot en shutdown.target.
+**Estado:** ✅ Creado y enabled. `hwclock -w` / `hwclock -r` funcional.
+
+### 6.3 Hostname edgebox -> SIP-Edge
+**Sintoma:** Hostname no coincidia con EdgeBox #1.
+**Fix:** `hostnamectl set-hostname SIP-Edge` + actualizar `/etc/hosts`.
+**Estado:** ✅ Corregido.
+
+### 6.4 API Key DeepSeek no configurada
+**Sintoma:** `DEEPSEEK_API_KEY` vacia en `.env`.
+**Fix:** Agregada key `sk-36ed...` en `/home/sipedge/sip_edge/.env` y en `compose.yml` local.
+**Estado:** ✅ Configurada en ambos entornos.
+
+### 6.5 Script send_sms.sh no funcional
+**Sintoma:** SMS marcados como "sent" pero nunca entregados.
+**Causa:** Flag `--messaging-create-sms="..."` (con `=`) incorrecto + SMSC ausente.
+**Fix:** Usar `--messaging-create-sms "number=...,text=...,smsc=+573003690025"` (espacio, no `=`).
+**Estado:** ✅ Script reparado. SMS enviado y recibido correctamente al 3006117436.
+
+### 6.6 SMS entrante - usuario rojecas rechazado
+**Hallazgo:** SMS desde 3006117436 recibido pero no procesado por whitelist.
+**Causa:** `rojecas` tiene rol `operator`. Whitelist solo acepta `admin`/`corresponsal`.
+**Estado:** Documentado. Requiere cambio de rol si se necesita acceso SMS.
+
+---
+
+## 7. Estado Final (Post-Fixes)
+
+Todos los items del checklist original de 5 fases completados.
+Pendientes menores resueltos. EdgeBox #2 operativa y funcionalmente
+equivalente a EdgeBox #1.
 
