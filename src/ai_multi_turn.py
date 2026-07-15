@@ -84,7 +84,21 @@ class AiMultiTurnService:
             conv = self._persistence.get_conversation(conversation_id)
             if conv is not None:
                 # Caso: dispatcher creo conversacion como 'unknown'
+                # PRIMERO verificar si ya existe una ai_query activa para
+                # este peer_number. Si existe, completar la 'unknown' y
+                # reutilizar la existente (evita conversaciones duplicadas).
                 if conv.workflow_type == "unknown":
+                    existing_active = self._persistence.get_active_conversation_by_peer(
+                        peer_number, "ai_query",
+                    )
+                    if existing_active is not None and existing_active.status == "active":
+                        # Ya hay una conversacion ai_query activa: completar
+                        # la 'unknown' del dispatcher y reutilizar la existente
+                        self._persistence.update_conversation_status(
+                            conv.id, "completed",
+                        )
+                        return existing_active
+                    # No hay ai_query activa: convertir la 'unknown' a ai_query
                     self._update_conversation_workflow_type(
                         conv.id, "ai_query", "active",
                     )
