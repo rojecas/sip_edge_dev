@@ -22,7 +22,37 @@
 6. Lee `harness/docs/specs.md` antes de tocar cualquier spec o feature `sdd: true`.
 7. Lee `harness/docs/sessions.md` para conocer el estandar de documentacion
    (planes, cierres, bloqueos).
-8. Lee las lecciones acumuladas en harness/learnings/. Primero common.md
+8. **Session reminder:** Revisa si hay contenido entre las marcas
+<!-- SESSION_REMINDER_START -->
+## Recordatorio — Proxima sesion (2026-07-15)
+
+### Estado del repositorio
+- F28 (ai_multi_turn) → **testing** ← PROXIMA ACCION (pruebas manuales, cierre, release-manager)
+- F29-F32 → **pending** (sql_tools_v2, alert_monitor, sms_scheduling_v2, sample_imaging)
+
+### Bugs corregidos en esta sesion
+| Bug | Causa | Fix |
+|-----|-------|-----|
+| ENUM sms_messages sin sending | Migracion F27 incompleta | Agregado sending al ENUM |
+| Race queue vs send_sms | Queue no marcaba sending | Queue ahora marca sending |
+| Conv AI duplicadas | No reutilizaba ai_query existente | Busca activa antes de crear |
+| Auto-generated falso pos | modem_id reciclado confundia | Eliminada deteccion, confiar solo en status |
+| sudo mmcli pedia password | /etc/sudoers.d/sip-edge faltaba | Creado con NOPASSWD |
+
+### Pendiente para la proxima sesion
+1. **F28** (ai_multi_turn) — terminar pruebas manuales, autorizar cierre, release-manager
+2. **F33** (sql_tools_v2) — spec-author, implement, review, testing, cierre
+3. **F34** (alert_monitor) — spec-author, implement, review, testing, cierre
+4. **F35** (sms_scheduling_v2) — spec-author, implement, review, testing, cierre
+5. **F32** (sample_imaging) — spec-author, implement, review, testing, cierre
+
+### Documentacion generada
+- docs/ERS_V1.4_Adendas.md (39 RF para F29-F32)
+- docs/analisis_solicitud_reportes_sms.md (analisis factibilidad)
+- harness/specs/28_ai_multi_turn/ (spec validado)
+
+<!-- SESSION_REMINDER_END -->
+9. Lee las lecciones acumuladas en harness/learnings/. Primero common.md
    (herramientas disponibles, reglas de escritura), luego el archivo especifico
    de tu rol si existe:
    - leader.md para el agente lider

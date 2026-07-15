@@ -1,37 +1,46 @@
-# Sesion cerrada - 2026-07-14 - Despliegue EdgeBox #2 completado
+# Sesion \"Nuevas features\" — 2026-07-14/15
 
 ## Resumen
-EdgeBox #2 completamente desplegada. 5 fases ejecutadas, datos migrados,
-verificacion post-reboot exitosa. Informe detallado en docs/informe_despliegue_edgebox2.md.
+Sesion larga multi-objetivo: analisis de solicitud del cliente, creacion de ERS V1.4,
+implementacion y correccion de F28 (ai_multi_turn) con pruebas en EdgeBox, y correccion
+de multiples bugs en el pipeline de SMS encontrados durante las pruebas.
 
-## Entregables
-- [x] Fase 1 — Usuarios (admin, sipedge, bkmngr, grupos, auto-login)
-- [x] Fase 2 — Hardware (watchdog 30s, RTC, 4G Tigo, SSD 119GB, WiFi, scripts)
-- [x] Fase 3 — Software Base (MariaDB, Python, repo, venv, .env, config.yaml)
-- [x] Fase 4 — Servicios (sip-edge systemd, cron, quectel-init)
-- [x] Fase 5 — llama.cpp (bf2c86d, Qwen2.5 1.5B)
-- [x] Reboot + verificacion post-arranque
-- [x] DB migrada (12 users, 4221 weighings, 621 haciendas)
-- [x] Emoji font + hostname + RTC + API key
-- [x] SMS funcional con SMSC correcto
+## Features trabajadas
+| ID | Feature | Estado | Notas |
+|---|---------|--------|-------|
+| 28 | ai_multi_turn | **testing** | Implementada + validada. Conversacion multiturno AI via SMS con FIFO, tool_log, archivado. 3 bugs corregidos en pruebas. |
+| 29-32 | sql_tools_v2, alert_monitor, sms_scheduling_v2, sample_imaging | **pending** | Registradas en feature_list.json + ERS_V1_4_Adendas.md |
 
-## Estado final EdgeBox #2
-| Componente | Estado |
-|------------|--------|
-| IP | 192.168.1.42 |
-| Hostname | SIP-Edge |
-| SIP-Edge | active, /health 200 |
-| 4G LTE | Tigo, 78%, IP dinamica |
-| SMS | Funcional (envio + recepcion) |
-| Watchdog | 30s |
-| RTC | /dev/rtc0 + save-hwclock |
-| SSD | 111 GB libre en /mnt/ssd |
-| Disco | 19 GB libre eMMC |
-| API Key | DeepSeek configurada |
+## Bugs encontrados y corregidos
+1. SMS duplicado por ENUM: F27 omitio 'sending' en sms_messages.status. Fix: agregado al ENUM.
+2. SMS duplicado por race queue: SendQueue no marcaba 'sending' antes de enviar. Fix: queue ahora marca sending.
+3. Conversaciones AI duplicadas: get_or_create_ai_conversation creaba nueva por cada SMS. Fix: reutiliza ai_query existente.
+4. SMS entrantes descartados: deteccion de auto-generados por modem_id era falsa positivo. Fix: eliminada (status != received basta).
+5. sudo mmcli pedia password: /etc/sudoers.d/sip-edge no existia. Fix: creado con NOPASSWD.
+6. Ambiguedad fechas en multiturno: LLM suponia fechas sin preguntar. Fix: pre-procesamiento inyecta nota de clarificacion.
 
-## Lecciones
-- send_sms.sh requiere SMSC explicito (+573003690025) y flag separado (sin =)
-- hwclock en Debian 13 requiere util-linux-extra
-- Emojis en kiosko requieren fonts-noto-color-emoji
-- Modem index puede cambiar tras reset (0 -> 2 -> 0)
-- Antena LTE se desconecta facil al manipular el chasis
+## Fixes entorno EdgeBox
+- Keyring deshabilitado (gnome-keyring autostarts movidos a .disabled)
+- Chromium kiosk autostart en /etc/xdg/autostart/kiosk.desktop
+- Keypad decimal fijado (kpdl:dot via localectl + autostart)
+- sudo NOPASSWD para mmcli documentado en Informe 02
+
+## Documentos generados
+- docs/ERS_V1.4_Adendas.md (39 RF + 2 NFR)
+- docs/analisis_solicitud_reportes_sms.md
+- harness/specs/28_ai_multi_turn/ (spec validado)
+- harness/progress/testplan_28_ai_multi_turn.md
+
+## Harness corregido
+- AGENTS.md: Caso A ahora incluye spec-validator, Casos B/C trigger cambiado a spec-reviewed
+- CHECKPOINTS.md: C7 incluye spec-reviewed y testing
+
+## Pendiente prox sesion
+- F28: terminar pruebas manuales → autorizar cierre → release-manager → done
+- F29-F35: spec-author para cada una
+- Revisar race condition send_sms vs SmsSendQueue (discutir solucion final)
+
+## Estado final
+- EdgeBox: /health 200, sudo mmcli OK, SMS funcional
+- F28: testing (esperando pruebas manuales)
+- F29-F35: pending

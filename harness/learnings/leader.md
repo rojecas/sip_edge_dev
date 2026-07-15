@@ -11,3 +11,10 @@
 - JAMAS preguntar autorizo cierre al entrar en testing
 - testing significa: el humano prueba. Solo anuncias Feature/Bug en testing - avisame cuando termines las pruebas
 - El humano dira autorizo cierre cuando este listo
+
+## Sesion 2026-07-14/15 — F28 ai_multi_turn + sesion multi-objetivo
+- El dispatcher v2 se reinicia en cada restart del servicio (no persiste estado).
+- Nunca implementar fixes sin discutir primero con el usuario (error: modifique message_exists_by_modem_id dos veces innecesariamente).
+- La deteccion de auto-generados por modem_id causa mas problemas de los que resuelve. Confiar en status != received del modem.
+- SESSION_REMINDER debe actualizarse en cada cierre de sesion, no eliminarse.
+- Para sesiones largas con multiples features: documentar cada hallazgo a medida que ocurre.

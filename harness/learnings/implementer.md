@@ -1,19 +1,7 @@
 # Lecciones para el Implementer
 
-## Encoding y escritura de archivos en Windows
-- En entornos Windows con PS 5.1, el shell opera en CP-1252 por defecto.
-  Al escribir archivos con caracteres Unicode (acentos, enie, emojis) desde
-  Python, verifica que el script use encoding='utf-8' explicito en open().
-  NUNCA confies en el locale del sistema.
-- El pipeline de corrupcion mas comun: UTF-8 valido -> leido por shell como
-  CP-1252 -> guardado como UTF-8 (doble codificacion). Produce mojibake como
-  "aprobacion" -> "aprobaciA?A3n".
-- Si encuentras caracteres corruptos en archivos existentes, diagnostica con
-  bytes.hex() antes de asumir que es un error de tu implementacion.
-- SOLUCION RAPIDA: $OutputEncoding = [System.Text.Encoding]::UTF8 al inicio
-  de scripts PS1. A largo plazo: ACP=65001 en registry (requiere reboot).
-
-## Escritura de JSON
-- NUNCA uses regex o -replace en PS para modificar JSON.
-- Siempre usa Python: json.load() -> modificar -> json.dump().
-- Usa ensure_ascii=False para preservar caracteres Unicode en el JSON.
+## Sesion 2026-07-14/15 — F28 ai_multi_turn
+- Al modificar el ENUM de sms_messages.status (agregar sending), tambien verificar que la migracion original en database/migrations/ coincida con el codigo.
+- file_get_or_create_ai_conversation debe manejar el caso de conversation_id pre-creada por el dispatcher con workflow_type='unknown'.
+- El modem Quectel recicla IDs de SMS tras reinicio. No confiar en modem_sms_id como identificador unico persistente.
+- Al agregar metodos a sms_persistence.py, verificar que el metodo no exista ya en otro lugar (get_body_by_modem_id fue innecesario).
