@@ -293,23 +293,6 @@ class SmsPersistenceService:
         finally:
             db.close()
 
-    def get_body_by_modem_id(self, modem_sms_id: int) -> str | None:
-        """Retorna el body de un mensaje enviado con ese modem_sms_id, o None.
-
-        Solo busca en mensajes con direction='sent' (los que nosotros enviamos).
-        Si el modem recicla IDs tras reinicio y un SMS entrante reusa un ID
-        que antes fue de un envio nuestro, el texto NO coincidira.
-        """
-        db: Session = self._db_session_factory()
-        try:
-            msg = db.query(SmsMessage.body).filter(
-                SmsMessage.modem_sms_id == modem_sms_id,
-                SmsMessage.direction == "sent",
-            ).order_by(SmsMessage.created_at.desc()).first()
-            return msg[0] if msg else None
-        finally:
-            db.close()
-
     def get_message(self, message_id: int) -> SmsMessage | None:
         """Recupera un mensaje por su ID."""
         db: Session = self._db_session_factory()
