@@ -5,7 +5,7 @@ Provee operaciones CRUD para sms_conversations y sms_messages.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -304,12 +304,12 @@ class SmsPersistenceService:
         """
         db: Session = self._db_session_factory()
         try:
-            # Solo buscar en mensajes recientes (7 dias). El modem recicla IDs
-            # tras reinicio, y los IDs antiguos en BD bloqueaban SMS nuevos.
-            cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+            # Solo mensajes ENVIADOS por nosotros (direction='sent'). El modem
+            # recicla IDs — los SMS recibidos de otros numeros pueden reusar IDs
+            # que ya existen en BD, pero NO son auto-generados.
             count = db.query(func.count(SmsMessage.id)).filter(
                 SmsMessage.modem_sms_id == modem_sms_id,
-                SmsMessage.created_at >= cutoff,
+                SmsMessage.direction == "sent",
             ).scalar()
             return count > 0
         finally:
