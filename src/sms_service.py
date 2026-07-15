@@ -60,26 +60,36 @@ class SMSService:
     # Envio individual
     # ------------------------------------------------------------------
 
-    def _persist_sms(self, phone: str, message: str) -> int | None:
+    def _persist_sms(
+        self, phone: str, message: str,
+        conversation_id: int | None = None,
+        status: str = "pending",
+    ) -> int | None:
         """Persiste un SMS en sms_messages (helper reutilizable).
 
-        Crea/recupera conversacion y crea el mensaje con status='pending'.
+        Crea/recupera conversacion y crea el mensaje con el status indicado.
+        Si conversation_id es proporcionado, se usa directamente sin buscar
+        ni crear conversacion.
         Retorna el id del mensaje persistido, o None si falla o no hay
         servicio de persistencia inyectado.
         """
         if self._persistence is None:
             return None
         try:
-            conv = self._persistence.get_or_create_active_conversation(
-                peer_number=phone, workflow_type="unknown",
-            )
+            if conversation_id is not None:
+                conv_id = conversation_id
+            else:
+                conv = self._persistence.get_or_create_active_conversation(
+                    peer_number=phone, workflow_type="unknown",
+                )
+                conv_id = conv.id
             msg = self._persistence.create_message(
-                conversation_id=conv.id,
+                conversation_id=conv_id,
                 direction="sent",
                 peer_number=phone,
                 body=message,
                 handler="sms_service",
-                status="pending",
+                status=status,
             )
             return msg.id
         except Exception:
@@ -95,7 +105,7 @@ class SMSService:
         except Exception:
             logger.exception("sms_service: error actualizando status de mensaje")
 
-    def send_sms(self, phone: str, message: str) -> bool:
+    def send_sms(self, phone: str, message: str, conversation_id: int | None = None) -> bool:
         """Envia un SMS al numero indicado.
 
         En dev mode simula el envio con log. En prod ejecuta mmcli.
@@ -103,6 +113,12 @@ class SMSService:
         antes de enviar y actualiza el status segun el resultado.
 
         B3: Si SMS_DRY_RUN=true, simula exito sin tocar el modem.
+
+        Args:
+            phone: Numero de telefono destino.
+            message: Texto del mensaje.
+            conversation_id: ID de conversacion a usar directamente. Si es None,
+                se busca/crea una conversacion 'unknown' (comportamiento legacy).
 
         Returns:
             True si el envio tuvo exito (dev mode siempre True),
@@ -112,34 +128,36 @@ class SMSService:
         dry_run = os.getenv("SMS_DRY_RUN", "false").lower() in ("true", "1", "yes")
         if dry_run:
             logger.info("[DRY_RUN] SMS bloqueado -> %s: %s", phone, message)
-            self._persist_sms(phone, message)
+            self._persist_sms(phone, message, conversation_id=conversation_id)
             return True
 
         if not phone or not message:
             logger.warning("send_sms llamado con phone o message vacio, omitiendo")
             return False
 
-        # R18: Persistir en sms_messages antes de enviar
-        persisted_msg_id = self._persist_sms(phone, message)
+        # R18: Persistir en sms_messages antes de enviar.
+        # Se crea directamente con status='sending' para evitar race condition
+        # con SmsSendQueue (que solo ve 'pending').
+        persisted_msg_id = self._persist_sms(
+            phone, message, conversation_id=conversation_id, status="sending",
+        )
 
         if self._dev_mode:
             logger.info(
                 "[DEV_MODE] SMS simulado -> %s: %s", phone, message
             )
-            self._update_persisted_status(persisted_msg_id, "sent")
+            if persisted_msg_id is not None:
+                self._update_persisted_status(persisted_msg_id, "sent")
             return True
 
-        # Envio atomico sincrono: marcar como sending, enviar, actualizar.
-        # Esto evita race conditions con SmsSendQueue (que solo ve "pending")
-        # y el doble-envio (Bug #26).
-        if persisted_msg_id is not None:
-            self._update_persisted_status(persisted_msg_id, "sending")
+        # Envio atomico sincrono: el mensaje ya nacio como 'sending',
+        # ahora solo queda enviarlo y actualizar a 'sent'/'failed'.
         success = self._send_via_mmcli(phone, message, persisted_msg_id)
         if success:
             logger.info("SMS enviado correctamente a %s (msg_id=%s)", phone, persisted_msg_id)
         return success
 
-    def send_sms_sync(self, phone: str, message: str) -> bool:
+    def send_sms_sync(self, phone: str, message: str, conversation_id: int | None = None) -> bool:
         """Envia un SMS de forma sincrona (bloqueante).
 
         Para casos legacy que requieren confirmacion inmediata de entrega.
@@ -148,6 +166,12 @@ class SMSService:
 
         B3: Si SMS_DRY_RUN=true, simula exito sin tocar el modem.
 
+        Args:
+            phone: Numero de telefono destino.
+            message: Texto del mensaje.
+            conversation_id: ID de conversacion a usar directamente. Si es None,
+                se busca/crea una conversacion 'unknown' (comportamiento legacy).
+
         Returns:
             True si mmcli confirmo el envio, False si fallo.
         """
@@ -155,15 +179,18 @@ class SMSService:
         dry_run = os.getenv("SMS_DRY_RUN", "false").lower() in ("true", "1", "yes")
         if dry_run:
             logger.info("[DRY_RUN] SMS bloqueado (sync) -> %s: %s", phone, message)
-            self._persist_sms(phone, message)
+            self._persist_sms(phone, message, conversation_id=conversation_id)
             return True
 
         if not phone or not message:
             logger.warning("send_sms_sync llamado con phone o message vacio")
             return False
 
-        # R18: Persistir antes de enviar
-        persisted_msg_id = self._persist_sms(phone, message)
+        # R18: Persistir antes de enviar, nace como 'sending' para evitar race
+        # con SmsSendQueue (que solo ve 'pending').
+        persisted_msg_id = self._persist_sms(
+            phone, message, conversation_id=conversation_id, status="sending",
+        )
 
         if self._dev_mode:
             logger.info("[DEV_MODE] SMS simulado (sync) -> %s: %s", phone, message)

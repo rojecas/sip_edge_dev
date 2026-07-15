@@ -291,7 +291,7 @@ class AgentOrchestrator:
         except LlamaConnectionError:
             error_text = "Lo siento, el sistema de analisis no esta disponible en este momento."
             logger.info("LLM: respuesta enviada a %s: '%s'", sender_phone, error_text[:100])
-            self._sms.send_sms(sender_phone, error_text)
+            self._sms.send_sms(sender_phone, error_text, conversation_id=conv.id if conv else None)
             return False
 
         # LLM: log del pensamiento y tool_calls de la primera vuelta
@@ -323,7 +323,7 @@ class AgentOrchestrator:
                 "LLM: respuesta enviada a %s: '%s'",
                 sender_phone, "No se pudo procesar la consulta.",
             )
-            self._sms.send_sms(sender_phone, "No se pudo procesar la consulta.")
+            self._sms.send_sms(sender_phone, "No se pudo procesar la consulta.", conversation_id=conv.id if conv else None)
             return True
 
         msg = choices[0].get("message", {})
@@ -338,14 +338,14 @@ class AgentOrchestrator:
                 logger.info(
                     "LLM: respuesta enviada a %s: '%s'", sender_phone, response_text[:100],
                 )
-                self._sms.send_sms(sender_phone, response_text)
+                self._sms.send_sms(sender_phone, response_text, conversation_id=conv.id if conv else None)
             else:
                 response_text = "No se pudo procesar la consulta."
                 logger.info(
                     "LLM: respuesta enviada a %s: '%s'",
                     sender_phone, response_text,
                 )
-                self._sms.send_sms(sender_phone, response_text)
+                self._sms.send_sms(sender_phone, response_text, conversation_id=conv.id if conv else None)
 
             # F28: Append exchange y detectar despedida
             self._after_response(
@@ -430,7 +430,7 @@ class AgentOrchestrator:
             logger.info(
                 "LLM: respuesta enviada a %s: '%s'", sender_phone, crude_text[:100],
             )
-            self._sms.send_sms(sender_phone, crude_text)
+            self._sms.send_sms(sender_phone, crude_text, conversation_id=conv.id if conv else None)
             # F28: Append exchange con resumen crudo
             self._after_response(
                 conv, message_history,
@@ -448,7 +448,7 @@ class AgentOrchestrator:
                 logger.info(
                     "LLM: respuesta enviada a %s: '%s'", sender_phone, response_text[:100],
                 )
-                self._sms.send_sms(sender_phone, response_text)
+                self._sms.send_sms(sender_phone, response_text, conversation_id=conv.id if conv else None)
                 # F28: Append exchange y detectar despedida
                 self._after_response(
                     conv, message_history,
@@ -460,7 +460,7 @@ class AgentOrchestrator:
             "LLM: respuesta enviada a %s: '%s'",
             sender_phone, "No se pudo generar una respuesta.",
         )
-        self._sms.send_sms(sender_phone, "No se pudo generar una respuesta.")
+        self._sms.send_sms(sender_phone, "No se pudo generar una respuesta.", conversation_id=conv.id if conv else None)
         self._after_response(
             conv, message_history,
             text, "No se pudo generar una respuesta.", max_exchanges, sender_phone,
@@ -500,7 +500,7 @@ class AgentOrchestrator:
                     "LLM: despedida detectada de %s, conversacion %s completada",
                     sender_phone, conv.id,
                 )
-                self._sms.send_sms(sender_phone, farewell_msg)
+                self._sms.send_sms(sender_phone, farewell_msg, conversation_id=conv.id if conv else None)
         except Exception:
             logger.exception("Error en post-procesamiento multiturno")
 

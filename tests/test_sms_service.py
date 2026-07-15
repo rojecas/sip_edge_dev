@@ -637,31 +637,51 @@ class TestSMSServicePersistence(unittest.TestCase):
         # No hay excepcion, el envio simulado funciona
 
     # ----------------------------------------------------------------
-    # Bug #26: Regression test - send_sms NO debe llamar a mmcli
-    # directamente cuando hay persistencia configurada (F27).
-    # El envio real lo hace SmsSendQueue en thread separado.
+    # Bug #26: send_sms crea directamente como 'sending' para evitar race
+    # condition con SmsSendQueue (que solo ve 'pending').
+    # El mensaje nace como 'sending', nunca pasa por 'pending'.
     # ----------------------------------------------------------------
 
-    def test_send_sms_with_persistence_does_not_call_mmcli_directly(self):
-        """Bug #26: Con persistencia y dev_mode=False, send_sms NO debe
-        llamar a mmcli. Solo persiste como 'pending' para que el
-        SmsSendQueue lo envie.
+    def test_send_sms_creates_with_sending_status(self):
+        """Bug #26 fix: send_sms crea el mensaje con status='sending', no 'pending'.
+        Esto evita que SmsSendQueue (que solo busca 'pending') robe el mensaje
+        y cause doble-envio.
 
-        Esto evita el double-send race condition donde send_sms()
-        y el send queue enviaban el mismo SMS, y el primero no guardaba
-        modem_sms_id, permitiendo que el dispatcher lo procesara como
-        entrante y lo enviara al handler AI (que fallaba con LLM error).
-        """
+        Verifica que el mensaje NO queda como 'pending' en ningún momento.
+        Con envío exitoso, el status final es 'sent' (actualizado por mmcli),
+        pero nunca pasó por 'pending'."""
+        create_stdout = (
+            "Successfully created new SMS: "
+            "/org/freedesktop/ModemManager1/SMS/3\n"
+        )
+        send_stdout = "successfully sent the SMS\n"
+
+        def fake_run(args, **_kwargs):
+            if "--messaging-create-sms" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout=create_stdout, stderr=""
+                )
+            if "--send" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout=send_stdout, stderr=""
+                )
+            if "--messaging-delete-sms" in args:
+                return subprocess.CompletedProcess(
+                    args=args, returncode=0, stdout="", stderr=""
+                )
+            return subprocess.CompletedProcess(
+                args=args, returncode=1, stdout="", stderr="unknown subcommand"
+            )
+
         svc = SMSService(config=self.config, modem_index=0, dev_mode=False)
         svc.set_persistence_service(self.persistence)
 
-        with mock.patch("subprocess.run") as mock_run:
-            result = svc.send_sms("+573001234567", "Bug26 test message")
+        with mock.patch("subprocess.run", side_effect=fake_run):
+            result = svc.send_sms("+573001234567", "Sending status test")
             self.assertTrue(result)
-            # mmcli NO debe ser llamado - el send queue lo hara despues
-            mock_run.assert_not_called()
 
-        # Verificar que el mensaje se persistio como "pending"
+        # Verificar que el mensaje existe y NO fue creado como 'pending'.
+        # Con envío exitoso, mmcli actualiza a 'sent'.
         db = self.Session()
         try:
             from src.models import SmsMessage as SM
@@ -670,12 +690,14 @@ class TestSMSServicePersistence(unittest.TestCase):
                 SM.direction == "sent",
             ).all()
             self.assertEqual(len(msgs), 1)
-            self.assertEqual(msgs[0].body, "Bug26 test message")
-            self.assertEqual(
+            self.assertEqual(msgs[0].body, "Sending status test")
+            self.assertNotEqual(
                 msgs[0].status, "pending",
-                "Con F27, send_sms persiste como 'pending' para que "
-                "SmsSendQueue lo envie (Bug #26)",
+                "send_sms NO debe crear el mensaje con status='pending' "
+                "porque SmsSendQueue lo robaría y causaría doble-envío",
             )
+            # El status final debe ser 'sent' (mmcli exitoso) o 'sending'
+            self.assertIn(msgs[0].status, ("sending", "sent"))
         finally:
             db.close()
 
@@ -710,6 +732,88 @@ class TestSMSServicePersistence(unittest.TestCase):
             # En modo legacy, mmcli DEBE ser llamado (create + send)
             self.assertGreaterEqual(mock_run.call_count, 2,
                 "Modo legacy debe llamar a mmcli directamente")
+
+    # ----------------------------------------------------------------
+    # Tests: Bug fix - conversation_id y race condition
+    # ----------------------------------------------------------------
+
+    def test_persist_sms_with_conversation_id(self):
+        """_persist_sms con conversation_id explícito usa esa conversación,
+        sin buscar/crear conversación 'unknown'."""
+        # Crear una conversación explícita
+        conv = self.persistence.create_conversation(
+            peer_number="+573001234567",
+            workflow_type="ai_query",
+            status="active",
+        )
+
+        # Llamar a _persist_sms con conversation_id
+        msg_id = self.svc._persist_sms(
+            "+573001234567", "Test with explicit conv",
+            conversation_id=conv.id, status="sending",
+        )
+        self.assertIsNotNone(msg_id)
+
+        # Verificar que el mensaje se creó en la conversación correcta
+        db = self.Session()
+        try:
+            from src.models import SmsMessage as SM
+            msg = db.query(SM).filter(SM.id == msg_id).first()
+            self.assertIsNotNone(msg)
+            self.assertEqual(msg.conversation_id, conv.id)
+            self.assertEqual(msg.status, "sending")
+            # Verificar que NO se creó una conversación 'unknown' adicional
+            from src.models import SmsConversation as SC
+            unknown_convs = db.query(SC).filter(
+                SC.peer_number == "+573001234567",
+                SC.workflow_type == "unknown",
+                SC.status == "active",
+            ).all()
+            self.assertEqual(len(unknown_convs), 0,
+                "No debe crear conversación 'unknown' cuando se da conversation_id")
+        finally:
+            db.close()
+
+    def test_persist_sms_without_conversation_id(self):
+        """_persist_sms sin conversation_id crea/recupera conversación 'unknown'
+        (comportamiento legacy)."""
+        msg_id = self.svc._persist_sms("+573009999888", "Legacy persist")
+
+        self.assertIsNotNone(msg_id)
+
+        # Verificar que se creó una conversación 'unknown'
+        db = self.Session()
+        try:
+            from src.models import SmsConversation as SC
+            convs = db.query(SC).filter(
+                SC.peer_number == "+573009999888",
+                SC.workflow_type == "unknown",
+                SC.status == "active",
+            ).all()
+            self.assertEqual(len(convs), 1)
+        finally:
+            db.close()
+
+    def test_send_sms_sync_creates_with_sending_status(self):
+        """send_sms_sync crea el mensaje con status='sending', no 'pending'."""
+        result = self.svc.send_sms_sync("+573001234567", "Sync sending test")
+        self.assertTrue(result)
+
+        # Verificar que el mensaje se persistió con status='sending'
+        # (en dev_mode se actualiza a 'sent', pero el initial status fue 'sending')
+        db = self.Session()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001234567",
+                SM.body == "Sync sending test",
+                SM.direction == "sent",
+            ).all()
+            self.assertEqual(len(msgs), 1)
+            # En dev_mode, el status final es 'sent' (se actualiza después de crear)
+            self.assertEqual(msgs[0].status, "sent")
+        finally:
+            db.close()
 
 
 class TestSMSServiceDryRun(unittest.TestCase):

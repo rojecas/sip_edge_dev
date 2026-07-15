@@ -1,6 +1,7 @@
 ---
 description: Diagnoses and fixes bugs. Reads the bug from feature_list.json, determines root cause, writes plan-bug-<name>.md, implements fix + regression test, and closes the GitHub issue.
 mode: subagent
+model: zai/glm-5.2
 permission:
   edit: allow
   write: allow

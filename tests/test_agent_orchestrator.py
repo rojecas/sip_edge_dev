@@ -589,3 +589,36 @@ class TestHandleSmsQueryMultiTurn(_MultiTurnTestBase):
             "+573001234567", "ai_query",
         )
         self.assertIsNotNone(conv)
+
+    def test_handle_sms_query_passes_conversation_id_to_send_sms(self):
+        """Bug fix: send_sms recibe conversation_id de la conversación AI activa.
+        Esto evita que los SMS enviados caigan en una conversación 'unknown'
+        separada."""
+        # Crear conversación ai_query activa
+        conv = self.persistence.create_conversation(
+            peer_number="+573001234567",
+            workflow_type="ai_query",
+            status="active",
+        )
+
+        self.mock_llm.chat_completion.return_value = {
+            "choices": [{
+                "message": {
+                    "role": "assistant",
+                    "content": "Respuesta de prueba.",
+                },
+            }],
+        }
+        self.mock_sms.send_sms.return_value = True
+
+        self.orchestrator.handle_sms_query(
+            "+573001234567", "consulta de prueba",
+            conversation_id=conv.id,
+        )
+
+        # Verificar que send_sms fue llamado con conversation_id
+        self.mock_sms.send_sms.assert_called()
+        call_kwargs = self.mock_sms.send_sms.call_args
+        # call_args is (args, kwargs) — verificamos que tenga conversation_id
+        self.assertIn("conversation_id", call_kwargs[1])
+        self.assertEqual(call_kwargs[1]["conversation_id"], conv.id)
