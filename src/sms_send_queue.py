@@ -146,6 +146,12 @@ class SmsSendQueue:
         if elapsed < self._min_send_interval:
             self._stop_event.wait(timeout=self._min_send_interval - elapsed)
         self._last_send_times[msg.peer_number] = time_module.time()
+        # Marcar como 'sending' antes de enviar para evitar race condition
+        # con send_sms() que tambien envia directamente (Bug: SMS duplicado)
+        try:
+            self._persistence.update_message_status(msg.id, "sending")
+        except Exception:
+            pass  # Si falla, continuamos igual
         for attempt in range(1, self.MAX_RETRIES + 1):
             try:
                 logger.debug(
