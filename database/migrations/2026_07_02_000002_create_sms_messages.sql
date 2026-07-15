@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS sms_messages (
     peer_number VARCHAR(20) NOT NULL,
     body TEXT NOT NULL,
     handler VARCHAR(32) NULL,
-    status ENUM('pending','sent','failed','timeout','delivered','received') NOT NULL DEFAULT 'pending',
+    status ENUM('pending','sending','sent','failed','timeout','delivered','received') NOT NULL DEFAULT 'pending',
     error_message TEXT NULL,
     modem_sms_id INT NULL,
     created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
