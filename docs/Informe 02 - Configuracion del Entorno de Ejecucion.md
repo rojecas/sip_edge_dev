@@ -393,6 +393,53 @@ sudo systemctl status sip-edge     # Ver estado
 sudo journalctl -u sip-edge -f     # Logs en tiempo real
 ```
 
+### Permisos sudo para mmcli (CRITICO)
+
+El servicio SIP-Edge ejecuta comandos `mmcli` via `sudo` para enviar/recibir SMS
+y gestionar el modem 4G. Si el usuario `sipedge` no tiene permisos `NOPASSWD`
+para `mmcli`, el dispatcher de SMS entrantes falla silenciosamente y no se
+procesan comandos SMS (emergencia, reset password, consultas AI).
+
+> **Leccion (2026-07-15):** Durante las pruebas de F28 se detecto que la
+> solicitud de modo manual no funcionaba. Causa: `sudo mmcli` pedia contrasena.
+> El archivo `/etc/sudoers.d/sip-edge` NO existia en este EdgeBox — fue omitido
+> durante la configuracion inicial. Sin el, el dispatcher de SMS no puede leer
+> mensajes entrantes ni enviar respuestas.
+
+**Archivo requerido:** `/etc/sudoers.d/sip-edge`
+
+```
+sipedge ALL=(root) NOPASSWD: /usr/bin/mmcli *
+```
+
+**Comando de instalacion:**
+
+```bash
+echo 'sipedge ALL=(root) NOPASSWD: /usr/bin/mmcli *' | sudo tee /etc/sudoers.d/sip-edge
+sudo chmod 440 /etc/sudoers.d/sip-edge
+```
+
+**Verificacion:**
+
+```bash
+# Debe ejecutarse sin pedir contrasena
+sudo -n mmcli -m 0 --messaging-list-sms
+# Respuesta esperada: "No sms messages were found" (o lista de SMS)
+
+# Si devuelve "sudo: a password is required", el archivo no existe o tiene
+# error de sintaxis
+```
+
+**Comandos mmcli que requieren sudo:**
+
+| Comando | Proposito | Modulo |
+|---------|-----------|--------|
+| `mmcli -m 0 --messaging-list-sms` | Listar SMS entrantes | `sms_dispatcher_v2.py` |
+| `mmcli -s <id>` | Leer contenido de un SMS | `sms_dispatcher_v2.py` |
+| `mmcli -m 0 --messaging-delete-sms=<id>` | Eliminar SMS procesado | `sms_dispatcher_v2.py` |
+| `mmcli -m 0 --messaging-create-sms '...'` | Crear SMS para envio | `sms_service.py` |
+| `mmcli -s <id> --send` | Enviar SMS creado | `sms_service.py` |
+
 ### API Endpoints (puerto 8000)
 
 | Metodo | Ruta | Funcion |
