@@ -166,6 +166,23 @@ class AiMultiTurnService:
             return []
         return history
 
+    @staticmethod
+    @staticmethod
+    def _extract_dates(text: str) -> set[str]:
+        """Extrae referencias a fechas de un texto.
+        Busca patrones como '14 jun', '15 de junio', '2026-06-14'.
+        Retorna un set de fechas normalizadas."""
+        import re
+        dates: set[str] = set()
+        # Patron: numero + mes abreviado (14 jun, 15 jun, etc.)
+        for m in re.finditer(r'(\d{1,2})\s+(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)', text.lower()):
+            dates.add(f"{m.group(1)} {m.group(2)}")
+        # Patron: numero + 'de' + mes (14 de junio, 15 de junio)
+        for m in re.finditer(r'(\d{1,2})\s+de\s+(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)', text.lower()):
+            month_abbr = m.group(2)[:3]
+            dates.add(f"{m.group(1)} {month_abbr}")
+        return dates
+
     def build_llm_messages(
         self,
         message_history: list[dict],
@@ -176,7 +193,28 @@ class AiMultiTurnService:
 
         Combina el system prompt, los exchanges del historial
         (user + assistant), y el nuevo mensaje del usuario.
+        Si el nuevo mensaje es ambiguo (sin fecha) y el historial
+        tiene varias fechas, inyecta una nota para forzar
+        clarificacion.
         """
+        # Detectar ambiguedad de fechas
+        user_text_to_send = new_user_text
+        if message_history:
+            history_text = " ".join(
+                ex.get("user", "") + " " + ex.get("assistant", "")
+                for ex in message_history
+            )
+            history_dates = self._extract_dates(history_text)
+            user_dates = self._extract_dates(new_user_text)
+            if len(history_dates) >= 2 and not user_dates:
+                date_list = ", ".join(sorted(history_dates))
+                user_text_to_send = (
+                    f"[IMPORTANTE: Esta pregunta NO especifica fecha. "
+                    f"El historial contiene datos de: {date_list}. "
+                    f"PREGUNTA al usuario a cual fecha se refiere ANTES "
+                    f"de responder con datos.]\n\n"
+                    f"{new_user_text}"
+                )
         messages: list[dict] = [
             {"role": "system", "content": system_prompt},
         ]
@@ -189,7 +227,7 @@ class AiMultiTurnService:
             if assistant_text:
                 messages.append({"role": "assistant", "content": assistant_text})
 
-        messages.append({"role": "user", "content": new_user_text})
+        messages.append({"role": "user", "content": user_text_to_send})
         return messages
 
     def append_exchange(
