@@ -293,25 +293,20 @@ class SmsPersistenceService:
         finally:
             db.close()
 
-    def message_exists_by_modem_id(self, modem_sms_id: int) -> bool:
-        """Verifica si existe un mensaje con el modem_sms_id dado.
+    def get_body_by_modem_id(self, modem_sms_id: int) -> str | None:
+        """Retorna el body de un mensaje enviado con ese modem_sms_id, o None.
 
-        Args:
-            modem_sms_id: ID del SMS en el modem (modem_sms_id).
-
-        Returns:
-            True si existe al menos un mensaje con ese modem_sms_id.
+        Solo busca en mensajes con direction='sent' (los que nosotros enviamos).
+        Si el modem recicla IDs tras reinicio y un SMS entrante reusa un ID
+        que antes fue de un envio nuestro, el texto NO coincidira.
         """
         db: Session = self._db_session_factory()
         try:
-            # Solo mensajes ENVIADOS por nosotros (direction='sent'). El modem
-            # recicla IDs — los SMS recibidos de otros numeros pueden reusar IDs
-            # que ya existen en BD, pero NO son auto-generados.
-            count = db.query(func.count(SmsMessage.id)).filter(
+            msg = db.query(SmsMessage.body).filter(
                 SmsMessage.modem_sms_id == modem_sms_id,
                 SmsMessage.direction == "sent",
-            ).scalar()
-            return count > 0
+            ).order_by(SmsMessage.created_at.desc()).first()
+            return msg[0] if msg else None
         finally:
             db.close()
 

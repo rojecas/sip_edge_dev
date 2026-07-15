@@ -202,15 +202,18 @@ class IncomingSmsDispatcherV2:
                     sender = _extract_sms_field(read.stdout, "number")
                     text = _extract_sms_field(read.stdout, "text")
 
-                    # Fix 3: Si el modem_sms_id existe en BD, es un SMS que nosotros
-                    # creamos al enviar. Eliminarlo y saltar para evitar loop.
+                    # Fix 3: Detectar SMS auto-generados (los que nosotros enviamos).
+                    # El modem recicla IDs tras reinicio, asi que no basta con verificar
+                    # si el modem_id existe en BD — hay que comparar el texto.
+                    # Solo si el ID existe Y el texto coincide, es realmente nuestro.
                     if sender and text:
                         try:
                             sms_modem_id = int(sms_id)
-                            if self._persistence.message_exists_by_modem_id(sms_modem_id):
+                            db_text = self._persistence.get_body_by_modem_id(sms_modem_id)
+                            if db_text is not None and db_text.strip() == text.strip():
                                 logger.info(
                                     "DispatcherV2: SMS %s es auto-generado "
-                                    "(modem_id=%s), eliminando",
+                                    "(modem_id=%s, texto coincide), eliminando",
                                     sms_id, sms_modem_id,
                                 )
                                 await self._delete_sms(sms_id)
