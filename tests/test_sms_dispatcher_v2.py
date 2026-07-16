@@ -13,7 +13,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from src.models import Base, SmsConversation, SmsMessage
+from src.models import Base, SmsConversation, SmsMessage, User
 from src.sms_persistence import SmsPersistenceService
 from src.sms_dispatcher_v2 import IncomingSmsDispatcherV2
 
@@ -365,6 +365,74 @@ class TestSmsDispatcherV2(unittest.TestCase):
 
         # handler_b retorno True, asi que handler_c no deberia ejecutarse
         self.assertEqual(execution_order, ["A", "B"])
+
+    # ==================================================================
+    # Rejected workflow: SMS de operadores/desconocidos se marca rejected
+    # ==================================================================
+
+    def test_operator_sms_marked_as_rejected(self):
+        """SMS de operador/desconocido debe marcarse como workflow_type='rejected'.
+
+        Cuando un SMS llega de un numero sin rol autorizado (admin/corresponsal),
+        la conversacion debe marcarse con workflow_type='rejected' y status='completed'
+        para trazabilidad, en vez de quedar como 'unknown'.
+        """
+        # SMS de un numero sin usuario registrado → role=None → rechazado
+        self.dispatcher._dispatch("3001234567", "hola")
+
+        db = self.Session()
+        try:
+            conv = (
+                db.query(SmsConversation)
+                .filter(SmsConversation.peer_number == "3001234567")
+                .first()
+            )
+            self.assertIsNotNone(conv, "Debe existir la conversacion")
+            self.assertEqual(
+                conv.workflow_type, "rejected",
+                f"SMS de operador debe marcarse 'rejected', no '{conv.workflow_type}'"
+            )
+            self.assertEqual(
+                conv.status, "completed",
+                "Conversacion rechazada debe marcarse completed"
+            )
+        finally:
+            db.close()
+
+    def test_operator_user_sms_marked_as_rejected(self):
+        """SMS de usuario con role='operator' debe marcarse como 'rejected'."""
+        # Crear usuario con role='operator'
+        db = self.Session()
+        try:
+            user = User(
+                username="operador1",
+                password_hash="x",
+                role="operator",
+                phone="3009876543",
+            )
+            db.add(user)
+            db.commit()
+        finally:
+            db.close()
+
+        # Enviar SMS desde el numero del operador
+        self.dispatcher._dispatch("3009876543", "mensaje de operador")
+
+        db = self.Session()
+        try:
+            conv = (
+                db.query(SmsConversation)
+                .filter(SmsConversation.peer_number == "3009876543")
+                .first()
+            )
+            self.assertIsNotNone(conv, "Debe existir conversacion para operador")
+            self.assertEqual(
+                conv.workflow_type, "rejected",
+                "SMS de usuario operator debe marcarse 'rejected'"
+            )
+            self.assertEqual(conv.status, "completed")
+        finally:
+            db.close()
 
 
 # ==================================================================

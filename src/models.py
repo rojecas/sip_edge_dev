@@ -273,7 +273,7 @@ class SmsConversation(Base):
     )
     peer_number = Column(String(20), nullable=False)
     workflow_type = Column(
-        Enum("emergency", "password_reset", "ai_query", "unknown"),
+        Enum("emergency", "password_reset", "ai_query", "unknown", "rejected"),
         nullable=False,
     )
     status = Column(

@@ -289,6 +289,8 @@ class IncomingSmsDispatcherV2:
                 "DispatcherV2: SMS de %s (rol=%s) ignorado por whitelist",
                 sender_phone, role,
             )
+            # Marcar como 'rejected' para trazabilidad (visible en consultas SQL)
+            self._persistence.update_conversation_workflow_type(conv.id, "rejected")
             self._persistence.update_conversation_status(conv.id, "completed")
             return
 

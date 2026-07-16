@@ -42,7 +42,7 @@ class SmsPersistenceService:
         expires_at: datetime | None = None,
     ) -> SmsConversation:
         """Crea una nueva conversacion SMS."""
-        if workflow_type not in ("emergency", "password_reset", "ai_query", "unknown"):
+        if workflow_type not in ("emergency", "password_reset", "ai_query", "unknown", "rejected"):
             raise SmsPersistenceError(f"workflow_type invalido: {workflow_type}")
 
         if status not in ("active", "completed", "expired", "cancelled", "failed", "archived"):
@@ -129,6 +129,33 @@ class SmsPersistenceService:
             db.commit()
             logger.debug(
                 "Conversacion %s actualizada a status=%s", conversation_id, status,
+            )
+        finally:
+            db.close()
+
+    def update_conversation_workflow_type(
+        self, conversation_id: int, workflow_type: str,
+    ) -> None:
+        """Actualiza el workflow_type de una conversacion."""
+        if workflow_type not in ("emergency", "password_reset", "ai_query", "unknown", "rejected"):
+            raise SmsPersistenceError(f"workflow_type invalido: {workflow_type}")
+
+        db: Session = self._db_session_factory()
+        try:
+            conv = (
+                db.query(SmsConversation)
+                .filter(SmsConversation.id == conversation_id)
+                .first()
+            )
+            if conv is None:
+                raise SmsPersistenceError(
+                    f"Conversacion {conversation_id} no encontrada"
+                )
+            conv.workflow_type = workflow_type
+            conv.last_activity = datetime.now(timezone.utc)
+            db.commit()
+            logger.debug(
+                "Conversacion %s actualizada a workflow_type=%s", conversation_id, workflow_type,
             )
         finally:
             db.close()
