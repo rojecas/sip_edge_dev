@@ -69,7 +69,7 @@ ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42
 | **IMEI** | Por EdgeBox (ver §2 inventario) |
 | **Operador** | Tigo Colombia (732103) |
 | **APN** | `internet.tigo.com.co` |
-| **Numero** | `573013643187` |
+| **Numero** | Por EdgeBox (ver §2 inventario) |
 | **Puertos AT** | `/dev/ttyUSB2`, `/dev/ttyUSB3` |
 | **Gestion** | ModemManager (`mmcli -m 0`) |
 
