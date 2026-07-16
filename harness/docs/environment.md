@@ -1,4 +1,4 @@
-﻿# Environment â€” sip_edge
+# Environment â€” sip_edge
 
 > El agente DEBE leer este archivo **antes de ejecutar cualquier comando bash**.
 > Describe DONDE y COMO se ejecutan los comandos, y que servicios estan disponibles.
@@ -12,13 +12,26 @@ Este proyecto tiene **dos entornos** distintos:
 | Entorno | Proposito | Como acceder |
 |---------|-----------|-------------|
 | **Local (dev)** | Desarrollo, tests, specs | Docker compose en la maquina local |
-| **EdgeBox (prod)** | Ejecucion real en hardware industrial | SSH al EdgeBox-RPI-200 |
+| **EdgeBoxes (prod)** | 2 EdgeBox-RPI-200 (ver §2 inventario) | SSH a 192.168.1.42 (solo uno en linea a la vez) |
 
 ---
 
-## 2. EdgeBox-RPI-200 (Produccion)
+## 2. EdgeBoxes (Producción)
 
-### Hardware
+El proyecto tiene **dos EdgeBox-RPI-200** con hardware idéntico. Solo uno está conectado
+a la red a la vez (misma IP `192.168.1.42`).
+
+### Inventario
+
+| ID | CPU Serial | MAC eth0 | Machine ID | IMEI Modem | Estado |
+|----|-----------|----------|------------|------------|--------|
+| **EB1** | `10000000b9e9541c` | `2c:cf:67:bb:3a:de` | `6b8419ea3...` | `862708046456880` | PROD — WiFi pendiente |
+| **EB2** | *(pendiente)* | *(pendiente)* | *(pendiente)* | `862708046475815` | TEST — fallo SMS (F28) |
+
+> ⚠️ **Identificador primario: CPU Serial** (`grep Serial /proc/cpuinfo`).
+> El IMEI puede variar si se intercambia el módem Quectel entre dispositivos.
+
+### Hardware (común a ambos)
 
 | Componente | Detalle |
 |------------|---------|
@@ -53,10 +66,10 @@ ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42
 
 | Parametro | Valor |
 |-----------|-------|
-| **IMEI** | 862708046475815 |
+| **IMEI** | Por EdgeBox (ver §2 inventario) |
 | **Operador** | Tigo Colombia (732103) |
 | **APN** | `internet.tigo.com.co` |
-| **Numero** | 573013643187 |
+| **Numero** | `573013643187` |
 | **Puertos AT** | `/dev/ttyUSB2`, `/dev/ttyUSB3` |
 | **Gestion** | ModemManager (`mmcli -m 0`) |
 
