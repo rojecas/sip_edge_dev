@@ -23,10 +23,10 @@ a la red a la vez (misma IP `192.168.1.42`).
 
 ### Inventario
 
-| ID | CPU Serial | MAC eth0 | Machine ID | IMEI Modem | Estado |
-|----|-----------|----------|------------|------------|--------|
-| **EB1** | `10000000b9e9541c` | `2c:cf:67:bb:3a:de` | `6b8419ea3...` | `862708046456880` | PROD — WiFi pendiente |
-| **EB2** | *(pendiente)* | *(pendiente)* | *(pendiente)* | `862708046475815` | TEST — fallo SMS (F28) |
+| ID | CPU Serial | MAC eth0 | Machine ID | Teléfono | IMEI Modem | Estado |
+|----|-----------|----------|------------|----------|------------|--------|
+| **EB1** | `10000000b9e9541c` | `2c:cf:67:bb:3a:de` | `6b8419ea3...` | `573008162266` | `862708046456880` | PROD — WiFi pendiente |
+| **EB2** | *(pendiente)* | *(pendiente)* | *(pendiente)* | `573013643187` | `862708046475815` | TEST — fallo SMS (F28) |
 
 > ⚠️ **Identificador primario: CPU Serial** (`grep Serial /proc/cpuinfo`).
 > El IMEI puede variar si se intercambia el módem Quectel entre dispositivos.
