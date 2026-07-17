@@ -2,6 +2,21 @@
 
 > All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-07-16
+
+### Added
+- Feature #28 — Conversacion Multiturno para Consultas AI via SMS: extensión del sistema de consultas AI para soportar conversaciones multiturno sobre la infraestructura de `sms_conversations`/`sms_messages` (Feature 27). Mantiene historial de hasta 10 exchanges (FIFO, texto plano sin tool_calls) en `message_history`, tabla `sms_ai_tool_log` para auditoría de tool_calls, detección de despedidas, y archival a 90 días. Emergency y password_reset tienen prioridad sobre AI.
+
+### Fixed
+- Bug #29 — ScaleService async reader crashes + WebSocket send_text nunca se ejecuta: TypeError en `_async_reader` sin recuperación, `ws.send_text()` nunca awaited, log faltante en `start()`.
+- Bug #30 — Watchdog mata el proceso cada 30s: `sd_notify` existe pero nunca se llama — implementada tarea async que notifica al watchdog cada 15s.
+- Bug #31 — Dispatcher v2 crashea en `get_user_role_by_phone`: método referenciado pero nunca implementado en `SmsPersistenceService` — AttributeError abortaba `_dispatch()` antes de delegar a handlers.
+
+### Testing-phase fixes (F28)
+- Fix conversation_id: `_dispatch()` ahora reutiliza conversación activa del peer (cualquier workflow_type) en vez de crear `unknown` por cada SMS entrante.
+- SMS sanitization: `_sanitize_sms_text()` trunca a 160 chars y reemplaza `/` con `-` (mitiga filtro SMSC de Tigo).
+- Defense-in-depth: null-checks en `password_reset.handle_incoming_sms` y `emergency_mode.process_incoming_sms`.
+
 ## [1.3.1] - 2026-07-09
 
 ### Fixed

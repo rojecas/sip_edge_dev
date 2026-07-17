@@ -1,36 +1,41 @@
 {
-  "project_version": "1.3.1",
-  "pending": [
-    {
-      "id": 13,
-      "type": "feature",
-      "name": "frontend_login_kiosk",
-      "title": "Frontend - Login, Kiosco de Pesaje y Logout",
-      "completed_at": "2026-07-09"
-    },
-    {
-      "id": 29,
-      "type": "bug",
-      "name": "scale_service_async_crashes",
-      "title": "ScaleService async reader crashes + WebSocket send_text nunca se ejecuta",
-      "completed_at": "2026-07-09"
-    },
-    {
-      "id": 30,
-      "type": "bug",
-      "name": "watchdog_sd_notify",
-      "title": "Watchdog mata el proceso cada 30s - sd_notify existe pero nunca se llama",
-      "completed_at": "2026-07-09"
-    },
-    {
-      "id": 31,
-      "type": "bug",
-      "name": "sms_dispatcher_v2_crashes",
-      "title": "Dispatcher v2 crashea en get_user_role_by_phone - SMS entrantes no se procesan",
-      "completed_at": "2026-07-09"
-    }
-  ],
+  "project_version": "1.4.0",
+  "pending": [],
   "history": [
+    {
+      "version": "1.4.0",
+      "released_at": "2026-07-16",
+      "items": [
+        {
+          "id": 28,
+          "type": "feature",
+          "name": "ai_multi_turn",
+          "title": "Conversacion Multiturno para Consultas AI via SMS",
+          "completed_at": "2026-07-16"
+        },
+        {
+          "id": 29,
+          "type": "bug",
+          "name": "scale_service_async_crashes",
+          "title": "ScaleService async reader crashes + WebSocket send_text nunca se ejecuta",
+          "completed_at": "2026-07-09"
+        },
+        {
+          "id": 30,
+          "type": "bug",
+          "name": "watchdog_sd_notify",
+          "title": "Watchdog mata el proceso cada 30s - sd_notify existe pero nunca se llama",
+          "completed_at": "2026-07-09"
+        },
+        {
+          "id": 31,
+          "type": "bug",
+          "name": "sms_dispatcher_v2_crashes",
+          "title": "Dispatcher v2 crashea en get_user_role_by_phone - SMS entrantes no se procesan",
+          "completed_at": "2026-07-09"
+        }
+      ]
+    },
     {
       "version": "1.3.1",
       "released_at": "2026-07-09",
