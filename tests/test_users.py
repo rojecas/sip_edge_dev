@@ -47,7 +47,14 @@ def _build_test_app():
             full_name="Inactivo",
             is_active=False,
         )
-        db.add_all([admin, operator, inactive_user])
+        operator2 = User(
+            username="operator2",
+            password_hash=hash_password("operator2pass"),
+            role="operator",
+            full_name="Operador Dos",
+            is_active=True,
+        )
+        db.add_all([admin, operator, inactive_user, operator2])
         db.commit()
     finally:
         db.close()
@@ -180,13 +187,29 @@ class TestUserManagement(unittest.TestCase):
         self.assertIsInstance(data["items"], list)
         self.assertGreaterEqual(len(data["items"]), 2)
         usernames = [u["username"] for u in data["items"]]
-        self.assertIn("admin", usernames)
-        self.assertIn("operator", usernames)
+        self.assertNotIn("admin", usernames)
+        self.assertNotIn("operator", usernames)
         self.assertIn("inactive", usernames)
+        self.assertIn("operator2", usernames)
         for user in data["items"]:
             self.assertNotIn("password_hash", user)
             self.assertIn("employee_code", user)
             self.assertIn("phone", user)
+
+    def test_list_users_excludes_hidden_ids(self):
+        """GET /api/users no incluye usuarios con id 1 y 2 (ocultos del listado)."""
+        token = self._login()
+        response = self.client.get(
+            "/api/users",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        ids = [u["id"] for u in data["items"]]
+        self.assertNotIn(1, ids)
+        self.assertNotIn(2, ids)
+        self.assertIn(3, ids)
+        self.assertIn(4, ids)
 
     # --- R2: Get user by ID ---
     def test_get_user_by_id(self):

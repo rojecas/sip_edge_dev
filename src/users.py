@@ -13,6 +13,8 @@ from src.database import get_db
 from src.models import User
 from src.schemas import PaginatedResponse
 
+HIDDEN_USER_IDS = {1, 2}
+
 
 class UserCreate(BaseModel):
     username: str = Field(min_length=1)
@@ -144,7 +146,7 @@ def get_users(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
-    query = db.query(User)
+    query = db.query(User).filter(User.id.notin_(HIDDEN_USER_IDS))
     total = query.count()
     total_pages = max(1, math.ceil(total / page_size))
     offset = (page - 1) * page_size

@@ -1106,6 +1106,8 @@ class TestUserResponseHidesResetFields(unittest.TestCase):
             user.reset_pin = hash_password("1234")
             user.reset_pin_expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
             user.force_password_change = True
+            visible = db.query(User).filter(User.username == "nophone").first()
+            visible.force_password_change = True
             db.commit()
         finally:
             db.close()
@@ -1144,9 +1146,9 @@ class TestUserResponseHidesResetFields(unittest.TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        operator_user = [u for u in data["items"] if u["username"] == "operator1"]
-        self.assertEqual(len(operator_user), 1)
-        self.assertTrue(operator_user[0]["force_password_change"])
+        nophone_user = [u for u in data["items"] if u["username"] == "nophone"]
+        self.assertEqual(len(nophone_user), 1)
+        self.assertTrue(nophone_user[0]["force_password_change"])
 
 
 # ==================================================================
