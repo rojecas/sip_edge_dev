@@ -24,34 +24,33 @@
    (planes, cierres, bloqueos).
 8. **Session reminder:** Revisa si hay contenido entre las marcas
 <!-- SESSION_REMINDER_START -->
-## Recordatorio — Proxima sesion (2026-07-15)
+## Recordatorio — Proxima sesion (2026-07-16)
 
-### Estado del repositorio
-- F28 (ai_multi_turn) → **testing** ← PROXIMA ACCION (pruebas manuales, cierre, release-manager)
-- F29-F32 → **pending** (sql_tools_v2, alert_monitor, sms_scheduling_v2, sample_imaging)
+### Cambios realizados en esta sesion
+- **F28 (ai_multi_turn)** — DONE. Liberado en v1.4.0. Conversacion multiturno AI via SMS con FIFO, tool_log, archival 90d.
+- **Fix: conversation_id dispatcher** — _dispatch() ahora reutiliza conversacion activa del peer en vez de crear unknown por cada SMS entrante.
+- **Fix: SMS sanitization** — _sanitize_sms_text() en sms_service.py: trunca a 160 chars, reemplaza / con -.
+- **Fix: defense-in-depth** — null-checks en password_reset.py y emergency_mode.py.
+- **Fix: 16 tests** — whitelist setup + handler signatures corregidos en test_password_reset, test_emergency_mode, test_sms_persistence.
+- **Release v1.4.0** — F28 + bugs #29 #30 #31. GitHub release creado.
 
-### Bugs corregidos en esta sesion
-| Bug | Causa | Fix |
-|-----|-------|-----|
-| ENUM sms_messages sin sending | Migracion F27 incompleta | Agregado sending al ENUM |
-| Race queue vs send_sms | Queue no marcaba sending | Queue ahora marca sending |
-| Conv AI duplicadas | No reutilizaba ai_query existente | Busca activa antes de crear |
-| Auto-generated falso pos | modem_id reciclado confundia | Eliminada deteccion, confiar solo en status |
-| sudo mmcli pedia password | /etc/sudoers.d/sip-edge faltaba | Creado con NOPASSWD |
+### Descubrimientos
+| Hallazgo | Detalle |
+|----------|---------|
+| SMSC Tigo bloquea Mina | La palabra Mina es filtrada por el SMSC de Tigo en AMBAS direcciones. No es bug del modem ni del app. |
+| EB1 local changes | EB1 tenia cambios locales stale en src/sms_service.py (identicos al commit). Descartados con git checkout antes del pull. |
 
 ### Pendiente para la proxima sesion
-1. **F28** (ai_multi_turn) — terminar pruebas manuales, autorizar cierre, release-manager
-2. **F33** (sql_tools_v2) — spec-author, implement, review, testing, cierre
-3. **F34** (alert_monitor) — spec-author, implement, review, testing, cierre
-4. **F35** (sms_scheduling_v2) — spec-author, implement, review, testing, cierre
-5. **F32** (sample_imaging) — spec-author, implement, review, testing, cierre
+1. **F29-F32** — pending (sql_tools_v2, alert_monitor, sms_scheduling_v2, sample_imaging). Iniciar spec-author para cada una.
+2. **EB1 untracked files** — scripts/ y docs/ sin trackear en EB1. Considerar .gitignore o commit.
+3. **EB1 src/static/index.html** — modificacion local en EB1 sin commitear. Investigar.
 
-### Documentacion generada
-- docs/ERS_V1.4_Adendas.md (39 RF para F29-F32)
-- docs/analisis_solicitud_reportes_sms.md (analisis factibilidad)
-- harness/specs/28_ai_multi_turn/ (spec validado)
-
+### Archivos modificados
+- src/sms_dispatcher_v2.py, src/sms_persistence.py, src/sms_service.py, src/password_reset.py, src/emergency_mode.py
+- tests/test_sms_dispatcher_v2.py, tests/test_sms_service.py, tests/test_sms_persistence.py, tests/test_password_reset.py, tests/test_emergency_mode.py
+- VERSION, CHANGELOG.md, harness/feature_list.json, harness/releases/tracker.json
 <!-- SESSION_REMINDER_END -->
+
 9. Lee las lecciones acumuladas en harness/learnings/. Primero common.md
    (herramientas disponibles, reglas de escritura), luego el archivo especifico
    de tu rol si existe:

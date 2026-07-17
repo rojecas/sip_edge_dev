@@ -1,46 +1,35 @@
-# Sesion \"Nuevas features\" — 2026-07-14/15
+# Sesion "continuacion debug Bug28" — 2026-07-16
 
 ## Resumen
-Sesion larga multi-objetivo: analisis de solicitud del cliente, creacion de ERS V1.4,
-implementacion y correccion de F28 (ai_multi_turn) con pruebas en EdgeBox, y correccion
-de multiples bugs en el pipeline de SMS encontrados durante las pruebas.
+Sesion de cierre de F28 (ai_multi_turn): fix del bug conversation_id en dispatcher,
+sanitizacion SMS, defense-in-depth, limpieza de 16 tests, release v1.4.0 y despliegue en EB1.
 
 ## Features trabajadas
 | ID | Feature | Estado | Notas |
 |---|---------|--------|-------|
-| 28 | ai_multi_turn | **testing** | Implementada + validada. Conversacion multiturno AI via SMS con FIFO, tool_log, archivado. 3 bugs corregidos en pruebas. |
-| 29-32 | sql_tools_v2, alert_monitor, sms_scheduling_v2, sample_imaging | **pending** | Registradas en feature_list.json + ERS_V1_4_Adendas.md |
+| 28 | ai_multi_turn | **done** | Liberado en v1.4.0. Conversacion multiturno AI via SMS. |
+| 29-32 | sql_tools_v2, alert_monitor, sms_scheduling_v2, sample_imaging | **pending** | Sin cambios. |
 
-## Bugs encontrados y corregidos
-1. SMS duplicado por ENUM: F27 omitio 'sending' en sms_messages.status. Fix: agregado al ENUM.
-2. SMS duplicado por race queue: SendQueue no marcaba 'sending' antes de enviar. Fix: queue ahora marca sending.
-3. Conversaciones AI duplicadas: get_or_create_ai_conversation creaba nueva por cada SMS. Fix: reutiliza ai_query existente.
-4. SMS entrantes descartados: deteccion de auto-generados por modem_id era falsa positivo. Fix: eliminada (status != received basta).
-5. sudo mmcli pedia password: /etc/sudoers.d/sip-edge no existia. Fix: creado con NOPASSWD.
-6. Ambiguedad fechas en multiturno: LLM suponia fechas sin preguntar. Fix: pre-procesamiento inyecta nota de clarificacion.
+## Fixes realizados
+1. **conversation_id dispatcher**: _dispatch() reutiliza conversacion activa del peer (cualquier workflow_type) en vez de crear unknown por cada SMS entrante.
+2. **SMS sanitization**: _sanitize_sms_text() en sms_service.py (trunca 160, reemplaza / con -).
+3. **Defense-in-depth**: null-checks en password_reset.handle_incoming_sms y emergency_mode.process_incoming_sms.
+4. **16 tests arreglados**: whitelist setup + handler signatures en test_password_reset, test_emergency_mode, test_sms_persistence. 3 tests obsoletos eliminados.
 
-## Fixes entorno EdgeBox
-- Keyring deshabilitado (gnome-keyring autostarts movidos a .disabled)
-- Chromium kiosk autostart en /etc/xdg/autostart/kiosk.desktop
-- Keypad decimal fijado (kpdl:dot via localectl + autostart)
-- sudo NOPASSWD para mmcli documentado en Informe 02
+## Release
+- **v1.4.0** — F28 (feature) + bugs #29 #30 #31
+- Commit: 577197a
+- Tag: v1.4.0
+- GitHub: https://github.com/rojecas/sip_edge/releases/tag/v1.4.0
+- Deploy EB1: cac715d fast-forward, servicio healthy
 
-## Documentos generados
-- docs/ERS_V1.4_Adendas.md (39 RF + 2 NFR)
-- docs/analisis_solicitud_reportes_sms.md
-- harness/specs/28_ai_multi_turn/ (spec validado)
-- harness/progress/testplan_28_ai_multi_turn.md
-
-## Harness corregido
-- AGENTS.md: Caso A ahora incluye spec-validator, Casos B/C trigger cambiado a spec-reviewed
-- CHECKPOINTS.md: C7 incluye spec-reviewed y testing
+## Verificacion
+- 261 tests green (8 modulos SMS-adjacentes)
+- Reviewer: APPROVED
+- EB1 health: HTTP 200, logs limpios
+- Pruebas manuales: OK (usuario autorizo cierre)
 
 ## Pendiente prox sesion
-- F28: terminar pruebas manuales → autorizar cierre → release-manager → done
-- F29-F35: spec-author para cada una
-- Revisar race condition send_sms vs SmsSendQueue (discutir solucion final)
-
-## Estado final
-- EdgeBox: /health 200, sudo mmcli OK, SMS funcional
-- F28: testing (esperando pruebas manuales)
-- F29-F35: pending
+- F29-F32: spec-author para cada una
+- EB1 untracked files (scripts/, docs/) — considerar .gitignore
+- EB1 src/static/index.html modificacion local — investigar
