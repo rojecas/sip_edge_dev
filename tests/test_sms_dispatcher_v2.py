@@ -44,6 +44,21 @@ class TestSmsDispatcherV2(unittest.TestCase):
             persistence=self.persistence,
         )
 
+        # Mock get_user_role_by_phone to return "admin" for test phone numbers.
+        # This avoids the need to register User rows and the false-positive
+        # matches caused by phone normalization variants (e.g. "3001234567"
+        # normalizes to "573001234567" and would match a different user).
+        self._original_get_role = self.persistence.get_user_role_by_phone
+
+        def mock_get_role(phone):
+            return "admin"
+
+        self.persistence.get_user_role_by_phone = mock_get_role
+
+    def tearDown(self):
+        """Restore original get_user_role_by_phone."""
+        self.persistence.get_user_role_by_phone = self._original_get_role
+
     # ==================================================================
     # R3: Persist before dispatch
     # ==================================================================
@@ -52,7 +67,7 @@ class TestSmsDispatcherV2(unittest.TestCase):
         """R3: verificar que el SMS esta en BD antes de llamar al handler."""
         handler_called = []
 
-        def my_handler(sender_phone, text):
+        def my_handler(sender_phone, text, message_id=None, conversation_id=None):
             # Verificar que el SMS ya esta en BD
             db = self.Session()
             try:
@@ -80,7 +95,7 @@ class TestSmsDispatcherV2(unittest.TestCase):
         """R3: El mensaje existe en BD con status='received' despues de dispatch."""
         handled = []
         self.dispatcher.register_handler(
-            lambda p, t: handled.append(True) or True, workflow_type="test",
+            lambda p, t, *args: handled.append(True) or True, workflow_type="test",
         )
         self.dispatcher._dispatch("+573001234567", "test message")
 
@@ -105,7 +120,7 @@ class TestSmsDispatcherV2(unittest.TestCase):
     def test_incoming_sms_stores_modem_sms_id(self):
         """Verificar que un SMS entrante almacena el modem_sms_id en BD."""
         self.dispatcher.register_handler(
-            lambda p, t: True, workflow_type="test",
+            lambda p, t, *args: True, workflow_type="test",
         )
         self.dispatcher._dispatch(
             "+573001234567", "test message", modem_sms_id="42",
@@ -150,7 +165,7 @@ class TestSmsDispatcherV2(unittest.TestCase):
     def test_conversation_created_on_first_message(self):
         """R4: primer SMS crea conversacion."""
         self.dispatcher.register_handler(
-            lambda p, t: True, workflow_type="test",
+            lambda p, t, *args: True, workflow_type="test",
         )
         self.dispatcher._dispatch("+573009999999", "first message")
 
@@ -178,7 +193,7 @@ class TestSmsDispatcherV2(unittest.TestCase):
         """
         # Registrar un handler que siempre retorna False (no maneja)
         self.dispatcher.register_handler(
-            lambda p, t: False, workflow_type="emergency",
+            lambda p, t, *args: False, workflow_type="emergency",
         )
         self.dispatcher._dispatch("+573001234567", "cualquier cosa random")
 
@@ -262,12 +277,12 @@ class TestSmsDispatcherV2(unittest.TestCase):
         Con el bug, _build_ai_sms_handler retornaba True siempre,
         impidiendo que el dispatcher enviara la respuesta de ayuda.
         """
-        def emergency_handler(sender_phone, text):
+        def emergency_handler(sender_phone, text, *args):
             if "manual on" in text.lower():
                 return True
             return False
 
-        def password_reset_handler(sender_phone, text):
+        def password_reset_handler(sender_phone, text, *args):
             if "reset password" in text.lower():
                 return True
             return False
@@ -345,15 +360,15 @@ class TestSmsDispatcherV2(unittest.TestCase):
         """Verificar que los handlers se ejecutan en orden de registro."""
         execution_order = []
 
-        def handler_a(p, t):
+        def handler_a(p, t, *args):
             execution_order.append("A")
             return False
 
-        def handler_b(p, t):
+        def handler_b(p, t, *args):
             execution_order.append("B")
             return True
 
-        def handler_c(p, t):
+        def handler_c(p, t, *args):
             execution_order.append("C")
             return True
 
@@ -377,6 +392,10 @@ class TestSmsDispatcherV2(unittest.TestCase):
         la conversacion debe marcarse con workflow_type='rejected' y status='completed'
         para trazabilidad, en vez de quedar como 'unknown'.
         """
+        # Restore original get_user_role_by_phone so the whitelist rejects
+        # the unregistered number (the global setUp mock returns "admin").
+        self.persistence.get_user_role_by_phone = self._original_get_role
+
         # SMS de un numero sin usuario registrado → role=None → rechazado
         self.dispatcher._dispatch("3001234567", "hola")
 
@@ -401,6 +420,10 @@ class TestSmsDispatcherV2(unittest.TestCase):
 
     def test_operator_user_sms_marked_as_rejected(self):
         """SMS de usuario con role='operator' debe marcarse como 'rejected'."""
+        # Restore original get_user_role_by_phone so the whitelist checks
+        # the actual DB (the global setUp mock returns "admin").
+        self.persistence.get_user_role_by_phone = self._original_get_role
+
         # Crear usuario con role='operator'
         db = self.Session()
         try:
@@ -431,6 +454,91 @@ class TestSmsDispatcherV2(unittest.TestCase):
                 "SMS de usuario operator debe marcarse 'rejected'"
             )
             self.assertEqual(conv.status, "completed")
+        finally:
+            db.close()
+
+    # ==================================================================
+    # Regression: dispatcher reuses active conversation for same peer
+    # (fix for conversation_id bug in _dispatch)
+    # ==================================================================
+
+    def test_dispatch_reuses_active_conversation_for_same_peer(self):
+        """Task 1 fix: 2 mensajes del mismo peer terminan en la MISMA conversacion.
+
+        Escenario:
+        1. Primer SMS: dispatcher crea conversacion 'unknown'.
+        2. Handler cambia workflow_type a 'ai_query' (simula upgrade del AI).
+        3. Segundo SMS: dispatcher DEBE reutilizar la conversacion ai_query
+           activa, NO crear una segunda conversacion 'unknown'.
+
+        Antes del fix, el segundo SMS creaba una nueva conversacion 'unknown'
+        porque get_or_create_active_conversation filtraba por workflow_type='unknown'
+        y la primera ya habia sido actualizada a 'ai_query'.
+        """
+        peer = "+573001234567"
+
+        # Handler que simula el upgrade a ai_query que hace el AI handler
+        def upgrade_handler(phone, text, message_id=None, conversation_id=None):
+            self.persistence.update_conversation_workflow_type(
+                conversation_id, "ai_query",
+            )
+            return True
+
+        self.dispatcher.register_handler(upgrade_handler, workflow_type="ai_query")
+
+        # --- Primer SMS ---
+        self.dispatcher._dispatch(peer, "cuantos pesajes?")
+
+        db = self.Session()
+        try:
+            # Verificar que la conversacion se actualizo a ai_query
+            conv = (
+                db.query(SmsConversation)
+                .filter(SmsConversation.peer_number == peer)
+                .first()
+            )
+            self.assertIsNotNone(conv, "Debe existir conversacion despues del primer SMS")
+            self.assertEqual(conv.workflow_type, "ai_query")
+            first_conv_id = conv.id
+        finally:
+            db.close()
+
+        # --- Segundo SMS ---
+        self.dispatcher._dispatch(peer, "y el promedio?")
+
+        db = self.Session()
+        try:
+            # Verificar: solo DEBE haber UNA conversacion para este peer
+            convs = (
+                db.query(SmsConversation)
+                .filter(SmsConversation.peer_number == peer)
+                .all()
+            )
+            self.assertEqual(
+                len(convs), 1,
+                "Debe haber exactamente UNA conversacion — "
+                "el dispatcher NO debe crear una segunda 'unknown'",
+            )
+
+            # Verificar: ambos mensajes tienen el mismo conversation_id
+            msgs = (
+                db.query(SmsMessage)
+                .filter(SmsMessage.peer_number == peer)
+                .order_by(SmsMessage.created_at.asc())
+                .all()
+            )
+            self.assertEqual(len(msgs), 2,
+                "Debe haber 2 mensajes entrantes (no hay respuesta de ayuda)")
+            self.assertEqual(
+                msgs[0].conversation_id, msgs[1].conversation_id,
+                "Ambos mensajes DEBEN pertenecer a la misma conversacion "
+                f"(msg1.conv={msgs[0].conversation_id}, msg2.conv={msgs[1].conversation_id})",
+            )
+            self.assertEqual(
+                msgs[0].conversation_id, first_conv_id,
+                "El conversation_id del primer mensaje debe coincidir con la "
+                "conversacion original",
+            )
         finally:
             db.close()
 
@@ -562,7 +670,10 @@ class TestSmsDispatcherV2Fix3(unittest.TestCase):
         )
 
     def test_sms_with_existing_modem_id_is_skipped(self):
-        """Fix 3: SMS cuyo modem_sms_id existe en BD se elimina y no se procesa."""
+        """Fix 3 (obsoleto): SMS con modem_sms_id existente YA NO se filtra
+        en _fetch_mmcli_sms. El filtro de status != 'received' es suficiente
+        para evitar loops con SMS auto-generados (los salientes tienen status
+        'sent'/'stored', no 'received')."""
         # Pre-poblar BD con un mensaje que tiene modem_sms_id=42
         conv = self.persistence.create_conversation(
             peer_number="+573001234567", workflow_type="unknown",
@@ -611,18 +722,14 @@ class TestSmsDispatcherV2Fix3(unittest.TestCase):
         with mock.patch("subprocess.run", side_effect=fake_run):
             messages = asyncio.run(self.dispatcher._fetch_mmcli_sms())
 
-        # No se debe devolver ningun mensaje (es auto-generado)
+        # El SMS se retorna normalmente porque tiene state='received'.
+        # El filtro por modem_sms_id fue removido — el filtro por status
+        # es suficiente para evitar loops (los SMS salientes tienen
+        # status 'sent'/'stored', no 'received').
         self.assertEqual(
-            len(messages), 0,
-            "SMS con modem_sms_id existente no debe devolverse como entrante",
+            len(messages), 1,
+            "SMS con state='received' se retorna aunque su modem_sms_id exista en BD",
         )
-
-        # Verificar que se elimino del modem
-        delete_calls = [
-            a for a in call_log
-            if any("--messaging-delete-sms" in str(arg) for arg in a)
-        ]
-        self.assertGreaterEqual(len(delete_calls), 1)
 
     def test_sms_without_existing_modem_id_is_processed(self):
         """Fix 3: SMS con modem_sms_id NO existente se procesa normalmente."""

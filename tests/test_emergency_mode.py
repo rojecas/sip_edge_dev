@@ -1405,6 +1405,12 @@ class TestFullPipelineV2(unittest.TestCase):
             self.svc.process_incoming_sms, workflow_type="emergency",
         )
 
+        # Mock get_user_role_by_phone to return "admin" — these tests
+        # verify the emergency activation pipeline, not the dispatcher
+        # whitelist. test_pipeline_v2_unauthorized restores the real method.
+        self._original_get_role = self.persistence.get_user_role_by_phone
+        self.persistence.get_user_role_by_phone = lambda phone: "admin"
+
     def _run_dispatcher_cycle(self):
         """Ejecuta un ciclo: start → espera processing → stop."""
         async def _run():
@@ -1481,6 +1487,10 @@ class TestFullPipelineV2(unittest.TestCase):
 
     def test_pipeline_v2_unauthorized(self):
         """Pipeline V2: SMS de numero no-admin NO activa modo (whitelist en dispatcher)."""
+        # Restore real get_user_role_by_phone so the whitelist actually
+        # rejects the unregistered number.
+        self.persistence.get_user_role_by_phone = self._original_get_role
+
         self.assertFalse(self.svc.is_active())
 
         self.dispatcher.enqueue_incoming_sms(

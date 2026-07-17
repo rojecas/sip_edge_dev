@@ -1056,3 +1056,117 @@ class TestSMSServiceModemSmsId(unittest.TestCase):
         updated = self.persistence.get_message(self.msg.id)
         self.assertIsNone(updated.modem_sms_id)
         self.assertEqual(updated.status, "pending")
+
+
+# ==================================================================
+# SMS sanitization tests (F28 testing fix: Task 3)
+# ==================================================================
+
+
+class TestSmsSanitization(unittest.TestCase):
+    """Verificar que _sanitize_sms_text sanitiza correctamente."""
+
+    def test_sanitize_replaces_slash_with_dash(self):
+        """La barra '/' se reemplaza por '-'. Fix para filtro SMSC Tigo."""
+        result = SMSService._sanitize_sms_text("24/06/2026")
+        self.assertEqual(result, "24-06-2026")
+
+    def test_sanitize_replaces_multiple_slashes(self):
+        """Multiples '/' se reemplazan todas por '-'."""
+        result = SMSService._sanitize_sms_text("a/b/c/d")
+        self.assertEqual(result, "a-b-c-d")
+
+    def test_sanitize_truncates_long_text(self):
+        """Texto > 160 chars se trunca a 157 + '...'."""
+        long_text = "x" * 200
+        result = SMSService._sanitize_sms_text(long_text)
+        self.assertEqual(len(result), 160)
+        self.assertTrue(result.endswith("..."))
+        self.assertEqual(result, "x" * 157 + "...")
+
+    def test_sanitize_exactly_160_chars_unchanged(self):
+        """Texto de exactamente 160 chars no se modifica (sin slash)."""
+        text = "a" * 160
+        result = SMSService._sanitize_sms_text(text)
+        self.assertEqual(result, text)
+        self.assertEqual(len(result), 160)
+
+    def test_sanitize_short_text_unchanged(self):
+        """Texto corto sin slash se mantiene igual."""
+        text = "Hola, cuantos pesajes hoy?"
+        result = SMSService._sanitize_sms_text(text)
+        self.assertEqual(result, text)
+
+    def test_sanitize_short_text_with_slash_replaced(self):
+        """Texto corto con slash: slash reemplazado, resto intacto."""
+        result = SMSService._sanitize_sms_text("Peso total: 107/150 kg")
+        self.assertEqual(result, "Peso total: 107-150 kg")
+
+    def test_sanitize_empty_string(self):
+        """Texto vacio se mantiene vacio."""
+        result = SMSService._sanitize_sms_text("")
+        self.assertEqual(result, "")
+
+    def test_sanitize_159_chars_with_slash_becomes_160_with_dash(self):
+        """Texto de 159 chars con 1 slash: slash -> dash, long sigue 159."""
+        text = "a" * 158 + "/"
+        result = SMSService._sanitize_sms_text(text)
+        self.assertEqual(len(result), 159)
+        self.assertEqual(result, "a" * 158 + "-")
+
+
+class TestSendSmsSanitizesBeforePersistence(unittest.TestCase):
+    """Verificar que send_sms sanitiza antes de persistir en BD."""
+
+    def setUp(self):
+        self.config = SmsConfig(
+            admin_phones=["+573001234567"],
+            scheduled_reports=["06:00", "14:00", "22:00"],
+        )
+        self.svc = SMSService(config=self.config, modem_index=0, dev_mode=True)
+        self.engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Base.metadata.create_all(bind=self.engine)
+        self.Session = sessionmaker(bind=self.engine, autocommit=False, autoflush=False)
+        self.persistence = SmsPersistenceService(db_session_factory=self.Session)
+        self.svc.set_persistence_service(self.persistence)
+
+    def test_send_sms_persists_sanitized_body(self):
+        """El texto persistido en BD es el sanitizado (no el original)."""
+        self.svc.send_sms("+573001234567", "Fecha: 15/07/2026 - Pesajes: 150")
+
+        db = self.Session()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001234567",
+                SM.direction == "sent",
+            ).all()
+            self.assertEqual(len(msgs), 1)
+            # Las barras deben ser guiones en la BD
+            self.assertNotIn("/", msgs[0].body)
+            self.assertIn("-", msgs[0].body)
+            self.assertEqual(msgs[0].body, "Fecha: 15-07-2026 - Pesajes: 150")
+        finally:
+            db.close()
+
+    def test_send_sms_persists_truncated_body(self):
+        """Texto largo: el persistido en BD esta truncado a 160 chars."""
+        long_msg = "x" * 200
+        self.svc.send_sms("+573001234567", long_msg)
+
+        db = self.Session()
+        try:
+            from src.models import SmsMessage as SM
+            msgs = db.query(SM).filter(
+                SM.peer_number == "+573001234567",
+                SM.direction == "sent",
+            ).all()
+            self.assertEqual(len(msgs), 1)
+            self.assertEqual(len(msgs[0].body), 160)
+            self.assertTrue(msgs[0].body.endswith("..."))
+        finally:
+            db.close()

@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 _SMS_INDEX_RE = re.compile(r"/org/freedesktop/ModemManager1/SMS/(\d+)")
 
+_MAX_SMS_CHARS = 160
+
 
 class SMSDeliveryError(Exception):
     """Se lanza cuando mmcli falla al enviar un SMS."""
@@ -135,6 +137,9 @@ class SMSService:
             logger.warning("send_sms llamado con phone o message vacio, omitiendo")
             return False
 
+        # Sanitizar antes de persistir
+        message = self._sanitize_sms_text(message)
+
         # R18: Persistir en sms_messages antes de enviar.
         # Se crea directamente con status='sending' para evitar race condition
         # con SmsSendQueue (que solo ve 'pending').
@@ -186,6 +191,9 @@ class SMSService:
             logger.warning("send_sms_sync llamado con phone o message vacio")
             return False
 
+        # Sanitizar antes de persistir
+        message = self._sanitize_sms_text(message)
+
         # R18: Persistir antes de enviar, nace como 'sending' para evitar race
         # con SmsSendQueue (que solo ve 'pending').
         persisted_msg_id = self._persist_sms(
@@ -206,6 +214,15 @@ class SMSService:
         )
 
         return success
+
+
+    @staticmethod
+    def _sanitize_sms_text(text: str) -> str:
+        """Sanitiza texto para SMS: trunca a 160 chars y reemplaza / por -."""
+        text = text.replace("/", "-")
+        if len(text) > _MAX_SMS_CHARS:
+            text = text[:_MAX_SMS_CHARS - 3] + "..."
+        return text
 
     def _send_via_mmcli(self, phone: str, message: str, message_id: int | None = None) -> bool:
         """Envia un SMS usando mmcli. Retorna True si exitoso, False si falla.

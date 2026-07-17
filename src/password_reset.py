@@ -136,8 +136,26 @@ class PasswordResetService:
                 .first()
             )
 
+            # Defense-in-depth: reject unknown senders (dispatcher whitelist
+            # should prevent this, but handle_incoming_sms can be called directly).
+            if sender_user is None:
+                logger.info(
+                    "password_reset: sender %s not found in users, rejecting",
+                    sender_phone,
+                )
+                return True  # Manejado (rechazado en silencio)
+
+            # Defense-in-depth: reject non-admin senders. The dispatcher
+            # whitelist already filters non-admin/corresponsal, but this
+            # guards against direct calls that bypass the dispatcher.
+            if sender_user.role != "admin":
+                logger.info(
+                    "password_reset: sender %s (role=%s) rejected, not admin",
+                    sender_phone, sender_user.role,
+                )
+                return True  # Manejado (rechazado en silencio)
+
             # R14: Verificar que admin no resetea su propia contrasena
-            # (la whitelist del dispatcher ya garantiza que solo admins llegan aqui)
             if sender_user.username.lower() == username.lower():
                 self._sms_service.send_sms(
                     sender_phone,

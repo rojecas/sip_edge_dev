@@ -260,12 +260,20 @@ class IncomingSmsDispatcherV2:
             return
 
         # R3: Persistir SMS entrante ANTES de delegar
-        # R4: Crear conversacion si no existe
+        # R4: Reutilizar cualquier conversacion activa existente para este peer.
+        # Si no hay ninguna, crear una nueva 'unknown'.
         try:
-            # Inicialmente workflow_type='unknown' — los handlers lo pueden cambiar
-            conv = self._persistence.get_or_create_active_conversation(
-                peer_number=sender_phone, workflow_type="unknown",
+            conv = self._persistence.get_active_conversation_by_peer_any_type(
+                peer_number=sender_phone,
             )
+            if conv is not None:
+                self._persistence.update_conversation_last_activity(conv.id)
+            else:
+                conv = self._persistence.create_conversation(
+                    peer_number=sender_phone,
+                    workflow_type="unknown",
+                    status="active",
+                )
             msg = self._persistence.create_message(
                 conversation_id=conv.id,
                 direction="received",

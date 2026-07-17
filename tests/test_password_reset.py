@@ -741,7 +741,7 @@ class TestIncomingSmsDispatcher(unittest.TestCase):
         """Handler registrado recibe SMS."""
         received: list[tuple[str, str]] = []
 
-        def handler(phone: str, text: str) -> bool:
+        def handler(phone: str, text: str, *args) -> bool:
             received.append((phone, text))
             return True
 
@@ -897,6 +897,16 @@ class TestIncomingSmsDispatcherV2(unittest.TestCase):
             modem_index=0, dev_mode=True, persistence=self.persistence,
         )
 
+        # Mock get_user_role_by_phone to return "admin" for all phones.
+        # Tests in this class verify dispatch behavior (chain, queue, errors),
+        # NOT the whitelist. The real whitelist is tested in TestPasswordResetPersistence.
+        self._original_get_role = self.persistence.get_user_role_by_phone
+        self.persistence.get_user_role_by_phone = lambda phone: "admin"
+
+    def tearDown(self):
+        """Restore original get_user_role_by_phone."""
+        self.persistence.get_user_role_by_phone = self._original_get_role
+
     def _run_dispatcher_cycle(self):
         """Ejecuta un ciclo de procesamiento del dispatcher."""
         import asyncio as _asyncio
@@ -906,7 +916,7 @@ class TestIncomingSmsDispatcherV2(unittest.TestCase):
         """Handler registrado recibe SMS via V2 dispatcher."""
         received: list[tuple[str, str]] = []
 
-        def handler(phone: str, text: str) -> bool:
+        def handler(phone: str, text: str, *args) -> bool:
             received.append((phone, text))
             return True
 
@@ -939,11 +949,11 @@ class TestIncomingSmsDispatcherV2(unittest.TestCase):
         first_called = []
         second_called = []
 
-        def handler1(phone, text):
+        def handler1(phone, text, *args):
             first_called.append(text)
             return True
 
-        def handler2(phone, text):
+        def handler2(phone, text, *args):
             second_called.append(text)
             return True
 
@@ -960,11 +970,11 @@ class TestIncomingSmsDispatcherV2(unittest.TestCase):
         first_called = []
         second_called = []
 
-        def handler1(phone, text):
+        def handler1(phone, text, *args):
             first_called.append(text)
             return False
 
-        def handler2(phone, text):
+        def handler2(phone, text, *args):
             second_called.append(text)
             return True
 
@@ -980,7 +990,7 @@ class TestIncomingSmsDispatcherV2(unittest.TestCase):
         """Dev mode V2: enqueue_incoming_sms procesa multiples mensajes."""
         received = []
 
-        def handler(phone, text):
+        def handler(phone, text, *args):
             received.append(text)
             return True
 
@@ -995,11 +1005,11 @@ class TestIncomingSmsDispatcherV2(unittest.TestCase):
 
     def test_handler_exception_does_not_crash_dispatcher(self):
         """Si un handler lanza excepcion, el dispatcher V2 continua."""
-        def bad_handler(phone, text):
+        def bad_handler(phone, text, *args):
             raise RuntimeError("Handler error")
 
         second_called = []
-        def good_handler(phone, text):
+        def good_handler(phone, text, *args):
             second_called.append(text)
             return True
 
@@ -1014,7 +1024,7 @@ class TestIncomingSmsDispatcherV2(unittest.TestCase):
         """V2: SMS no manejado por ningun handler → dispatcher envia ayuda."""
         received = []
 
-        def handler(phone, text):
+        def handler(phone, text, *args):
             received.append(text)
             return False  # No lo maneja
 
@@ -1045,7 +1055,7 @@ class TestIncomingSmsDispatcherV2(unittest.TestCase):
 
     def test_v2_persists_conversation(self):
         """V2: cada SMS entrante crea conversacion en sms_conversations."""
-        def handler(phone, text):
+        def handler(phone, text, *args):
             return True
 
         self.dispatcher.register_handler(handler, workflow_type="emergency")

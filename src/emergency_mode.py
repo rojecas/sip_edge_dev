@@ -253,7 +253,15 @@ class EmergencyModeService:
                 .first()
             )
 
-            # La whitelist en el dispatcher ya garantiza que solo admins llegan aqui
+            # Defense-in-depth: the dispatcher v2 whitelist filters non-admin
+            # senders, but process_incoming_sms can be called directly.
+            if user is None:
+                logger.info(
+                    "emergency_mode: sender %s not found in users, ignoring",
+                    sender_phone,
+                )
+                return False
+
             supervisor_id = user.id
 
             try:

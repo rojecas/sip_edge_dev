@@ -259,48 +259,12 @@ class TestSmsPersistence(unittest.TestCase):
             db.close()
 
     # ==================================================================
-    # Message exists by modem_sms_id (Fix 3)
+    # message_exists_by_modem_id: REMOVED — superseded by status-based
+    # filtering in _fetch_mmcli_sms() (commit c125895).
+    # The old dedup-by-modem_id approach was replaced by filtering on
+    # status != "received" (outgoing SMS show as "sent"/"stored").
     # ==================================================================
 
-    def test_message_exists_by_modem_id_returns_true_when_exists(self):
-        """message_exists_by_modem_id retorna True si el modem_sms_id existe."""
-        conv = self.svc.create_conversation(
-            peer_number="+573001234567", workflow_type="emergency",
-        )
-        msg = self.svc.create_message(
-            conversation_id=conv.id,
-            direction="sent",
-            peer_number="+573001234567",
-            body="Test",
-            status="sent",
-        )
-        # Asignar modem_sms_id manualmente
-        self.svc.update_message_status(msg.id, "sent", modem_sms_id=42)
-
-        result = self.svc.message_exists_by_modem_id(42)
-        self.assertTrue(result)
-
-    def test_message_exists_by_modem_id_returns_false_when_not_exists(self):
-        """message_exists_by_modem_id retorna False si el modem_sms_id no existe."""
-        result = self.svc.message_exists_by_modem_id(999)
-        self.assertFalse(result)
-
-    def test_message_exists_by_modem_id_ignores_other_ids(self):
-        """message_exists_by_modem_id solo encuentra el ID exacto."""
-        conv = self.svc.create_conversation(
-            peer_number="+573001234567", workflow_type="emergency",
-        )
-        msg = self.svc.create_message(
-            conversation_id=conv.id,
-            direction="sent",
-            peer_number="+573001234567",
-            body="Test",
-            status="sent",
-        )
-        self.svc.update_message_status(msg.id, "sent", modem_sms_id=100)
-
-        self.assertTrue(self.svc.message_exists_by_modem_id(100))
-        self.assertFalse(self.svc.message_exists_by_modem_id(101))
 
     def test_get_message_by_id(self):
         """Recuperar mensaje por ID."""
@@ -345,8 +309,11 @@ class TestSmsPersistence(unittest.TestCase):
 
     def test_get_user_role_by_phone_returns_role(self):
         """get_user_role_by_phone retorna el rol cuando el telefono existe."""
-        self._create_test_user("admin_test", "admin", "+573001234567")
-        self._create_test_user("op_test", "operator", "+573007654321")
+        # Register with normalized phone format (no "+" prefix, no spaces).
+        # get_user_role_by_phone normalizes input by stripping "+" and trying
+        # variants (with/without country code).
+        self._create_test_user("admin_test", "admin", "573001234567")
+        self._create_test_user("op_test", "operator", "573007654321")
 
         self.assertEqual(
             self.svc.get_user_role_by_phone("+573001234567"), "admin",

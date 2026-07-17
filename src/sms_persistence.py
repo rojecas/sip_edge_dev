@@ -196,6 +196,29 @@ class SmsPersistenceService:
         finally:
             db.close()
 
+    def get_active_conversation_by_peer_any_type(
+        self, peer_number: str,
+    ) -> SmsConversation | None:
+        """Busca CUALQUIER conversacion activa para un peer_number,
+        sin filtrar por workflow_type.
+
+        Util en el dispatcher para reutilizar conversaciones existentes
+        (ej: ai_query) en lugar de crear una nueva 'unknown' duplicada.
+        """
+        db: Session = self._db_session_factory()
+        try:
+            return (
+                db.query(SmsConversation)
+                .filter(
+                    SmsConversation.peer_number == peer_number,
+                    SmsConversation.status == "active",
+                )
+                .order_by(SmsConversation.last_activity.desc())
+                .first()
+            )
+        finally:
+            db.close()
+
     def get_conversation_by_request_id(
         self, request_id: int,
     ) -> SmsConversation | None:
