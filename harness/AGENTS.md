@@ -24,31 +24,42 @@
    (planes, cierres, bloqueos).
 8. **Session reminder:** Revisa si hay contenido entre las marcas
 <!-- SESSION_REMINDER_START -->
-## Recordatorio — Proxima sesion (2026-07-16)
+## Recordatorio — Proxima sesion (2026-07-17)
 
 ### Cambios realizados en esta sesion
-- **F28 (ai_multi_turn)** — DONE. Liberado en v1.4.0. Conversacion multiturno AI via SMS con FIFO, tool_log, archival 90d.
-- **Fix: conversation_id dispatcher** — _dispatch() ahora reutiliza conversacion activa del peer en vez de crear unknown por cada SMS entrante.
-- **Fix: SMS sanitization** — _sanitize_sms_text() en sms_service.py: trunca a 160 chars, reemplaza / con -.
-- **Fix: defense-in-depth** — null-checks en password_reset.py y emergency_mode.py.
-- **Fix: 16 tests** — whitelist setup + handler signatures corregidos en test_password_reset, test_emergency_mode, test_sms_persistence.
-- **Release v1.4.0** — F28 + bugs #29 #30 #31. GitHub release creado.
+- **Protocolo DFW06L** — `00REXT` -> `READ`, parser corregido a `ST,GS,<peso>,<kg>`. Fix `result.net_weight` -> `result.weight` en UI.
+- **Reorden pesos kiosko** — Muestra->Vegetal->Mineral en KioskForm.svelte.
+- **Paginacion AdminSuertes** — dropdown de haciendas carga todas las paginas (fix de 100 limite).
+- **Node.js instalado** en EdgeBox (v20.19.2) para build frontend local.
+- **init.sh** — script bash equivalente a init.ps1.
+- **AGENTS.md/leader.md** — Leader ahora ejecuta `github_sync.py create` en `in_progress`.
+- **bug-fixer model** — `zai/glm-5.2` -> `deepseek/deepseek-reasoner`.
+- **F36 (hacienda_search_filter)** y **F37 (notas_muestras)** registradas (pending).
+- **init.sh** — script bash con deteccion de venv, .env, y timeouts por modulo.
 
 ### Descubrimientos
 | Hallazgo | Detalle |
 |----------|---------|
-| SMSC Tigo bloquea Mina | La palabra Mina es filtrada por el SMSC de Tigo en AMBAS direcciones. No es bug del modem ni del app. |
-| EB1 local changes | EB1 tenia cambios locales stale en src/sms_service.py (identicos al commit). Descartados con git checkout antes del pull. |
+| Manual de balanza erroneo | Manual correspondia a DFWLI-2, balanza real es DFW06L |
+| Comandos sin prefijo `00` | DFW06L usa `READ\r\n`, `TARE\r\n`, `ZERO\r\n`, `CLEAR\r\n` |
+| Formato respuesta DFW06L | `ST,GS,<peso>,<kg>` (status y gross/net separados x coma) |
+| ERR04 intermitente en PuTTY | PuTTY envia caracter a caracter; `echo -ne` envia buffer completo |
+| ERR03 en TARE | Comando recibido pero no permitido en estado actual (peso negativo) |
+| rs232_transmission debe actualizarse | Trama RS232 debe incluir `notas` (feature F37) |
 
 ### Pendiente para la proxima sesion
-1. **F29-F32** — pending (sql_tools_v2, alert_monitor, sms_scheduling_v2, sample_imaging). Iniciar spec-author para cada una.
-2. **EB1 untracked files** — scripts/ y docs/ sin trackear en EB1. Considerar .gitignore o commit.
-3. **EB1 src/static/index.html** — modificacion local en EB1 sin commitear. Investigar.
+1. **F32-F37** — pending. Iniciar spec-author por orden de ID.
+2. **TARE con ERR03** — probar con peso positivo en bandeja.
+3. **TMAN** — probar si DFW06L soporta tara manual.
 
 ### Archivos modificados
-- src/sms_dispatcher_v2.py, src/sms_persistence.py, src/sms_service.py, src/password_reset.py, src/emergency_mode.py
-- tests/test_sms_dispatcher_v2.py, tests/test_sms_service.py, tests/test_sms_persistence.py, tests/test_password_reset.py, tests/test_emergency_mode.py
-- VERSION, CHANGELOG.md, harness/feature_list.json, harness/releases/tracker.json
+- src/scale.py, src/scale_api.py, src/tools/virtual_scale.py
+- frontend/src/components/KioskForm.svelte, AdminSuertes.svelte, WeightField.svelte
+- tests/test_scale.py, test_scale_api.py, test_virtual_scale.py
+- harness/AGENTS.md, harness/feature_list.json, harness/init.sh (nuevo)
+- .opencode/agents/bug-fixer.md, .opencode/agents/leader.md
+- docs/database.md, frontend/package-lock.json
+- src/static/ (bundle recompilado)
 <!-- SESSION_REMINDER_END -->
 
 9. Lee las lecciones acumuladas en harness/learnings/. Primero common.md

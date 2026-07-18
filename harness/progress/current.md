@@ -1,35 +1,57 @@
-# Sesion "continuacion debug Bug28" — 2026-07-16
+# Sesion "justes finales" — 2026-07-17 20:07
 
 ## Resumen
-Sesion de cierre de F28 (ai_multi_turn): fix del bug conversation_id en dispatcher,
-sanitizacion SMS, defense-in-depth, limpieza de 16 tests, release v1.4.0 y despliegue en EB1.
+Sesion de ajustes finales: protocolo de balanza corregido a DFW06L,
+paginacion en AdminSuertes, reorden de pesos en kiosko, install Node.js,
+script init.sh, creacion de features F36/F37, y documentacion.
 
-## Features trabajadas
-| ID | Feature | Estado | Notas |
-|---|---------|--------|-------|
-| 28 | ai_multi_turn | **done** | Liberado en v1.4.0. Conversacion multiturno AI via SMS. |
-| 29-32 | sql_tools_v2, alert_monitor, sms_scheduling_v2, sample_imaging | **pending** | Sin cambios. |
+## Cambios realizados
 
-## Fixes realizados
-1. **conversation_id dispatcher**: _dispatch() reutiliza conversacion activa del peer (cualquier workflow_type) en vez de crear unknown por cada SMS entrante.
-2. **SMS sanitization**: _sanitize_sms_text() en sms_service.py (trunca 160, reemplaza / con -).
-3. **Defense-in-depth**: null-checks en password_reset.handle_incoming_sms y emergency_mode.process_incoming_sms.
-4. **16 tests arreglados**: whitelist setup + handler signatures en test_password_reset, test_emergency_mode, test_sms_persistence. 3 tests obsoletos eliminados.
+### Protocolo Balanza DFW06L (cambio mayor)
+| Archivo | Cambio |
+|---------|--------|
+| `src/scale.py` | `00REXT` -> `READ`; eliminado prefijo `00` de todos los comandos |
+| `src/scale.py` | `parse_short_response()`: nuevo formato `ST,GS,<peso>,<kg>` |
+| `src/tools/virtual_scale.py` | Simulador actualizado a DFW06L |
+| `tests/test_scale*.py` | Tests actualizados |
+| `WeightField.svelte` | `result.net_weight` -> `result.weight` |
 
-## Release
-- **v1.4.0** — F28 (feature) + bugs #29 #30 #31
-- Commit: 577197a
-- Tag: v1.4.0
-- GitHub: https://github.com/rojecas/sip_edge/releases/tag/v1.4.0
-- Deploy EB1: cac715d fast-forward, servicio healthy
+### Diagnostico de comunicacion RS485
+- Descubierto: PuTTY envia caracter a caracter, causando ERR04 intermitente
+- Comprobado: `echo -ne "READ\r\n" > /dev/ttyACM0` funciona sin errores
+- Comando real: `READ\r\n` (no `00REXT\r\n` como estaba documentado)
+- Modelo real: DFW06L (no DFWLI-2 como decia el manual erroneo)
+- Parametros: 9600 8N1 (correctos, no se cambiaron)
 
-## Verificacion
-- 261 tests green (8 modulos SMS-adjacentes)
-- Reviewer: APPROVED
-- EB1 health: HTTP 200, logs limpios
-- Pruebas manuales: OK (usuario autorizo cierre)
+### Frontend
+| Cambio | Archivo |
+|--------|---------|
+| Reorden pesos: Muestra->Vegetal->Mineral | `KioskForm.svelte` |
+| Paginacion en dropdown de haciendas (AdminSuertes) | `AdminSuertes.svelte` |
+| Install Node.js + npm en EdgeBox | `apt-get install nodejs npm` |
+
+### Harness / Infraestructura
+| Cambio | Archivo |
+|--------|---------|
+| Script init.sh (bash, equiv. a init.ps1) | `harness/init.sh` — nuevo |
+| Leader ahora crea GitHub issues en `in_progress` | `AGENTS.md`, `leader.md` |
+| bug-fixer model: GLM -> DeepSeek reasoner | `bug-fixer.md` |
+
+### Nuevas features (registradas, pendientes)
+- **F36** (`hacienda_search_filter`): filtro de busqueda por nombre en dropdowns de hacienda
+- **F37** (`notas_muestras`): campo de notas colapsable en kiosko + consulta SMS
+
+### Descubrimientos
+| Hallazgo | Detalle |
+|----------|---------|
+| Manual de balanza erroneo | Manual DFWLI-2, balanza real DFW06L |
+| Comandos sin prefijo 00 | DFW06L usa `READ\r\n`, no `00REXT\r\n`|
+| Formato respuesta | `ST,GS,<peso>,<kg>` (status y GS separados) |
+| ERR04 por character-level | PuTTY envia letra a letra, balanza interpreta cada una como comando invalido |
 
 ## Pendiente prox sesion
-- F29-F32: spec-author para cada una
-- EB1 untracked files (scripts/, docs/) — considerar .gitignore
-- EB1 src/static/index.html modificacion local — investigar
+- F32-F37: procesar features pendientes (spec-author)
+- F36: filtro de busqueda por nombre en haciendas
+- F37: campo notas colapsable en kiosko + consulta SMS
+- TARE con ERR03: probar con peso > 0 en bandeja
+- TMAN: probar si existe en DFW06L
