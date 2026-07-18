@@ -77,13 +77,16 @@ y aplica el caso correspondiente.
 ### Caso B — status == `"spec-reviewed"` Y el humano acaba de aprobar (feature SDD)
 
 1. Cambia el status a `in_progress` en `harness/feature_list.json`.
-2. Lanza **1 subagente `implementer`** pasandole la ruta `harness/specs/{NN}_{name}/` como input.
+2. Crea el issue en GitHub: `python harness/scripts/github_sync.py create --feature-id <id>`.
+   Esto registra la URL del issue en `feature_list.json`. Si falla (sin `gh` CLI o sin red),
+   continua sin bloquear — el issue se puede crear despues.
+3. Lanza **1 subagente `implementer`** pasandole la ruta `harness/specs/{NN}_{name}/` como input.
    El `implementer` trabaja a partir del spec, no del `acceptance` original.
-3. Cuando termine -> lanza **1 `reviewer`** que verifica trazabilidad tests <-> requirements
+4. Cuando termine -> lanza **1 `reviewer`** que verifica trazabilidad tests <-> requirements
    y que `tasks.md` queda completo.
-4. Cuando el reviewer apruebe -> cambia el status a `testing`. **PARAS.**
+5. Cuando el reviewer apruebe -> cambia el status a `testing`. **PARAS.**
    Anuncia: "Feature en `testing` — avisame cuando termines las pruebas."
-5. Cuando el humano autorice el cierre -> lanza **1 subagente `release-manager (register)`**
+6. Cuando el humano autorice el cierre -> lanza **1 subagente `release-manager (register)`**
    pasandole `id` y `name`.
 
 ### Caso C — status == `"spec-reviewed"` SIN aprobacion humana
@@ -123,11 +126,13 @@ Sesion interrumpida. Pregunta al humano si reanudar al `bug-fixer` o abortar.
 ### Caso H — `sdd: false` (o sin `sdd`) Y `type` no es `"bug"`, status == `"pending"`
 
 1. Cambia el status a `in_progress` en `harness/feature_list.json`.
-2. Lanza **1 subagente `implementer`** con instruccion: "sin carpeta `specs/`, trabaja desde `acceptance`
+2. Crea el issue en GitHub: `python harness/scripts/github_sync.py create --feature-id <id>`.
+   Si falla, continua sin bloquear.
+3. Lanza **1 subagente `implementer`** con instruccion: "sin carpeta `specs/`, trabaja desde `acceptance`
    en `feature_list.json`, crea `harness/progress/plan-<name>.md` antes de tocar codigo".
-3. Cuando termine -> lanza **1 `reviewer`**.
-4. Cuando el reviewer apruebe -> cambia el status a `testing`. **PARAS.**
+4. Cuando termine -> lanza **1 `reviewer`**.
+5. Cuando el reviewer apruebe -> cambia el status a `testing`. **PARAS.**
    Anuncia: "Feature en `testing` — avisame cuando termines las pruebas."
-5. Cuando el humano autorice el cierre -> lanza **1 subagente `release-manager (register)`**
+6. Cuando el humano autorice el cierre -> lanza **1 subagente `release-manager (register)`**
    pasandole `id` y `name`.
 

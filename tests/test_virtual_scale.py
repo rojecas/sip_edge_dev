@@ -257,8 +257,8 @@ class TestParseSerialCommand(unittest.TestCase):
 
     def test_parse_command_rext(self):
         """Detecta comando REXT correctamente."""
-        cmd, arg = _parse_serial_command("00REXT\r\n")
-        self.assertEqual(cmd, "REXT")
+        cmd, arg = _parse_serial_command("READ\r\n")
+        self.assertEqual(cmd, "READ")
         self.assertIsNone(arg)
 
     def test_parse_command_tare(self):
@@ -289,9 +289,9 @@ class TestParseSerialCommand(unittest.TestCase):
         self.assertIsNone(arg)
 
     def test_parse_command_rext_no_cr(self):
-        """Detecta REXT sin \\r (solo \\n o stripped)."""
-        cmd, arg = _parse_serial_command("00REXT")
-        self.assertEqual(cmd, "REXT")
+        """Detecta READ sin \\r (solo \\n o stripped)."""
+        cmd, arg = _parse_serial_command("READ")
+        self.assertEqual(cmd, "READ")
 
 
 class TestCurrentReadingIntegration(unittest.TestCase):

@@ -52,21 +52,27 @@ def parse_extended_response(line: str) -> dict:
 
 
 def parse_short_response(line: str) -> dict:
-    """Parse short weight string: 01ST,GS, 0.0,kg"""
+    """Parse short weight string: ST,GS, 0.0,kg (DFW06L format)."""
     stripped = line.strip()
-    parts = stripped.split(",")
+    parts = [p.strip() for p in stripped.split(",")]
     if len(parts) != 4:
         raise ScaleProtocolError(
             f"Short response requires 4 comma-separated fields, got {len(parts)}: {line!r}"
         )
-    address = parts[0][:2]
-    status_code = parts[0][2:4]
-    weight = float(parts[2].strip())
-    unit = parts[3].strip()
+    # DFW06L format: ST,GS, -0.49,kg
+    # Field 0: stability indicator (ST=stable, US=unstable)
+    # Field 1: gross/net indicator (GS=gross, NT=net)
+    # Field 2: weight value
+    # Field 3: unit
+    status_code = parts[0]
+    gross_net = parts[1]
+    weight = float(parts[2])
+    unit = parts[3]
     return {
-        "address": address,
+        "address": "00",
         "status_code": status_code,
         "is_stable": status_code == "ST",
+        "gross_net": gross_net,
         "weight": weight,
         "unit": unit,
     }
@@ -143,7 +149,7 @@ class ScaleService:
 
     def send_command(self, command: str, value: str = None) -> dict:
         cmd_map = {
-            "REXT": "REXT",
+            "READ": "READ",
             "TARE": "TARE",
             "TMAN": "TMAN",
             "ZERO": "ZERO",
@@ -155,9 +161,9 @@ class ScaleService:
         if command == "TMAN":
             if not value:
                 raise ScaleProtocolError("TMAN command requires a value")
-            cmd_str = f"00{base}{value}\r\n"
+            cmd_str = f"{base}{value}\r\n"
         else:
-            cmd_str = f"00{base}\r\n"
+            cmd_str = f"{base}\r\n"
         self._response_event.clear()
         self._response_data = None
         self._command_active = True

@@ -5,7 +5,7 @@
    * When disabled=true (normal mode), field is readonly — only updated via Tara/Leer.
    * When disabled=false (emergency mode), field is editable manually.
    *
-   * CORREGIDO (T38): Boton "Leer" llama a POST /api/scale/command (REXT).
+   * CORREGIDO (T38): Boton "Leer" llama a POST /api/scale/command (READ).
    * Boton "Tara" llama a POST /api/scale/command (TARE).
    * Botones se deshabilitan durante la peticion (isLoading).
    */
@@ -43,13 +43,13 @@
     if (isLoading) return;
     isLoading = true;
     try {
-      const result = await api.post(ENDPOINTS.SCALE_COMMAND, { command: "REXT" });
-      if (result && result.net_weight !== undefined) {
-        value = result.net_weight;
+      const result = await api.post(ENDPOINTS.SCALE_COMMAND, { command: "READ" });
+      if (result && result.weight !== undefined) {
+        value = result.weight;
         onLeer?.();
       }
     } catch (err) {
-      console.error(`REXT failed on ${fieldName}:`, err.message || err);
+      console.error(`READ failed on ${fieldName}:`, err.message || err);
     } finally {
       isLoading = false;
     }

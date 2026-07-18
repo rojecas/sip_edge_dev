@@ -1,7 +1,7 @@
 ﻿"""Balanza Virtual DINI ARGEO DFWLI-2 para desarrollo y pruebas.
 
 Simula el protocolo DINI ARGEO DFWLI-2 via puerto serial, respondiendo
-a los comandos REXT, TARE, TMAN, ZERO y CLEAR con datos desde archivos
+a los comandos READ, TARE, TMAN, ZERO y CLEAR con datos desde archivos
 CSV pre-generados. Incluye un REPL interactivo (Windows-only, usa msvcrt)
 para navegar por las medidas y simular eventos de la balanza real.
 
@@ -32,7 +32,7 @@ except ImportError:
 # constantes del protocolo
 # ---------------------------------------------------------------------------
 
-CMD_REXT = "00REXT"
+CMD_READ = "READ"
 CMD_TARE = "00TARE"
 CMD_ZERO = "00ZERO"
 CMD_CLEAR = "00CLEAR"
@@ -137,7 +137,7 @@ def _current_reading(
 
 
 # ---------------------------------------------------------------------------
-# T7 â€” construir respuesta extendida (REXT)
+# T7 â€” construir respuesta extendida (READ)
 # ---------------------------------------------------------------------------
 
 
@@ -202,8 +202,8 @@ def _parse_serial_command(line: str) -> tuple[str, str | None]:
     if not stripped:
         return ("EMPTY", None)
 
-    if stripped == CMD_REXT:
-        return ("REXT", None)
+    if stripped == CMD_READ:
+        return ("READ", None)
     if stripped == CMD_TARE:
         return ("TARE", None)
     if stripped == CMD_ZERO:
@@ -404,7 +404,7 @@ def main() -> None:
     print(f"  Dataset       : {dataset_id} ({total_rows} medidas)")
     print(f"  Data dir      : {args.data_dir}")
     print()
-    print("  Comandos aceptados: 00REXT, 00TARE, 00TMAN<v>, 00ZERO, 00CLEAR")
+    print("  Comandos aceptados: READ, TARE, TMAN<v>, ZERO, CLEAR")
     print()
     print("  REPL:")
     print("    n        = siguiente sub-paso/medida")
@@ -461,7 +461,7 @@ def main() -> None:
                 # ---------------------------------------------------------
                 # T10 â€” enrutar comando
                 # ---------------------------------------------------------
-                if cmd == "REXT":
+                if cmd == "READ":
                     # T6 â€” leer el valor actual
                     reading = _current_reading(pointer, dataset, override)
 
@@ -482,7 +482,7 @@ def main() -> None:
                     # Log a consola
                     row, sub = pointer
                     print(
-                        f"[REXT] row={row} sub={sub}"
+                        f"[READ] row={row} sub={sub}"
                         f" ({SUB_STEP_NAMES[sub]}) status={reading['status']}"
                         f" peso={reading['peso']} -> {response.strip()}"
                     )

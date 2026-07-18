@@ -122,7 +122,7 @@ usar regex para JSON, errores de line endings, etc.).
 
 - ❌ Editar archivos en `src/` o `tests/`.
 - ❌ Marcar features/bugs como `done` (eso lo hace release-manager).
-- ❌ Ejecutar `github_sync.py` (eso lo hace release-manager).
+- ❌ Ejecutar `github_sync.py close` (eso lo hace release-manager). El leader SI ejecuta `github_sync.py create` al transicionar features a `in_progress` (Caso B y Caso H del AGENTS.md).
 - ❌ Saltar la puerta de aprobacion humana entre `spec_ready` e `in_progress` (features) o entre `untriaged` y `triaged` (bugs).
 - ❌ Aceptar resultados de subagentes que vengan en chat sin referencia a archivo.
 - ❌ Lanzar `spec-author` para un bug. Los bugs van por `bug-fixer`.

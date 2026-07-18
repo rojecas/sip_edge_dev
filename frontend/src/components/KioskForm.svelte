@@ -377,8 +377,8 @@ import EmergencyModal from "./EmergencyModal.svelte";
     <h3>Pesos (kg)</h3>
     <div class="weights-grid">
       <WeightField fieldName="Peso Muestra" bind:value={pesoMuestra} disabled={!$emergencyStore} onReset={handleResetPesoMuestra} />
-      <WeightField fieldName="Peso Mineral" bind:value={pesoMineral} disabled={!$emergencyStore} onReset={handleResetPesoMineral} />
       <WeightField fieldName="Peso Vegetal" bind:value={pesoVegetal} disabled={!$emergencyStore} onReset={handleResetPesoVegetal} />
+      <WeightField fieldName="Peso Mineral" bind:value={pesoMineral} disabled={!$emergencyStore} onReset={handleResetPesoMineral} />
     </div>
   </div>
 

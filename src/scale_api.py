@@ -1,4 +1,4 @@
-"""API endpoint for scale commands (REXT, TARE, ZERO, CLEAR, TMAN)."""
+"""API endpoint for scale commands (READ, TARE, ZERO, CLEAR, TMAN)."""
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/scale", tags=["scale"])
 
 
 class ScaleCommandRequest(BaseModel):
-    command: str  # REXT, TARE, ZERO, CLEAR, TMAN
+    command: str  # READ, TARE, ZERO, CLEAR, TMAN
     value: str | None = None
 
 

@@ -138,10 +138,10 @@ class TestScaleServiceCommands(unittest.TestCase):
         instance.readline.return_value = b"00ST,1, 10.5,PT 2.0, 0,kg\r\n"
         service = ScaleService(self.config, self.serial_config)
         service.start()
-        result = service.send_command("REXT")
+        result = service.send_command("READ")
         self.assertEqual(result["net_weight"], 10.5)
         self.assertTrue(result["is_stable"])
-        instance.write.assert_called_once_with(b"00REXT\r\n")
+        instance.write.assert_called_once_with(b"READ\r\n")
         service.stop()
 
     @mock.patch("src.scale.serial.Serial")
@@ -195,7 +195,7 @@ class TestScaleServiceCommands(unittest.TestCase):
         service = ScaleService(self.config, self.serial_config)
         service.start()
         with self.assertRaises(ScaleTimeoutError):
-            service.send_command("REXT")
+            service.send_command("READ")
         service.stop()
 
     @mock.patch("src.scale.serial.Serial")
@@ -205,7 +205,7 @@ class TestScaleServiceCommands(unittest.TestCase):
         service = ScaleService(self.config, self.serial_config)
         service.start()
         with self.assertRaises(ScaleTimeoutError):
-            service.send_command("REXT")
+            service.send_command("READ")
         service.stop()
 
     @mock.patch("src.scale.serial.Serial")
@@ -235,7 +235,7 @@ class TestScaleServiceCommands(unittest.TestCase):
     def test_send_command_not_started(self, mock_serial):
         service = ScaleService(self.config, self.serial_config)
         with self.assertRaises(ScaleConnectionError):
-            service.send_command("REXT")
+            service.send_command("READ")
 
     @mock.patch("src.scale.serial.Serial")
     def test_update_timeout(self, mock_serial):
@@ -244,7 +244,7 @@ class TestScaleServiceCommands(unittest.TestCase):
         service = ScaleService(self.config, self.serial_config)
         service.update_timeout(10)
         service.start()
-        result = service.send_command("REXT")
+        result = service.send_command("READ")
         self.assertTrue(result["is_stable"])
         service.stop()
 

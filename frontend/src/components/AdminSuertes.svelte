@@ -62,10 +62,27 @@ async function loadHaciendas() {
       const qs = buildQuery({ page: 1, page_size: CONFIG.DEFAULT_HACIENDAS_PAGE_SIZE });
       const result = await api.get(`${ENDPOINTS.HACIENDAS}${qs}`);
       haciendas = result.items || [];
+
+      // Load remaining pages in background if needed (fix: dropdown limited to page 1)
+      if (result.total_pages > 1) {
+        loadRemainingHaciendas(result.total_pages);
+      }
     } catch {
       haciendas = [];
     } finally {
       haciendasLoading = false;
+    }
+  }
+
+  async function loadRemainingHaciendas(totalPages) {
+    for (let p = 2; p <= totalPages; p++) {
+      try {
+        const qs = buildQuery({ page: p, page_size: CONFIG.DEFAULT_HACIENDAS_PAGE_SIZE });
+        const data = await api.get(`${ENDPOINTS.HACIENDAS}${qs}`);
+        haciendas = [...haciendas, ...(data.items || [])];
+      } catch {
+        // Silently skip failed pages
+      }
     }
   }
 

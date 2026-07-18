@@ -38,17 +38,17 @@ class TestScaleCommandEndpoint(unittest.TestCase):
         self.mock_scale.send_command = MagicMock()
 
     def test_rext_command_returns_weight(self):
-        """Send REXT and receive net_weight in response."""
+        """Send READ and receive net_weight in response."""
         self.mock_scale.send_command.return_value = {
             "net_weight": 150.500, "is_stable": True, "unit": "kg",
         }
-        response = self.client.post("/api/scale/command", json={"command": "REXT"})
+        response = self.client.post("/api/scale/command", json={"command": "READ"})
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["net_weight"], 150.500)
         self.assertTrue(data["is_stable"])
         self.assertEqual(data["unit"], "kg")
-        self.mock_scale.send_command.assert_called_once_with("REXT", None)
+        self.mock_scale.send_command.assert_called_once_with("READ", None)
 
     def test_tare_command_returns_ok(self):
         """Send TARE and receive result: ok."""
@@ -73,7 +73,7 @@ class TestScaleCommandEndpoint(unittest.TestCase):
         self.mock_scale.send_command.side_effect = ScaleConnectionError(
             "Serial port not open"
         )
-        response = self.client.post("/api/scale/command", json={"command": "REXT"})
+        response = self.client.post("/api/scale/command", json={"command": "READ"})
         self.assertEqual(response.status_code, 503)
         self.assertIn("Serial port not open", response.json()["detail"])
 
@@ -82,6 +82,6 @@ class TestScaleCommandEndpoint(unittest.TestCase):
         self.mock_scale.send_command.side_effect = ScaleTimeoutError(
             "No response within 3s"
         )
-        response = self.client.post("/api/scale/command", json={"command": "REXT"})
+        response = self.client.post("/api/scale/command", json={"command": "READ"})
         self.assertEqual(response.status_code, 503)
         self.assertIn("No response", response.json()["detail"])

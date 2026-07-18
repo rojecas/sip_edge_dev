@@ -810,6 +810,47 @@
                 27
             ],
             "ers_ref": "ERS_V1.4_Adendas.md §A.4"
+        },
+        {
+            "id": 36,
+            "name": "hacienda_search_filter",
+            "title": "Filtro de Búsqueda en Dropdowns de Hacienda",
+            "type": "feature",
+            "sdd": true,
+            "description": "Agregar un filtro de búsqueda por nombre en los dropdowns de selección de hacienda del frontend. Actualmente los selects de hacienda en AdminSuertes y KioskForm son listas planas. A medida que crece el número de haciendas, encontrar una específica se vuelve difícil. Esta feature permite que el usuario escriba parte del nombre de la hacienda en el dropdown y la lista se filtre mostrando solo coincidencias parciales (substring).",
+            "acceptance": [
+                "El dropdown de hacienda en AdminSuertes (creación/edición de suertes) debe permitir buscar/filtrar por nombre de hacienda",
+                "El dropdown de hacienda en KioskForm (kiosko de pesaje) debe permitir buscar/filtrar por nombre de hacienda",
+                "El filtro debe buscar coincidencias parciales (substring) en el nombre de la hacienda",
+                "La búsqueda debe funcionar sobre todas las haciendas, no solo las de la primera página"
+            ],
+            "status": "pending",
+            "depends_on": [
+                4,
+                13,
+                16
+            ]
+        },
+        {
+            "id": 37,
+            "name": "notas_muestras",
+            "title": "Campo de Notas Colapsable en Vista de Toma de Muestras",
+            "type": "feature",
+            "sdd": true,
+            "description": "Agregar un campo de texto colapsable (collapsible) en la vista de pesaje/kiosko donde el operador pueda registrar notas u observaciones sobre las medidas de cada muestra. El campo debe poder expandirse/colapsarse para no ocupar espacio permanente en la pantalla. Incluye notas sobre las medidas (problemas con core sampler, muestras de empalme, vagón con nivel de caña muy bajo) y notas sobre las muestras (alta cantidad de materia extraña vegetal, sin materia extraña mineral, otras observaciones del operador).",
+            "acceptance": [
+                "El formulario de pesaje en /kiosko tiene un campo de texto para notas, colapsible (expandir/colapsar)",
+                "El campo de notas persiste junto con el registro de pesaje en la BD (columna notas en tabla weighings)",
+                "Las notas son visibles en el historial de pesajes (HistoryTable)",
+                "El campo se limpia al hacer reset de la medida",
+                "Las notas pueden ser consultadas via SMS (ej. 'notas del vagon V5' o 'notas de hoy') a traves del agente AI"
+            ],
+            "status": "pending",
+            "depends_on": [
+                6,
+                8,
+                13
+            ]
         }
     ]
 }
