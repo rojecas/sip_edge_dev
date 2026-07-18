@@ -77,7 +77,7 @@ ssh -i ~/.ssh/sip_edge_edgebox sipedge@192.168.1.42
 
 | Puerto fisico | Dispositivo | Proposito |
 |--------------|-------------|-----------|
-| RS485 | `/dev/ttyACM0` | Bascula DINI ARGEO DFWLI-2 |
+| RS485 | `/dev/ttyACM0` | Bascula DINI ARGEO DFW06L |
 | RS232 | `/dev/ttyACM1` | Transmision a PC externo |
 
 - Permisos: `root:dialout` â€” el usuario `sipedge` esta en el grupo `dialout`.

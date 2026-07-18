@@ -20,7 +20,7 @@ en una EdgeBox-RPI-200 (SeeedStudio) en una planta industrial en Colombia.
 | Backend (FastAPI) | Completo. 40+ endpoints REST, WebSocket /ws/scale, auth JWT con RBAC. Sirve en puerto 8000. |
 | Base de datos | MariaDB 11.8.6 con 9 tablas. |
 | LLM (llama.cpp) | Operativo en puerto 8080, 3 cores dedicados. Modelos Qwen 2.5 1.5B / Gemma 4. |
-| Hardware integrado | RS485 (bascula DINI ARGEO DFWLI-2), RS232 (PC externo), modem GSM Quectel EC25, RTC PCF8563, WDT. |
+| Hardware integrado | RS485 (bascula DINI ARGEO DFW06L), RS232 (PC externo), modem GSM Quectel EC25, RTC PCF8563, WDT. |
 | Frontend | No existe. Solo una pagina HTML inline de login (src/login_page.py, 240 lineas) que muestra el token JWT en texto plano. |
 | Features | 12 features implementadas y cerradas (status: done). |
 | SDD specs | 12 specs completos en harness/specs/. |
