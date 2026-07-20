@@ -258,9 +258,9 @@ def list_weighings(
     }
     sort_col = sort_columns.get(sort_by, Weighing.fecha)
     if sort_order == "asc":
-        query = query.order_by(asc(sort_col))
+        query = query.order_by(asc(sort_col), asc(Weighing.hora))
     else:
-        query = query.order_by(desc(sort_col))
+        query = query.order_by(desc(sort_col), desc(Weighing.hora))
 
     # Pagination
     total = query.count()
