@@ -29,6 +29,7 @@
   let selectedSuerteId = $state(null);
   let suertesLoading = $state(false);
 
+  let resetCounter = $state(0);
   // Weight fields
   let pesoMuestra = $state(0);
   let pesoMineral = $state(0);
@@ -142,6 +143,7 @@
     notas = "";
     successMessage = "";
     errorMessage = "";
+    resetCounter++;
   }
 
   async function handleReset() {
@@ -291,7 +293,7 @@
 
       <div class="field">
         <label for="hacienda">Hacienda</label>
-        <HaciendaCodeInput onSelect={handleHaciendaSelect} placeholder="Ingrese código de hacienda" />
+        <HaciendaCodeInput onSelect={handleHaciendaSelect} placeholder="Ingrese código de hacienda" resetKey={resetCounter} />
       </div>
 
       <div class="field">

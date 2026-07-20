@@ -7,12 +7,13 @@
    * Props:
    *   onSelect(hacienda: HaciendaResponse | null) — called when a hacienda is confirmed or cleared
    *   placeholder — optional placeholder text for the input
+   *   resetKey — incremented by parent to trigger internal state reset
    */
   import { api, buildQuery } from "../lib/api.js";
   import { ENDPOINTS } from "../lib/constants.js";
   import { navigate } from "../lib/router.js";
 
-  let { onSelect, placeholder = "Ingrese código de hacienda" } = $props();
+  let { onSelect, placeholder = "Ingrese código de hacienda", resetKey = 0 } = $props();
 
   // Internal state
   let inputValue = $state("");
@@ -20,8 +21,16 @@
   let showErrorModal = $state(false);
   let searchCode = $state("");           // code that failed to resolve
   let loading = $state(false);
-
   let inputRef = $state(null);
+
+  // Reset internal state when parent increments resetKey (e.g. after form submit)
+  $effect(() => {
+    void resetKey;
+    selectedHacienda = null;
+    inputValue = "";
+    searchCode = "";
+    showErrorModal = false;
+  });
 
   /**
    * Triggers API search for the hacienda code.
@@ -69,15 +78,11 @@
     searchCode = "";
     showErrorModal = false;
     onSelect(null);
-    // Focus back to input after clearing
     if (inputRef) {
       inputRef.focus();
     }
   }
 
-  /**
-   * Close error modal and focus input (R8: Reintentar).
-   */
   function handleRetry() {
     showErrorModal = false;
     if (inputRef) {
@@ -85,16 +90,11 @@
     }
   }
 
-  /**
-   * Navigate to hacienda creation view (R9: Crear nueva hacienda).
-   */
   function handleCreateNew() {
     showErrorModal = false;
     navigate("/kiosco/haciendas");
   }
-  /**
-   * Close error modal when clicking overlay (not modal content).
-   */
+
   function handleOverlayClick(e) {
     if (e.target === e.currentTarget) {
       handleRetry();
