@@ -3,7 +3,7 @@
    * NotesField — Collapsible textarea for operator notes.
    * Props: bind:notas (string), label (string, default "Notas").
    */
-  let { notas = "", label = "Notas" } = $props();
+  let { notas = $bindable(""), label = "Notas" } = $props();
   let expanded = $state(false);
 
   function toggle() {
