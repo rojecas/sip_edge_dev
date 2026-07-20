@@ -147,14 +147,18 @@ class TestHaciendasAuth(unittest.TestCase):
         data = response.json()
         self.assertIsInstance(data["items"], list)
 
-    def test_create_hacienda_as_operator(self):
+    def test_create_hacienda_as_operator_returns_201(self):
         token = self._login("operator", "operatorpass")
         response = self.client.post(
             "/api/haciendas",
             json={"codigo": "H001", "nombre": "Test"},
             headers={"Authorization": f"Bearer {token}"},
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["codigo"], "H001")
+        self.assertEqual(data["nombre"], "Test")
+        self.assertIn("id", data)
 
     def test_get_hacienda_as_operator(self):
         token = self._login("operator", "operatorpass")
@@ -164,14 +168,26 @@ class TestHaciendasAuth(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 404)  # No hacienda 1 in test
 
-    def test_update_hacienda_as_operator(self):
+    def test_update_hacienda_as_operator_returns_200(self):
+        # First create a hacienda as admin
+        admin_token = self._login("admin", "adminpass")
+        create_resp = self.client.post(
+            "/api/haciendas",
+            json={"codigo": "H001", "nombre": "Original"},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        hacienda_id = create_resp.json()["id"]
+
+        # Now update as operator
         token = self._login("operator", "operatorpass")
         response = self.client.put(
-            "/api/haciendas/1",
-            json={"nombre": "Updated"},
+            f"/api/haciendas/{hacienda_id}",
+            json={"nombre": "Updated by operator"},
             headers={"Authorization": f"Bearer {token}"},
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["nombre"], "Updated by operator")
 
     def test_delete_hacienda_as_operator(self):
         token = self._login("operator", "operatorpass")
@@ -190,14 +206,28 @@ class TestHaciendasAuth(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIsInstance(response.json(), list)
 
-    def test_create_suerte_as_operator(self):
+    def test_create_suerte_as_operator_returns_201(self):
+        # First create a hacienda as admin (needed for suerte creation)
+        admin_token = self._login("admin", "adminpass")
+        hacienda_resp = self.client.post(
+            "/api/haciendas",
+            json={"codigo": "H001", "nombre": "Hacienda Test"},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        hacienda_id = hacienda_resp.json()["id"]
+
+        # Now create suerte as operator
         token = self._login("operator", "operatorpass")
         response = self.client.post(
             "/api/suertes",
-            json={"hacienda_id": 1, "codigo_suerte": "A1"},
+            json={"hacienda_id": hacienda_id, "codigo_suerte": "A1"},
             headers={"Authorization": f"Bearer {token}"},
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["hacienda_id"], hacienda_id)
+        self.assertEqual(data["codigo_suerte"], "A1")
+        self.assertIn("id", data)
 
     def test_get_suerte_as_operator(self):
         token = self._login("operator", "operatorpass")
@@ -207,14 +237,32 @@ class TestHaciendasAuth(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 404)  # No suerte 1 in test
 
-    def test_update_suerte_as_operator(self):
+    def test_update_suerte_as_operator_returns_200(self):
+        # First create a hacienda and suerte as admin
+        admin_token = self._login("admin", "adminpass")
+        hacienda_resp = self.client.post(
+            "/api/haciendas",
+            json={"codigo": "H001", "nombre": "Hacienda Test"},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        hacienda_id = hacienda_resp.json()["id"]
+        suerte_resp = self.client.post(
+            "/api/suertes",
+            json={"hacienda_id": hacienda_id, "codigo_suerte": "A1"},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        suerte_id = suerte_resp.json()["id"]
+
+        # Now update as operator
         token = self._login("operator", "operatorpass")
         response = self.client.put(
-            "/api/suertes/1",
+            f"/api/suertes/{suerte_id}",
             json={"codigo_suerte": "B2"},
             headers={"Authorization": f"Bearer {token}"},
         )
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["codigo_suerte"], "B2")
 
     def test_delete_suerte_as_operator(self):
         token = self._login("operator", "operatorpass")
@@ -223,6 +271,27 @@ class TestHaciendasAuth(unittest.TestCase):
             headers={"Authorization": f"Bearer {token}"},
         )
         self.assertEqual(response.status_code, 403)
+
+    def test_new_hacienda_available_after_creation(self):
+        """R10: New hacienda created by operator appears in GET /api/haciendas."""
+        token = self._login("operator", "operatorpass")
+        # Create hacienda as operator
+        create_resp = self.client.post(
+            "/api/haciendas",
+            json={"codigo": "NEW001", "nombre": "Nueva Hacienda"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(create_resp.status_code, 201)
+        new_id = create_resp.json()["id"]
+        # GET haciendas and verify it appears
+        list_resp = self.client.get(
+            "/api/haciendas",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(list_resp.status_code, 200)
+        data = list_resp.json()
+        ids = [h["id"] for h in data["items"]]
+        self.assertIn(new_id, ids)
 
 
 class TestHaciendasCRUD(unittest.TestCase):
@@ -834,6 +903,156 @@ class TestSuertesCRUD(unittest.TestCase):
         )
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["codigo_suerte"], "B2")
+
+
+class TestCreatedBy(unittest.TestCase):
+    """Tests for Feature 39 — Trazabilidad: Registro de usuario creador."""
+
+    def setUp(self):
+        self.client = _build_test_app()
+
+    def _login(self, username="admin", password="adminpass"):
+        response = self.client.post(
+            "/api/auth/login",
+            json={"username": username, "password": password},
+        )
+        return response.json()["access_token"]
+
+    def _auth_header(self):
+        return {"Authorization": f"Bearer {self._login()}"}
+
+    def _create_hacienda(self, codigo="H001", nombre="Hacienda Test"):
+        response = self.client.post(
+            "/api/haciendas",
+            json={"codigo": codigo, "nombre": nombre},
+            headers=self._auth_header(),
+        )
+        return response.json()
+
+    # T15 — R3, R5: POST /api/haciendas asigna created_by
+    def test_create_hacienda_sets_created_by(self):
+        data = self._create_hacienda("H001", "Hacienda Test")
+        self.assertIn("created_by", data)
+        self.assertEqual(data["created_by"], 1)  # admin is user_id=1
+        self.assertIn("created_by_username", data)
+        self.assertEqual(data["created_by_username"], "admin")
+
+    # T16 — R4, R6: POST /api/suertes asigna created_by
+    def test_create_suerte_sets_created_by(self):
+        hacienda = self._create_hacienda()
+        response = self.client.post(
+            "/api/suertes",
+            json={"hacienda_id": hacienda["id"], "codigo_suerte": "A1"},
+            headers=self._auth_header(),
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertIn("created_by", data)
+        self.assertEqual(data["created_by"], 1)
+        self.assertIn("created_by_username", data)
+        self.assertEqual(data["created_by_username"], "admin")
+
+    # T15 extra: operator también asigna created_by
+    def test_create_hacienda_as_operator_sets_created_by(self):
+        token = self._login("operator", "operatorpass")
+        response = self.client.post(
+            "/api/haciendas",
+            json={"codigo": "H001", "nombre": "Test"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertIn("created_by", data)
+        self.assertEqual(data["created_by"], 2)  # operator is user_id=2
+        self.assertEqual(data["created_by_username"], "operator")
+
+    # T17 — R5: GET /api/haciendas incluye created_by
+    def test_list_haciendas_includes_created_by(self):
+        self._create_hacienda("H001", "Hacienda Uno")
+        self._create_hacienda("H002", "Hacienda Dos")
+        response = self.client.get(
+            "/api/haciendas",
+            headers=self._auth_header(),
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertGreaterEqual(len(data["items"]), 2)
+        for h in data["items"]:
+            self.assertIn("created_by", h)
+            self.assertIn("created_by_username", h)
+            self.assertEqual(h["created_by"], 1)
+            self.assertEqual(h["created_by_username"], "admin")
+
+    # T18 — R6: GET /api/suertes incluye created_by
+    def test_list_suertes_includes_created_by(self):
+        hacienda = self._create_hacienda()
+        headers = self._auth_header()
+        for cod in ["A1", "B2"]:
+            self.client.post(
+                "/api/suertes",
+                json={"hacienda_id": hacienda["id"], "codigo_suerte": cod},
+                headers=headers,
+            )
+        response = self.client.get(
+            "/api/suertes",
+            headers=headers,
+        )
+        self.assertEqual(response.status_code, 200)
+        suertes_list = response.json()
+        self.assertGreaterEqual(len(suertes_list), 2)
+        for s in suertes_list:
+            self.assertIn("created_by", s)
+            self.assertIn("created_by_username", s)
+            self.assertEqual(s["created_by"], 1)
+            self.assertEqual(s["created_by_username"], "admin")
+
+    # T19 — R9: Existing records with NULL created_by expose null
+    def test_existing_records_have_null_created_by(self):
+        # Create a hacienda first, then directly set created_by to NULL
+        hacienda = self._create_hacienda("H001", "Hacienda Test")
+        # Direct SQL to simulate pre-migration record
+        from src.models import Hacienda as HaciendaModel
+
+        # We need access to the test DB session
+        import src.main as main_mod
+        from src.database import get_db as _original_get_db
+        override_gen = main_mod.app.dependency_overrides.get(_original_get_db)
+        if override_gen is None:
+            self.skipTest("DB override not available")
+        session = next(override_gen())
+        try:
+            h = session.query(HaciendaModel).filter(HaciendaModel.id == hacienda["id"]).first()
+            h.created_by = None
+            session.commit()
+        finally:
+            session.close()
+
+        # Now GET the hacienda — should have null created_by/created_by_username
+        response = self.client.get(
+            f"/api/haciendas/{hacienda['id']}",
+            headers=self._auth_header(),
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("created_by", data)
+        self.assertIsNone(data["created_by"])
+        self.assertIn("created_by_username", data)
+        self.assertIsNone(data["created_by_username"])
+
+    # T20 — R10: POST sin token sigue devolviendo 401
+    def test_create_hacienda_without_token_still_returns_401(self):
+        response = self.client.post(
+            "/api/haciendas",
+            json={"codigo": "H001", "nombre": "Test"},
+        )
+        self.assertEqual(response.status_code, 401)
+
+    def test_create_suerte_without_token_still_returns_401(self):
+        response = self.client.post(
+            "/api/suertes",
+            json={"hacienda_id": 1, "codigo_suerte": "A1"},
+        )
+        self.assertEqual(response.status_code, 401)
 
 
 if __name__ == "__main__":

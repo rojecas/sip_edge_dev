@@ -5,8 +5,7 @@
    */
   import "./app.css";
   import { authStore } from "./stores/auth.js";
-  import { setAuthStore, api } from "./lib/api.js";
-  import { isRoute } from "./lib/router.js";
+  import { setAuthStore } from "./lib/api.js";
   import AuthModal from "./components/AuthModal.svelte";
   import InactivityGuard from "./components/InactivityGuard.svelte";
   import KioskLayout from "./components/KioskLayout.svelte";
@@ -39,6 +38,7 @@
     onHashChange(); // initial read
     return () => window.removeEventListener("hashchange", onHashChange);
   });
+
 </script>
 
 {#if !$authStore.isAuthenticated}
@@ -50,6 +50,14 @@
     <KioskLayout>
       {#if currentRoute === "/kiosco/historial"}
         <HistoryTable />
+      {:else if currentRoute === "/kiosco/haciendas"}
+        <div class="kiosk-admin-wrapper">
+          <AdminHaciendas allowDelete={false} />
+        </div>
+      {:else if currentRoute === "/kiosco/suertes"}
+        <div class="kiosk-admin-wrapper">
+          <AdminSuertes allowDelete={false} />
+        </div>
       {:else}
         <KioskForm />
       {/if}
@@ -80,3 +88,4 @@
     </AdminLayout>
   {/if}
 {/if}
+

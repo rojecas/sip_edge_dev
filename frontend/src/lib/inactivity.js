@@ -1,23 +1,23 @@
 /**
- * Inactivity checker — compares JWT iat with current time.
- * If session expired, calls authStore.logout().
+ * Inactivity checker — compares last user activity with session timeout.
+ * If session expired, calls the onExpired callback.
  */
 
 import { CONFIG } from "./constants.js";
 
 /**
- * Check if the JWT session has expired based on iat and session timeout.
- * @param {object|null} jwtPayload - decoded JWT payload
+ * Check if the session has expired based on last activity and timeout.
+ * @param {number|null} lastActivity - timestamp (seconds) of last user activity
  * @param {number} sessionTimeoutMinutes - configured session timeout in minutes
  * @returns {boolean} true if session is expired
  */
-export function checkInactivity(jwtPayload, sessionTimeoutMinutes) {
-  if (!jwtPayload || !jwtPayload.iat) {
-    return true; // no valid iat — treat as expired
+export function checkInactivity(lastActivity, sessionTimeoutMinutes) {
+  if (lastActivity === null || lastActivity === undefined) {
+    return true; // no activity recorded — treat as expired
   }
 
   const now = Date.now() / 1000; // seconds
-  const elapsed = now - jwtPayload.iat;
+  const elapsed = now - lastActivity;
   const timeout = (sessionTimeoutMinutes || CONFIG.DEFAULT_SESSION_TIMEOUT_MINUTES) * 60;
 
   return elapsed > timeout;
@@ -26,16 +26,16 @@ export function checkInactivity(jwtPayload, sessionTimeoutMinutes) {
 /**
  * Start inactivity monitoring timer.
  * Calls onExpired callback when session expires.
- * @param {function} getPayload - returns current JWT payload (or null)
+ * @param {function} getLastActivity - returns timestamp of last activity (or null)
  * @param {function} getTimeout - returns session timeout in minutes
  * @param {function} onExpired - called when session expires
  * @returns {function} stop function to clear the timer
  */
-export function startInactivityTimer(getPayload, getTimeout, onExpired) {
+export function startInactivityTimer(getLastActivity, getTimeout, onExpired) {
   const interval = setInterval(() => {
-    const payload = getPayload();
+    const last = getLastActivity();
     const timeout = getTimeout();
-    if (checkInactivity(payload, timeout)) {
+    if (checkInactivity(last, timeout)) {
       clearInterval(interval);
       onExpired();
     }

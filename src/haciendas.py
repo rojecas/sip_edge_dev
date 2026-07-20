@@ -31,6 +31,8 @@ class HaciendaResponse(BaseModel):
     nombre: str
     created_at: datetime
     updated_at: datetime
+    created_by: Optional[int] = None
+    created_by_username: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -51,6 +53,8 @@ class SuerteResponse(BaseModel):
     codigo_suerte: str
     created_at: datetime
     updated_at: datetime
+    created_by: Optional[int] = None
+    created_by_username: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -63,6 +67,8 @@ def _hacienda_to_response(h: Hacienda) -> HaciendaResponse:
         nombre=h.nombre,
         created_at=h.created_at,
         updated_at=h.updated_at,
+        created_by=h.created_by,
+        created_by_username=h.creator.username if h.creator else None,
     )
 
 
@@ -73,6 +79,8 @@ def _suerte_to_response(s: Suerte) -> SuerteResponse:
         codigo_suerte=s.codigo_suerte,
         created_at=s.created_at,
         updated_at=s.updated_at,
+        created_by=s.created_by,
+        created_by_username=s.creator.username if s.creator else None,
     )
 
 
@@ -92,13 +100,13 @@ def get_hacienda(db: Session, hacienda_id: int) -> HaciendaResponse:
     return _hacienda_to_response(h)
 
 
-def create_hacienda(db: Session, data: HaciendaCreate) -> HaciendaResponse:
+def create_hacienda(db: Session, data: HaciendaCreate, user_id: int) -> HaciendaResponse:
     existing = db.query(Hacienda).filter(
         Hacienda.codigo == data.codigo, Hacienda.deleted_at.is_(None)
     ).first()
     if existing is not None:
         raise HTTPException(status_code=409, detail="Ya existe una hacienda con este codigo. Cambielo para poder guardarla.")
-    h = Hacienda(codigo=data.codigo, nombre=data.nombre)
+    h = Hacienda(codigo=data.codigo, nombre=data.nombre, created_by=user_id)
     db.add(h)
     db.commit()
     db.refresh(h)
@@ -163,7 +171,7 @@ def get_suerte(db: Session, suerte_id: int) -> SuerteResponse:
     return _suerte_to_response(s)
 
 
-def create_suerte(db: Session, data: SuerteCreate) -> SuerteResponse:
+def create_suerte(db: Session, data: SuerteCreate, user_id: int) -> SuerteResponse:
     # verify hacienda exists and is active
     hacienda = db.query(Hacienda).filter(
         Hacienda.id == data.hacienda_id, Hacienda.deleted_at.is_(None)
@@ -181,7 +189,7 @@ def create_suerte(db: Session, data: SuerteCreate) -> SuerteResponse:
             status_code=409,
             detail="Ya existe una suerte con este codigo en esta hacienda. Cambielo para poder guardarla.",
         )
-    s = Suerte(hacienda_id=data.hacienda_id, codigo_suerte=data.codigo_suerte)
+    s = Suerte(hacienda_id=data.hacienda_id, codigo_suerte=data.codigo_suerte, created_by=user_id)
     db.add(s)
     db.commit()
     db.refresh(s)
@@ -280,11 +288,11 @@ def get_haciendas(
 @haciendas_router.post("", response_model=HaciendaResponse, status_code=201)
 def create_new_hacienda(
     body: HaciendaCreate,
-    _admin: dict = Depends(check_inactivity),
-    __admin: dict = Depends(require_role("admin")),
+    current_user: dict = Depends(check_inactivity),
+    __: dict = Depends(require_any_role("admin", "operator")),
     db: Session = Depends(get_db),
 ):
-    return create_hacienda(db, body)
+    return create_hacienda(db, body, current_user["user_id"])
 
 
 @haciendas_router.get("/{hacienda_id}", response_model=HaciendaResponse)
@@ -302,7 +310,7 @@ def update_existing_hacienda(
     hacienda_id: int,
     body: HaciendaUpdate,
     _admin: dict = Depends(check_inactivity),
-    __admin: dict = Depends(require_role("admin")),
+    __operator: dict = Depends(require_any_role("admin", "operator")),
     db: Session = Depends(get_db),
 ):
     return update_hacienda(db, hacienda_id, body)
@@ -331,11 +339,11 @@ def get_suertes(
 @suertes_router.post("", response_model=SuerteResponse, status_code=201)
 def create_new_suerte(
     body: SuerteCreate,
-    _admin: dict = Depends(check_inactivity),
-    __admin: dict = Depends(require_role("admin")),
+    current_user: dict = Depends(check_inactivity),
+    __: dict = Depends(require_any_role("admin", "operator")),
     db: Session = Depends(get_db),
 ):
-    return create_suerte(db, body)
+    return create_suerte(db, body, current_user["user_id"])
 
 
 @suertes_router.get("/{suerte_id}", response_model=SuerteResponse)
@@ -353,7 +361,7 @@ def update_existing_suerte(
     suerte_id: int,
     body: SuerteUpdate,
     _admin: dict = Depends(check_inactivity),
-    __admin: dict = Depends(require_role("admin")),
+    __operator: dict = Depends(require_any_role("admin", "operator")),
     db: Session = Depends(get_db),
 ):
     return update_suerte(db, suerte_id, body)

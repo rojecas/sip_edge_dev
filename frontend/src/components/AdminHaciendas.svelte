@@ -8,6 +8,8 @@
   import ConfirmModal from "./ConfirmModal.svelte";
   import HaciendaFormModal from "./HaciendaFormModal.svelte";
 
+  let { allowDelete = true } = $props();
+
   let haciendas = $state([]);
   let loading = $state(true);
   let loadError = $state("");
@@ -195,6 +197,7 @@
             <th>Nombre</th>
             <th>Creado</th>
             <th>Actualizado</th>
+            <th>Creado por</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -205,9 +208,12 @@
               <td>{h.nombre || "—"}</td>
               <td>{formatDate(h.created_at)}</td>
               <td>{formatDate(h.updated_at)}</td>
+              <td>{h.created_by_username || "—"}</td>
               <td class="actions-cell">
                 <button class="btn-action" onclick={() => openEdit(h)} title="Editar">✏️</button>
-                <button class="btn-action" onclick={() => openDelete(h)} title="Eliminar">🗑️</button>
+                {#if allowDelete}
+                  <button class="btn-action" onclick={() => openDelete(h)} title="Eliminar">🗑️</button>
+                {/if}
               </td>
             </tr>
           {/each}

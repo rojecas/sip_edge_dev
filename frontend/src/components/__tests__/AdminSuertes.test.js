@@ -256,3 +256,40 @@ describe("AdminSuertes — eliminar suerte (R17)", () => {
     });
   });
 });
+
+describe("AdminSuertes — allowDelete prop (F38 R3)", () => {
+  async function setupAndSelect() {
+    api.get.mockImplementation((url) => {
+      if (url.includes("/api/haciendas")) return Promise.resolve({ items: mockHaciendas });
+      if (url.includes("/api/suertes")) return Promise.resolve(mockSuertes);
+      return Promise.resolve({});
+    });
+    render(AdminSuertes, { allowDelete: false });
+    await waitForHaciendasLoaded();
+    await selectHacienda(1);
+    await waitFor(() => {
+      expect(screen.getByText("S001")).toBeInTheDocument();
+    });
+  }
+
+  it("oculta boton eliminar cuando allowDelete=false", async () => {
+    await setupAndSelect();
+    expect(screen.queryByTitle("Eliminar")).toBeNull();
+  });
+
+  it("muestra boton eliminar por defecto (allowDelete=true)", async () => {
+    api.get.mockImplementation((url) => {
+      if (url.includes("/api/haciendas")) return Promise.resolve({ items: mockHaciendas });
+      if (url.includes("/api/suertes")) return Promise.resolve(mockSuertes);
+      return Promise.resolve({});
+    });
+    render(AdminSuertes);
+    await waitForHaciendasLoaded();
+    await selectHacienda(1);
+    await waitFor(() => {
+      expect(screen.getByText("S001")).toBeInTheDocument();
+    });
+    const deleteBtns = screen.getAllByTitle("Eliminar");
+    expect(deleteBtns.length).toBeGreaterThan(0);
+  });
+});

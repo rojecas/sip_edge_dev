@@ -1,6 +1,28 @@
 {
   "project_version": "1.4.0",
-  "pending": [],
+  "pending": [
+    {
+      "id": 40,
+      "type": "bug",
+      "name": "session_timeout_mide_edad_no_inactividad",
+      "title": "El timeout de sesion mide edad del token, no inactividad real del usuario",
+      "completed_at": "2026-07-20"
+    },
+    {
+      "id": 38,
+      "type": "feature",
+      "name": "operator_hacienda_suerte_crud",
+      "title": "Acceso Completo a Haciendas y Suertes desde el Kiosko (Operador)",
+      "completed_at": "2026-07-19"
+    },
+    {
+      "id": 39,
+      "type": "feature",
+      "name": "hacienda_suerte_created_by",
+      "title": "Trazabilidad: Registro de usuario creador en Haciendas y Suertes",
+      "completed_at": "2026-07-20"
+    }
+  ],
   "history": [
     {
       "version": "1.4.0",

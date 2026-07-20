@@ -814,21 +814,25 @@
         {
             "id": 36,
             "name": "hacienda_search_filter",
-            "title": "Filtro de Búsqueda en Dropdowns de Hacienda",
+            "title": "Entrada de Codigo de Hacienda en Kiosko y AdminSuertes",
             "type": "feature",
             "sdd": true,
-            "description": "Agregar un filtro de búsqueda por nombre en los dropdowns de selección de hacienda del frontend. Actualmente los selects de hacienda en AdminSuertes y KioskForm son listas planas. A medida que crece el número de haciendas, encontrar una específica se vuelve difícil. Esta feature permite que el usuario escriba parte del nombre de la hacienda en el dropdown y la lista se filtre mostrando solo coincidencias parciales (substring).",
+            "description": "Reemplazar los dropdowns <select> de hacienda en KioskForm y AdminSuertes por un campo de entrada de texto donde el operador teclea el codigo alfanumerico de la hacienda (ej. 131, A49). Al ingresar el codigo completo (match exacto), el sistema resuelve y muestra confirmado: (Codigo) Nombre. Si el codigo no existe, muestra un mensaje de error con un boton Crear nueva hacienda que navega a la vista de creacion de haciendas del kiosko (F38). El filtro es cliente-side sobre todas las haciendas ya cargadas.",
             "acceptance": [
-                "El dropdown de hacienda en AdminSuertes (creación/edición de suertes) debe permitir buscar/filtrar por nombre de hacienda",
-                "El dropdown de hacienda en KioskForm (kiosko de pesaje) debe permitir buscar/filtrar por nombre de hacienda",
-                "El filtro debe buscar coincidencias parciales (substring) en el nombre de la hacienda",
-                "La búsqueda debe funcionar sobre todas las haciendas, no solo las de la primera página"
+                "El <select> de hacienda en KioskForm y AdminSuertes es reemplazado por un campo de texto para ingresar el codigo",
+                "Al ingresar un codigo existente (match exacto, Enter/Tab), se muestra confirmado: (Codigo) Nombre junto con opcion de limpiar (x)",
+                "El codigo se resuelve cliente-side contra todas las haciendas ya cargadas (sin llamada adicional a la API)",
+                "Si el codigo no existe, se muestra mensaje: Codigo no encontrado con boton [Crear nueva hacienda]",
+                "El boton [Crear nueva hacienda] navega a la vista de creacion de haciendas del kiosko (F38)",
+                "El display confirmado mantiene el formato actual: CODIGO - NOMBRE en KioskForm, NOMBRE (CODIGO) en AdminSuertes",
+                "Al limpiar el codigo seleccionado, las suertes asociadas se resetean"
             ],
             "status": "pending",
             "depends_on": [
                 4,
                 13,
-                16
+                16,
+                38
             ]
         },
         {
@@ -851,6 +855,70 @@
                 8,
                 13
             ]
+        },
+        {
+            "id": 38,
+            "name": "operator_hacienda_suerte_crud",
+            "title": "Acceso Completo a Haciendas y Suertes desde el Kiosko (Operador)",
+            "type": "feature",
+            "sdd": true,
+            "description": "Agregar dos pestanas adicionales a la vista de kiosko: [Haciendas] y [Suertes], quedando la barra de navegacion: [Pesaje] [Historial] [Haciendas] [Suertes]. Los operadores (rol operator) tienen el MISMO acceso que los administradores a la gestion de haciendas y suertes: listar, crear, editar y eliminar (soft-delete) directamente desde el kiosko, sin requerir acceso al panel de administracion. Se reutilizan los componentes AdminHaciendas y AdminSuertes completos. Esta feature habilita el boton Crear nueva hacienda en F36 cuando un codigo no es encontrado.",
+            "acceptance": [
+                "La vista de kiosko muestra 4 pestanas: Pesaje, Historial, Haciendas, Suertes",
+                "Pestana Haciendas: tabla paginada con crear y editar, SIN boton de eliminar para operadores",
+                "Pestana Suertes: tabla filtrable por hacienda con crear y editar, SIN boton de eliminar para operadores",
+                "POST y PUT /api/haciendas/{id} accesibles a rol operator; DELETE solo admin",
+                "POST y PUT /api/suertes/{id} accesibles a rol operator; DELETE solo admin",
+                "Operadores pueden gestionar haciendas y suertes (sin eliminar); corresponsales no",
+                "Haciendas/suertes creadas/editadas desde el kiosko estan inmediatamente disponibles en F36"
+            ],
+            "status": "done",
+            "depends_on": [
+                4,
+                13
+            ],
+            "github_issue": "https://github.com/rojecas/sip_edge/issues/22"
+        },
+        {
+            "id": 39,
+            "name": "hacienda_suerte_created_by",
+            "title": "Trazabilidad: Registro de usuario creador en Haciendas y Suertes",
+            "type": "feature",
+            "sdd": true,
+            "description": "Agregar columna created_by (FK a users.id) en las tablas haciendas y suertes para registrar que usuario creo cada registro. Al crear una hacienda o suerte, el sistema asigna automaticamente el ID del usuario autenticado. La columna se expone en las respuestas de la API y se muestra en las tablas del frontend (AdminHaciendas, AdminSuertes, y las vistas equivalentes del kiosko en F38).",
+            "acceptance": [
+                "Tabla haciendas tiene columna created_by BIGINT UNSIGNED NULL con FK a users.id",
+                "Tabla suertes tiene columna created_by BIGINT UNSIGNED NULL con FK a users.id",
+                "POST /api/haciendas asigna created_by = usuario autenticado",
+                "POST /api/suertes asigna created_by = usuario autenticado",
+                "GET /api/haciendas y GET /api/suertes incluyen created_by en la respuesta",
+                "Tabla de haciendas (admin y kiosko) muestra columna Creado por con el username",
+                "Tabla de suertes (admin y kiosko) muestra columna Creado por con el username"
+            ],
+            "status": "done",
+            "depends_on": [
+                4,
+                38
+            ],
+            "github_issue": "https://github.com/rojecas/sip_edge/issues/23"
+        },
+        {
+            "id": 40,
+            "type": "bug",
+            "name": "session_timeout_mide_edad_no_inactividad",
+            "title": "El timeout de sesion mide edad del token, no inactividad real del usuario",
+            "description": "La feature 2 (auth_rbac) promete 'bloqueo por inactividad con timeout configurable', pero tanto el backend (check_inactivity) como el frontend (InactivityGuard) miden la antiguedad del token JWT (ahora - iat), no la inactividad real del usuario. Esto causa que los operadores sean expulsados en medio de una medicion aunque esten activamente usando el sistema, porque el timer corre desde el login y nunca se resetea. No hay endpoint de refresh token, y el InactivityGuard no monitorea eventos DOM (touch, click, teclado) para detectar actividad del usuario.",
+            "reproduction": [
+                "1. Iniciar sesion como operador",
+                "2. Esperar a que transcurra el session_timeout_minutes (default 15 min)",
+                "3. Realizar cualquier accion (ej. Confirmar Medidas)",
+                "4. El backend responde 401 'Session expired due to inactivity'",
+                "5. El frontend fuerza logout inmediato perdiendo los datos del formulario"
+            ],
+            "affected_feature_ids": [
+                2
+            ],
+            "status": "done"
         }
     ]
 }

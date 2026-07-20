@@ -8,6 +8,8 @@
   import ConfirmModal from "./ConfirmModal.svelte";
   import SuerteFormModal from "./SuerteFormModal.svelte";
 
+  let { allowDelete = true } = $props();
+
   // Haciendas for dropdown
   let haciendas = $state([]);
   let haciendasLoading = $state(true);
@@ -267,6 +269,7 @@ function showResult(msg, isError = false) {
             <th>Código Suerte</th>
             <th>Creado</th>
             <th>Actualizado</th>
+            <th>Creado por</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -276,9 +279,12 @@ function showResult(msg, isError = false) {
               <td>{s.codigo_suerte || "—"}</td>
               <td>{formatDate(s.created_at)}</td>
               <td>{formatDate(s.updated_at)}</td>
+              <td>{s.created_by_username || "—"}</td>
               <td class="actions-cell">
                 <button class="btn-action" onclick={() => openEdit(s)} title="Editar">✏️</button>
-                <button class="btn-action" onclick={() => openDelete(s)} title="Eliminar">🗑️</button>
+                {#if allowDelete}
+                  <button class="btn-action" onclick={() => openDelete(s)} title="Eliminar">🗑️</button>
+                {/if}
               </td>
             </tr>
           {/each}

@@ -32,6 +32,7 @@ export const ENDPOINTS = {
   ANOMALIES_DETECT: "/api/anomalies",
   AGENT_QUERY: "/api/agent/query",
   SCALE_COMMAND: "/api/scale/command",
+  REFRESH: "/api/auth/refresh",
 };
 
 export const CONFIG = {
@@ -40,6 +41,7 @@ export const CONFIG = {
   WS_RECONNECT_INTERVAL_MS: 2000,
   POLLING_INTERVAL_MS: 5000,
   INACTIVITY_CHECK_INTERVAL_MS: 60000,
+  REFRESH_INTERVAL_MS: 120000,
   DEFAULT_PAGE_SIZE: 20,
   DEFAULT_HACIENDAS_PAGE_SIZE: 100,
   MAX_PAGE_SIZE: 100,

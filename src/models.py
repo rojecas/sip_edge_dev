@@ -48,7 +48,14 @@ class Hacienda(Base):
     created_at = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp())
     updated_at = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp(), server_onupdate=func.current_timestamp())
     deleted_at = Column(TIMESTAMP, nullable=True, default=None)
+    created_by = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+    )
 
+    creator = relationship("User", foreign_keys=[created_by])
     suertes = relationship("Suerte", back_populates="hacienda")
 
 
@@ -61,8 +68,15 @@ class Suerte(Base):
     created_at = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp())
     updated_at = Column(TIMESTAMP, nullable=False, server_default=func.current_timestamp(), server_onupdate=func.current_timestamp())
     deleted_at = Column(TIMESTAMP, nullable=True, default=None)
+    created_by = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        default=None,
+    )
     __table_args__ = (UniqueConstraint("hacienda_id", "codigo_suerte"),)
 
+    creator = relationship("User", foreign_keys=[created_by])
     hacienda = relationship("Hacienda", back_populates="suertes")
 
 

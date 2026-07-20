@@ -4,6 +4,7 @@ import json
 import logging
 import math
 import os
+import time
 import subprocess
 from contextlib import asynccontextmanager
 from dataclasses import asdict
@@ -30,8 +31,10 @@ from sqlalchemy.orm import Session
 
 from src.auth import (
     LoginRequest,
+    RefreshResponse,
     SessionTimeoutRequest,
     TokenResponse,
+    auth_router,
     check_inactivity,
     create_access_token,
     get_current_user,
@@ -41,6 +44,7 @@ from src.auth import (
 from src.config import (
     AgentConfig,
     BackupConfig,
+    DEFAULT_SESSION_TIMEOUT_MINUTES,
     GsmConfig,
     ScaleConfig,
     SerialPortConfig,
@@ -410,8 +414,33 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+app.state.last_activity = time.time()
 
 
+# ---- Middleware: track user activity ----
+@app.middleware("http")
+async def track_user_activity(request: Request, call_next):
+    """Actualiza last_activity DESPUES de cada request exitoso (sin tocar BD)."""
+    response = await call_next(request)
+    # Exclude polling/probe endpoints from activity tracking
+    # (they run on timers, not user interaction)
+    _polling_paths = {"/api/auth/status", "/api/emergency/status"}
+    if request.url.path in _polling_paths:
+        return response
+    if response.status_code < 400:
+        # Track activity for authenticated requests (Bearer token)
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            request.app.state.last_activity = time.time()
+        # Also track login (no Bearer, but creates a session)
+        elif request.url.path == "/api/auth/login":
+            request.app.state.last_activity = time.time()
+    return response
+
+
+
+
+app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(haciendas_router)
 app.include_router(suertes_router)
@@ -857,7 +886,10 @@ async def login(body: LoginRequest, db: Session = Depends(get_db)):
     if user.failed_login_attempts != 0:
         user.failed_login_attempts = 0
         db.commit()
-    token = create_access_token(user.id, user.role)
+    timeout = DEFAULT_SESSION_TIMEOUT_MINUTES
+    if hasattr(app.state, "session") and app.state.session:
+        timeout = app.state.session.session_timeout_minutes
+    token = create_access_token(user.id, user.role, session_timeout_minutes=timeout)
     return TokenResponse(access_token=token, token_type="bearer", role=user.role)
 
 

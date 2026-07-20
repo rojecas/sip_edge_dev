@@ -199,3 +199,20 @@ describe("AdminHaciendas — eliminar hacienda (R11)", () => {
     });
   });
 });
+
+describe("AdminHaciendas — allowDelete prop (F38 R2)", () => {
+  it("oculta boton eliminar cuando allowDelete=false", async () => {
+    api.get.mockResolvedValue(mockPaginatedResponse);
+    render(AdminHaciendas, { allowDelete: false });
+    await waitForLoaded();
+    expect(screen.queryByTitle("Eliminar")).toBeNull();
+  });
+
+  it("muestra boton eliminar por defecto (allowDelete=true)", async () => {
+    api.get.mockResolvedValue(mockPaginatedResponse);
+    render(AdminHaciendas);
+    await waitForLoaded();
+    const deleteBtns = screen.getAllByTitle("Eliminar");
+    expect(deleteBtns.length).toBeGreaterThan(0);
+  });
+});

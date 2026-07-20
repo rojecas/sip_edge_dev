@@ -1,6 +1,6 @@
 <script>
   /**
-   * KioskLayout — Layout for operator views.
+   * KioskLayout ï¿½ Layout for operator views.
    * Header: username + icon (left), nav Pesaje/Historial, app name, logout (right).
    */
   import { authStore } from "../stores/auth.js";
@@ -26,6 +26,14 @@
 
   function goToHistorial() {
     navigate("/kiosco/historial");
+  }
+
+  function goToHaciendas() {
+    navigate("/kiosco/haciendas");
+  }
+
+  function goToSuertes() {
+    navigate("/kiosco/suertes");
   }
 </script>
 
@@ -61,6 +69,16 @@
         class:active={currentRoute === "/kiosco/historial"}
         onclick={goToHistorial}
       >Historial</button>
+      <button
+        class="nav-btn"
+        class:active={currentRoute === "/kiosco/haciendas"}
+        onclick={goToHaciendas}
+      >Haciendas</button>
+      <button
+        class="nav-btn"
+        class:active={currentRoute === "/kiosco/suertes"}
+        onclick={goToSuertes}
+      >Suertes</button>
     </nav>
     <div class="header-center">
       <span class="app-name">Sip-Edge</span>

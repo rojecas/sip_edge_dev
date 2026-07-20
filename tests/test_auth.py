@@ -401,6 +401,67 @@ class TestTokenStructure(unittest.TestCase):
         self.assertEqual(payload["role"], "admin")
         self.assertIn("iat", payload)
         self.assertIsInstance(payload["iat"], int)
+        self.assertIn("session_timeout_minutes", payload)
+        self.assertIsInstance(payload["session_timeout_minutes"], int)
+
+    def test_token_contains_custom_timeout(self):
+        token = create_access_token(1, "operator", session_timeout_minutes=60)
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+        self.assertEqual(payload["session_timeout_minutes"], 60)
+
+
+class TestRefreshToken(unittest.TestCase):
+    def setUp(self):
+        self.client = _build_test_app()
+
+    def _get_admin_token(self):
+        response = self.client.post(
+            "/api/auth/login",
+            json={"username": "admin", "password": "adminpass"},
+        )
+        self.assertEqual(response.status_code, 200)
+        return response.json()
+
+    def test_refresh_token_returns_new_jwt(self):
+        """POST /api/auth/refresh returns a new JWT with fresh iat."""
+        import time as _time
+
+        data = self._get_admin_token()
+        old_token = data["access_token"]
+        old_payload = jwt.decode(old_token, JWT_SECRET_KEY, algorithms=[ALGORITHM])
+
+        # Wait 1s so the new token gets a different iat
+        _time.sleep(1)
+
+        response = self.client.post(
+            "/api/auth/refresh",
+            headers={"Authorization": f"Bearer {old_token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        new_data = response.json()
+        self.assertIn("access_token", new_data)
+        self.assertEqual(new_data["token_type"], "bearer")
+        self.assertEqual(new_data["role"], "admin")
+
+        # New token string is different from old token
+        self.assertNotEqual(new_data["access_token"], old_token)
+
+        new_payload = jwt.decode(
+            new_data["access_token"], JWT_SECRET_KEY, algorithms=[ALGORITHM]
+        )
+        # New token has greater iat
+        self.assertGreater(new_payload["iat"], old_payload["iat"])
+        # Same user and role
+        self.assertEqual(new_payload["sub"], old_payload["sub"])
+        self.assertEqual(new_payload["role"], old_payload["role"])
+        # New token has session_timeout_minutes
+        self.assertIn("session_timeout_minutes", new_payload)
+
+    def test_refresh_token_requires_auth(self):
+        """POST /api/auth/refresh without token returns 401."""
+        response = self.client.post("/api/auth/refresh")
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["detail"], "Not authenticated")
 
 
 def _build_test_app_with_sms_mock():
