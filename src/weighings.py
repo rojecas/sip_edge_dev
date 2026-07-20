@@ -37,6 +37,7 @@ class WeighingCreate(BaseModel):
     peso_vegetal_extrano: Decimal = Field(ge=0)
     manual_entry: bool = Field(default=False)
     tipo_cosecha: str = Field(default="Mecanico - Verde")
+    notas: Optional[str] = Field(default=None, max_length=65535)
 
     @field_validator("tipo_cosecha")
     @classmethod
@@ -45,6 +46,13 @@ class WeighingCreate(BaseModel):
             raise ValueError(
                 f"tipo_cosecha debe ser uno de: {', '.join(TIPO_COSECHA_VALUES)}"
             )
+        return v
+
+    @field_validator("notas", mode="before")
+    @classmethod
+    def normalize_notas(cls, v):
+        if v is not None and isinstance(v, str) and v.strip() == "":
+            return None
         return v
 
 
@@ -65,6 +73,7 @@ class WeighingResponse(BaseModel):
     enviado_pc: bool
     manual_entry: bool
     tipo_cosecha: str
+    notas: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -93,6 +102,7 @@ def _build_frame_data(record: Weighing, hacienda: Hacienda, suerte: Suerte) -> d
             "vegetal_extrano": float(record.peso_vegetal_extrano),
         },
         "tipo_cosecha": record.tipo_cosecha,
+        "notas": record.notas,
     }
 
 
@@ -142,6 +152,7 @@ def create_weighing(
         usuario_id=current_user["user_id"],
         manual_entry=body.manual_entry,
         tipo_cosecha=body.tipo_cosecha,
+        notas=body.notas,
     )
     db.add(record)
     db.commit()
@@ -277,6 +288,7 @@ def list_weighings(
             enviado_pc=w.enviado_pc,
             manual_entry=w.manual_entry,
             tipo_cosecha=w.tipo_cosecha,
+            notas=w.notas,
         ))
 
     return PaginatedResponse(

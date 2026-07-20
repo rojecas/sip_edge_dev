@@ -53,9 +53,11 @@ async function waitForHaciendasLoaded() {
 }
 
 async function selectHacienda(index = 1) {
-  const select = document.querySelector(".selector-row select");
-  expect(select).toBeInTheDocument();
-  await fireEvent.change(select, { target: { value: String(index) } });
+  const code = mockHaciendas[index - 1].codigo;
+  const input = document.querySelector(".hacienda-code-input .code-input");
+  expect(input).toBeInTheDocument();
+  await fireEvent.input(input, { target: { value: code } });
+  await fireEvent.keyDown(input, { key: "Enter" });
 }
 
 describe("AdminSuertes — dropdown y carga (R12, R13)", () => {
@@ -131,7 +133,7 @@ describe("AdminSuertes — dropdown y carga (R12, R13)", () => {
     });
   });
 
-  it("muestra columna Hacienda ID en la tabla", async () => {
+  it("muestra la hacienda seleccionada en el componente HaciendaCodeInput", async () => {
     api.get.mockImplementation((url) => {
       if (url.includes("/api/haciendas")) return Promise.resolve({ items: mockHaciendas });
       if (url.includes("/api/suertes")) return Promise.resolve(mockSuertes);
@@ -141,7 +143,7 @@ describe("AdminSuertes — dropdown y carga (R12, R13)", () => {
     await waitForHaciendasLoaded();
     await selectHacienda(1);
     await waitFor(() => {
-      expect(screen.getByText("Hacienda ID")).toBeInTheDocument();
+      expect(screen.getByText("HA - Hacienda A")).toBeInTheDocument();
     });
   });
 });
@@ -210,7 +212,7 @@ describe("AdminSuertes — editar suerte (R16)", () => {
   it("PUT /api/suertes/{id} se llama al guardar edicion", async () => {
     await setupAndSelect();
     api.put.mockResolvedValue({});
-    const editBtns = document.querySelectorAll(".btn-edit");
+    const editBtns = screen.getAllByTitle("Editar");
     await fireEvent.click(editBtns[0]);
     await waitFor(() => {
       expect(screen.getByText("Editar Suerte")).toBeInTheDocument();
@@ -246,7 +248,7 @@ describe("AdminSuertes — eliminar suerte (R17)", () => {
   it("DELETE /api/suertes/{id} se ejecuta con confirmacion", async () => {
     await setupAndSelect();
     api.del.mockResolvedValue({});
-    const deleteBtns = document.querySelectorAll(".btn-delete");
+    const deleteBtns = screen.getAllByTitle("Eliminar");
     await fireEvent.click(deleteBtns[0]);
     expect(screen.getByText("Eliminar Suerte")).toBeInTheDocument();
     const confirmBtns = document.querySelectorAll(".modal-actions .btn-confirm");

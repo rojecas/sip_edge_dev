@@ -208,6 +208,22 @@ TOOL_DEFINITIONS: list[dict] = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_weighing_notes",
+            "description": "Obtiene las notas registradas en pesajes, filtrado opcionalmente por vagon y/o rango de fechas. Requiere al menos uno de vagon o fecha_inicio.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "vagon": {"type": "string", "description": "Filtro opcional por identificador de vagon"},
+                    "fecha_inicio": {"type": "string", "description": "Fecha inicio formato YYYY-MM-DD"},
+                    "fecha_fin": {"type": "string", "description": "Fecha fin formato YYYY-MM-DD"},
+                    "limit": {"type": "integer", "description": "Maximo de registros a retornar (default 20)"},
+                },
+            },
+        },
+    },
 ]
 
 
@@ -707,6 +723,57 @@ class SqlTools:
             db.close()
 
     # ------------------------------------------------------------------
+    # Herramienta de notas (T8 — Feature 37)
+    # ------------------------------------------------------------------
+
+    def get_weighing_notes(
+        self,
+        vagon: str | None = None,
+        fecha_inicio: str | None = None,
+        fecha_fin: str | None = None,
+        limit: int = 20,
+    ) -> list[dict]:
+        """Retorna notas de pesajes filtrados por vagon y/o rango de fechas.
+
+        Requiere al menos uno de: vagon, fecha_inicio.
+        """
+        if not vagon and not fecha_inicio:
+            raise ToolExecutionError(
+                "Debe proporcionar al menos uno de: vagon, fecha_inicio"
+            )
+        db = self._get_db()
+        try:
+            query = db.query(
+                Weighing.id,
+                Weighing.fecha,
+                Weighing.vagon,
+                Weighing.tractomula,
+                Weighing.notas,
+            )
+            if vagon:
+                query = query.filter(Weighing.vagon == vagon)
+            if fecha_inicio:
+                fi = date.fromisoformat(fecha_inicio)
+                query = query.filter(Weighing.fecha >= fi)
+            if fecha_fin:
+                ff = date.fromisoformat(fecha_fin)
+                query = query.filter(Weighing.fecha <= ff)
+            query = query.order_by(Weighing.id.desc()).limit(limit)
+            rows = query.all()
+            return [
+                {
+                    "id": r.id,
+                    "fecha": r.fecha.isoformat() if r.fecha else None,
+                    "vagon": r.vagon,
+                    "tractomula": r.tractomula,
+                    "notas": r.notas,
+                }
+                for r in rows
+            ]
+        finally:
+            db.close()
+
+    # ------------------------------------------------------------------
     # Dispatcher central (T9)
     # ------------------------------------------------------------------
 
@@ -728,6 +795,7 @@ class SqlTools:
             "get_custom_period_summary": self.get_custom_period_summary,
             "detect_anomalies": self.detect_anomalies,
             "check_thresholds": self.check_thresholds,
+            "get_weighing_notes": self.get_weighing_notes,
         }
         if tool_name not in tool_map:
             raise ToolExecutionError(f"Herramienta desconocida: {tool_name}")

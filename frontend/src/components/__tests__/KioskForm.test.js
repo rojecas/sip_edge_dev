@@ -1,8 +1,9 @@
 /**
  * Tests para KioskForm.svelte — Formulario de pesaje.
- * Cubre: R3 (reset general relegado a accion secundaria).
+ * Cubre: R3 (reset general relegado a accion secundaria),
+ *        R2-R4-R6 (notas colapsables — Feature 37).
  */
-import { vi, describe, it, expect, afterEach } from "vitest";
+import { vi, describe, it, expect, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/svelte";
 import KioskForm from "../KioskForm.svelte";
 
@@ -149,6 +150,97 @@ describe("KioskForm — Auto-capture PRINT (T41)", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Peso recibido: 125.450 kg/)).toBeInTheDocument();
+    });
+  });
+});
+
+describe("KioskForm — Feature 37: Notas colapsables (R2, R3, R4, R6)", () => {
+  // T25: NotesField renders in the form (R2)
+  it("renderiza el campo de notas colapsable en el formulario", async () => {
+    render(KioskForm);
+    await waitFor(() => {
+      expect(screen.getByText("Confirmar Medidas")).toBeInTheDocument();
+    });
+    // The toggle button with label "Notas" should be visible
+    const toggleBtn = screen.getByText("Notas");
+    expect(toggleBtn).toBeInTheDocument();
+  });
+
+  // T26: Expand/collapse shows/hides textarea (R3, R4)
+  it("al expandir muestra el textarea y al colapsar lo oculta", async () => {
+    render(KioskForm);
+    await waitFor(() => {
+      expect(screen.getByText("Confirmar Medidas")).toBeInTheDocument();
+    });
+
+    // Initially textarea should not be visible
+    const textareas = document.querySelectorAll(".notes-textarea");
+    expect(textareas.length).toBe(0);
+
+    // Click the toggle to expand
+    const toggleBtn = screen.getByText("Notas").closest("button");
+    await fireEvent.click(toggleBtn);
+
+    // Now textarea should be visible
+    await waitFor(() => {
+      const expandedTextareas = document.querySelectorAll(".notes-textarea");
+      expect(expandedTextareas.length).toBeGreaterThan(0);
+    });
+
+    // Click again to collapse
+    await fireEvent.click(toggleBtn);
+
+    // Textarea should be hidden again
+    await waitFor(() => {
+      const collapsedTextareas = document.querySelectorAll(".notes-textarea");
+      expect(collapsedTextareas.length).toBe(0);
+    });
+  });
+
+  // T27: Reset form clears notes (R6)
+  it("al resetear el formulario se limpia el campo notas", async () => {
+    render(KioskForm);
+    await waitFor(() => {
+      expect(screen.getByText("Confirmar Medidas")).toBeInTheDocument();
+    });
+
+    // Expand notes and type something
+    const toggleBtn = screen.getByText("Notas").closest("button");
+    await fireEvent.click(toggleBtn);
+
+    await waitFor(() => {
+      const textareas = document.querySelectorAll(".notes-textarea");
+      expect(textareas.length).toBeGreaterThan(0);
+    });
+
+    const textarea = document.querySelector(".notes-textarea");
+    await fireEvent.input(textarea, { target: { value: "Nota de prueba" } });
+    expect(textarea.value).toBe("Nota de prueba");
+
+    // Collapse first (doesn't affect value)
+    await fireEvent.click(toggleBtn);
+
+    // Click "Limpiar todo"
+    const limpiarBtn = screen.getByText("Limpiar todo");
+    await fireEvent.click(limpiarBtn);
+
+    // Confirm modal should appear
+    await waitFor(() => {
+      expect(screen.getByText("Limpiar Formulario")).toBeInTheDocument();
+    });
+
+    // Click Limpiar in modal
+    const confirmBtn = screen.getByRole("button", { name: "Limpiar" });
+    await fireEvent.click(confirmBtn);
+
+    // After reset, notes should be empty
+    // Expand again to check
+    await waitFor(async () => {
+      const toggleAfterReset = screen.getByText("Notas").closest("button");
+      await fireEvent.click(toggleAfterReset);
+      const textareaAfterReset = document.querySelector(".notes-textarea");
+      expect(textareaAfterReset).not.toBeNull();
+      expect(textareaAfterReset.value).toBe("");
     });
   });
 });

@@ -108,6 +108,7 @@ class Weighing(Base):
         default="Mecanico - Verde",
         server_default=text("'Mecanico - Verde'"),
     )
+    notas = Column(Text, nullable=True, default=None)
 
 
 class BackupLog(Base):

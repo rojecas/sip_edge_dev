@@ -21,6 +21,13 @@
       "name": "hacienda_suerte_created_by",
       "title": "Trazabilidad: Registro de usuario creador en Haciendas y Suertes",
       "completed_at": "2026-07-20"
+    },
+    {
+      "id": 36,
+      "type": "feature",
+      "name": "hacienda_search_filter",
+      "title": "Entrada de Codigo de Hacienda en Kiosko y AdminSuertes",
+      "completed_at": "2026-07-20"
     }
   ],
   "history": [

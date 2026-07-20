@@ -217,10 +217,10 @@ class TestSqlToolsExecuteTool(_SqlToolsTestBase):
 
 
 class TestToolDefinitions(unittest.TestCase):
-    """Verificar que TOOL_DEFINITIONS tiene las 12 herramientas."""
+    """Verificar que TOOL_DEFINITIONS tiene las 13 herramientas."""
 
     def test_tool_definitions_count(self):
-        self.assertEqual(len(TOOL_DEFINITIONS), 12)
+        self.assertEqual(len(TOOL_DEFINITIONS), 13)
 
     def test_tool_definitions_format(self):
         for td in TOOL_DEFINITIONS:
@@ -228,6 +228,55 @@ class TestToolDefinitions(unittest.TestCase):
             self.assertIn("name", td["function"])
             self.assertIn("description", td["function"])
             self.assertIn("parameters", td["function"])
+
+
+class TestSqlToolsGetWeighingNotes(_SqlToolsTestBase):
+    """T22-T24 (Feature 37): Tests para get_weighing_notes."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()  # Carga datos base
+        # Add notas to one weighing for test
+        db = cls.SessionLocal()
+        try:
+            w = db.query(Weighing).filter(Weighing.vagon == "V0").first()
+            if w:
+                w.notas = "Problemas con core sampler, muestra muy humeda"
+                db.commit()
+        finally:
+            db.close()
+
+    # T22: Filter by vagon returns notes for that vagon (R9)
+    def test_get_weighing_notes_by_vagon(self):
+        result = self.tools.get_weighing_notes(vagon="V0")
+        self.assertIsInstance(result, list)
+        self.assertGreaterEqual(len(result), 1)
+        self.assertEqual(result[0]["vagon"], "V0")
+        self.assertIn("Problemas con core sampler", result[0]["notas"])
+
+    # T23: Filter by date range returns notes in range (R9)
+    def test_get_weighing_notes_by_date_range(self):
+        result = self.tools.get_weighing_notes(
+            fecha_inicio="2026-06-01", fecha_fin="2026-06-30"
+        )
+        self.assertIsInstance(result, list)
+        self.assertGreaterEqual(len(result), 1)
+        self.assertIn("id", result[0])
+        self.assertIn("notas", result[0])
+
+    # T24: No params raises ToolExecutionError (R9)
+    def test_get_weighing_notes_no_params_error(self):
+        with self.assertRaises(ToolExecutionError):
+            self.tools.get_weighing_notes()
+
+    # Verify execute_tool dispatches correctly
+    def test_execute_tool_get_weighing_notes(self):
+        result = self.tools.execute_tool(
+            "get_weighing_notes",
+            {"vagon": "V0", "limit": 5},
+        )
+        self.assertIsInstance(result, list)
+        self.assertGreaterEqual(len(result), 1)
 
 
 class TestSqlToolsInvalidTool(_SqlToolsTestBase):

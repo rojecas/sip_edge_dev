@@ -575,5 +575,81 @@ class TestWeighingAtomicTransaction(TestWeighingsAuth):
         self.assertEqual(response.status_code, 404)
 
 
+class TestWeighingsNotas(TestWeighingsAuth):
+    """T18-T21: Feature 37 — notas field in weighings."""
+
+    # T18: POST with notas persists and returns the field (R5, R12)
+    def test_create_weighing_with_notes(self):
+        token = self._login("operator1", "op1pass")
+        response = self.client.post(
+            "/api/weighings",
+            json=self._create_weighing_body(notas="Problemas con core sampler"),
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["notas"], "Problemas con core sampler")
+
+    # T19: POST without notas persists null (R11)
+    def test_create_weighing_without_notes_null(self):
+        token = self._login("operator1", "op1pass")
+        body = self._create_weighing_body()
+        # Ensure notas is not in body
+        body.pop("notas", None)
+        response = self.client.post(
+            "/api/weighings",
+            json=body,
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertIsNone(data["notas"])
+
+    # T20a: POST with empty string persists null via field_validator (R11)
+    def test_create_weighing_with_empty_notes(self):
+        token = self._login("operator1", "op1pass")
+        response = self.client.post(
+            "/api/weighings",
+            json=self._create_weighing_body(notas=""),
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertIsNone(data["notas"])
+
+    # T20b: POST with long text persists full text without truncation (R13)
+    def test_create_weighing_with_long_notes(self):
+        token = self._login("operator1", "op1pass")
+        long_text = "X" * 2000  # 2000 characters
+        response = self.client.post(
+            "/api/weighings",
+            json=self._create_weighing_body(notas=long_text),
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 201)
+        data = response.json()
+        self.assertEqual(data["notas"], long_text)
+        self.assertEqual(len(data["notas"]), 2000)
+
+    # T21: GET /api/weighings includes notas field in items (R7, R12)
+    def test_list_weighings_includes_notes(self):
+        token = self._login("operator1", "op1pass")
+        # Create a weighing with notes
+        self.client.post(
+            "/api/weighings",
+            json=self._create_weighing_body(notas="Nota de prueba"),
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        response = self.client.get(
+            "/api/weighings",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertGreaterEqual(len(data["items"]), 1)
+        self.assertIn("notas", data["items"][0])
+        self.assertEqual(data["items"][0]["notas"], "Nota de prueba")
+
+
 if __name__ == "__main__":
     unittest.main()

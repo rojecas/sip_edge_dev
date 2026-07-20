@@ -577,6 +577,98 @@ class TestHaciendasCRUD(unittest.TestCase):
         self.assertIn("updated_at", data)
         self.assertNotIn("deleted_at", data)
 
+    # T2 — R3, R4: search by codigo returns matching item
+    def test_list_haciendas_search_found(self):
+        self.client.post(
+            "/api/haciendas",
+            json={"codigo": "131", "nombre": "Hacienda San Jose"},
+            headers=self._auth_header(),
+        )
+        self.client.post(
+            "/api/haciendas",
+            json={"codigo": "A16", "nombre": "Otra Hacienda"},
+            headers=self._auth_header(),
+        )
+        response = self.client.get(
+            "/api/haciendas?search=131&page_size=1",
+            headers=self._auth_header(),
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data["items"]), 1)
+        self.assertEqual(data["items"][0]["codigo"], "131")
+        self.assertEqual(data["total"], 1)
+
+    # T3 — R7: search with non-existent codigo returns empty items
+    def test_list_haciendas_search_not_found(self):
+        self.client.post(
+            "/api/haciendas",
+            json={"codigo": "H001", "nombre": "Hacienda Uno"},
+            headers=self._auth_header(),
+        )
+        response = self.client.get(
+            "/api/haciendas?search=NONEXIST&page_size=1",
+            headers=self._auth_header(),
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data["items"]), 0)
+        self.assertEqual(data["total"], 0)
+
+    # T4 — R4: case-insensitive search
+    def test_list_haciendas_search_case_insensitive(self):
+        self.client.post(
+            "/api/haciendas",
+            json={"codigo": "A16", "nombre": "Hacienda A16"},
+            headers=self._auth_header(),
+        )
+        # Lowercase search should match uppercase codigo
+        response = self.client.get(
+            "/api/haciendas?search=a16&page_size=1",
+            headers=self._auth_header(),
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(len(data["items"]), 1)
+        self.assertEqual(data["items"][0]["codigo"], "A16")
+
+        # Uppercase search should match lowercase codigo
+        self.client.post(
+            "/api/haciendas",
+            json={"codigo": "b05", "nombre": "Hacienda B05"},
+            headers=self._auth_header(),
+        )
+        response2 = self.client.get(
+            "/api/haciendas?search=B05&page_size=1",
+            headers=self._auth_header(),
+        )
+        self.assertEqual(response2.status_code, 200)
+        data2 = response2.json()
+        self.assertEqual(len(data2["items"]), 1)
+        self.assertEqual(data2["items"][0]["codigo"], "b05")
+
+    # T5 — R4: backward compatibility — no search param returns all
+    def test_list_haciendas_search_backward_compatible(self):
+        self.client.post(
+            "/api/haciendas",
+            json={"codigo": "H001", "nombre": "Hacienda Uno"},
+            headers=self._auth_header(),
+        )
+        self.client.post(
+            "/api/haciendas",
+            json={"codigo": "H002", "nombre": "Hacienda Dos"},
+            headers=self._auth_header(),
+        )
+        # Call without search param — should still return all items
+        response = self.client.get(
+            "/api/haciendas",
+            headers=self._auth_header(),
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["total"], 2)
+        self.assertEqual(len(data["items"]), 2)
+
 
 class TestSuertesCRUD(unittest.TestCase):
     def setUp(self):

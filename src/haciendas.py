@@ -6,7 +6,7 @@ from typing import Any, Generic, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import asc, desc
+from sqlalchemy import asc, desc, func
 from sqlalchemy.orm import Session
 
 from src.auth import check_inactivity, require_any_role, require_role
@@ -252,8 +252,13 @@ def get_haciendas(
     page_size: int = Query(100, ge=1, le=100),
     sort_by: str = Query("nombre", description="Column to sort by"),
     sort_order: str = Query("asc", description="asc or desc"),
+    search: Optional[str] = Query(None, description="Case-insensitive exact match on codigo"),
 ):
     query = db.query(Hacienda).filter(Hacienda.deleted_at.is_(None))
+
+    # Search filter (R4): case-insensitive exact match on codigo
+    if search:
+        query = query.filter(func.lower(Hacienda.codigo) == search.lower())
 
     # Sort
     sort_columns: dict[str, Any] = {

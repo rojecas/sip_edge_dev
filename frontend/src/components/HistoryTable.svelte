@@ -7,6 +7,7 @@
   import { onMount } from "svelte";
   import { api, ApiError, buildQuery } from "../lib/api.js";
   import { ENDPOINTS, CONFIG } from "../lib/constants.js";
+  import WeighingDetailModal from "./WeighingDetailModal.svelte";
 
   // Data
   let items = $state([]);
@@ -23,6 +24,8 @@
   let isLoading = $state(false);
   let errorMessage = $state("");
   let emptyFilterMessage = $state("");
+  let selectedWeighing = $state(null);
+  let showDetail = $state(false);
 
   onMount(() => {
     loadData();
@@ -170,7 +173,7 @@
         </thead>
         <tbody>
           {#each items as w}
-            <tr>
+            <tr onclick={() => { selectedWeighing = w; showDetail = true; }}>
               <td>{w.fecha}</td>
               <td>{w.hora}</td>
               <td>{w.tractomula || "—"}</td>
@@ -215,6 +218,13 @@
         >Siguiente</button>
       </div>
     </div>
+  {/if}
+
+  {#if showDetail && selectedWeighing}
+    <WeighingDetailModal
+      weighing={selectedWeighing}
+      onclose={() => showDetail = false}
+    />
   {/if}
 </div>
 
@@ -371,6 +381,10 @@
 
   .data-table tr:last-child td {
     border-bottom: none;
+  }
+
+  .data-table tbody tr {
+    cursor: pointer;
   }
 
   .data-table tr:hover td {

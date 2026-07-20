@@ -6,15 +6,17 @@
    */
   import { onMount, onDestroy } from "svelte";
   import { get } from "svelte/store";
-  import { api, ApiError, buildQuery } from "../lib/api.js";
-  import { ENDPOINTS, CONFIG, HARVEST_TYPES } from "../lib/constants.js";
+  import { api, ApiError } from "../lib/api.js";
+  import { ENDPOINTS, HARVEST_TYPES } from "../lib/constants.js";
   import { authStore } from "../stores/auth.js";
   import { emergencyStore } from "../stores/emergency.js";
   import { onScaleReading } from "../lib/ws.js";
   import ScaleReader from "./ScaleReader.svelte";
   import WeightField from "./WeightField.svelte";
   import ConfirmModal from "./ConfirmModal.svelte";
-import EmergencyModal from "./EmergencyModal.svelte";
+  import HaciendaCodeInput from "./HaciendaCodeInput.svelte";
+  import EmergencyModal from "./EmergencyModal.svelte";
+  import NotesField from "./NotesField.svelte";
 
   // Vehicle fields
   let tractomula = $state("");
@@ -22,13 +24,10 @@ import EmergencyModal from "./EmergencyModal.svelte";
   let guia = $state("");
 
   // Hacienda / Suerte
-  let haciendas = $state([]);
   let selectedHaciendaId = $state(null);
   let suertes = $state([]);
   let selectedSuerteId = $state(null);
-  let haciendasLoading = $state(false);
   let suertesLoading = $state(false);
-  let haciendasError = $state("");
 
   // Weight fields
   let pesoMuestra = $state(0);
@@ -37,6 +36,9 @@ import EmergencyModal from "./EmergencyModal.svelte";
 
   // Harvest type
   let tipoCosecha = $state("Mecanico - Verde");
+
+  // Notas / observaciones
+  let notas = $state("");
 
   // State
   let isSubmitting = $state(false);
@@ -83,10 +85,8 @@ import EmergencyModal from "./EmergencyModal.svelte";
     }
   }
 
-  // Load haciendas on mount
+  // Subscribe to scale readings for auto-capture PRINT
   onMount(() => {
-    loadHaciendas();
-    // Subscribe to scale readings for auto-capture PRINT
     onScaleReading(handleScaleReading);
   });
 
@@ -94,42 +94,18 @@ import EmergencyModal from "./EmergencyModal.svelte";
     if (printNotificationTimer) clearTimeout(printNotificationTimer);
   });
 
-  async function loadHaciendas() {
-    haciendasLoading = true;
-    haciendasError = "";
-    try {
-      const params = {
-        page: 1,
-        page_size: CONFIG.DEFAULT_HACIENDAS_PAGE_SIZE,
-        sort_by: "nombre",
-        sort_order: "asc",
-      };
-      const data = await api.get(`${ENDPOINTS.HACIENDAS}${buildQuery(params)}`);
-      haciendas = data.items || [];
-
-      // If there are more pages, load them in background
-      if (data.total_pages > 1) {
-        loadRemainingHaciendas(data.total_pages);
-      }
-    } catch (err) {
-      haciendasError = err instanceof ApiError ? err.message : "Error al cargar haciendas";
-    } finally {
-      haciendasLoading = false;
-    }
-  }
-
-  async function loadRemainingHaciendas(totalPages) {
-    for (let p = 2; p <= totalPages; p++) {
-      try {
-        const params = {
-          page: p,
-          page_size: CONFIG.DEFAULT_HACIENDAS_PAGE_SIZE,
-        };
-        const data = await api.get(`${ENDPOINTS.HACIENDAS}${buildQuery(params)}`);
-        haciendas = [...haciendas, ...(data.items || [])];
-      } catch {
-        // Silently fail for background loading
-      }
+  /**
+   * Handle hacienda selection from HaciendaCodeInput (R1).
+   * Called with hacienda object on confirm, or null on clear.
+   */
+  function handleHaciendaSelect(hacienda) {
+    if (hacienda) {
+      selectedHaciendaId = hacienda.id;
+      onHaciendaChange();
+    } else {
+      selectedHaciendaId = null;
+      suertes = [];
+      selectedSuerteId = null;
     }
   }
 
@@ -163,6 +139,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
     pesoMineral = 0;
     pesoVegetal = 0;
     tipoCosecha = "Mecanico - Verde";
+    notas = "";
     successMessage = "";
     errorMessage = "";
   }
@@ -246,6 +223,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
         peso_vegetal_extrano: pesoVegetal || 0,
         manual_entry: get(emergencyStore),
         tipo_cosecha: tipoCosecha,
+        notas: notas || null,
       };
       await api.post(ENDPOINTS.WEIGHINGS, body);
       successMessage = "Pesaje registrado exitosamente";
@@ -313,23 +291,7 @@ import EmergencyModal from "./EmergencyModal.svelte";
 
       <div class="field">
         <label for="hacienda">Hacienda</label>
-        {#if haciendasLoading}
-          <p class="loading-text">Cargando haciendas...</p>
-        {:else if haciendasError}
-          <p class="error-text">{haciendasError}</p>
-        {:else}
-          <select
-            id="hacienda"
-            bind:value={selectedHaciendaId}
-            onchange={onHaciendaChange}
-            class="select-input"
-          >
-            <option value={null}>Seleccione una hacienda</option>
-            {#each haciendas as h}
-              <option value={h.id}>{h.codigo} — {h.nombre}</option>
-            {/each}
-          </select>
-        {/if}
+        <HaciendaCodeInput onSelect={handleHaciendaSelect} placeholder="Ingrese código de hacienda" />
       </div>
 
       <div class="field">
@@ -380,6 +342,11 @@ import EmergencyModal from "./EmergencyModal.svelte";
       <WeightField fieldName="Peso Vegetal" bind:value={pesoVegetal} disabled={!$emergencyStore} onReset={handleResetPesoVegetal} />
       <WeightField fieldName="Peso Mineral" bind:value={pesoMineral} disabled={!$emergencyStore} onReset={handleResetPesoMineral} />
     </div>
+  </div>
+
+  <!-- Notas colapsables -->
+  <div class="form-section">
+    <NotesField bind:notas={notas} />
   </div>
 
   <!-- Messages -->
@@ -506,12 +473,6 @@ import EmergencyModal from "./EmergencyModal.svelte";
     color: var(--text-secondary);
     margin: 0;
     padding: 10px 0;
-  }
-
-  .error-text {
-    font-size: 14px;
-    color: var(--error);
-    margin: 0;
   }
 
   .weights-grid {

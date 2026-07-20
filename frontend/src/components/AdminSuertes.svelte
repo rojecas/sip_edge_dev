@@ -3,19 +3,17 @@
    * AdminSuertes — Suerte management: filter by hacienda, list, create, edit, delete.
    */
   import { api, ApiError, buildQuery } from "../lib/api.js";
-  import { onMount } from "svelte";
-  import { ENDPOINTS, CONFIG } from "../lib/constants.js";
+  import { ENDPOINTS } from "../lib/constants.js";
   import ConfirmModal from "./ConfirmModal.svelte";
   import SuerteFormModal from "./SuerteFormModal.svelte";
+  import HaciendaCodeInput from "./HaciendaCodeInput.svelte";
 
   let { allowDelete = true } = $props();
 
-  // Haciendas for dropdown
-  let haciendas = $state([]);
-  let haciendasLoading = $state(true);
-
-  // Selected hacienda
+  // Selected hacienda (id set via HaciendaCodeInput.onSelect)
   let selectedHaciendaId = $state(0);
+  // Haciendas array (minimal — populated from selection, for SuerteFormModal compatibility)
+  let haciendas = $state([]);
 
   // Suertes list
   let suertes = $state([]);
@@ -45,9 +43,6 @@
   let totalItems = $state(0);
   let pageSize = $state(10);
 
-  // Load haciendas for dropdown on mount
-  onMount(() => { loadHaciendas(); });
-
   // Reactively load suertes when selectedHaciendaId changes
   $effect(() => {
     if (selectedHaciendaId) {
@@ -58,33 +53,18 @@
       emptyMsg = '';
     }
   });
-async function loadHaciendas() {
-    haciendasLoading = true;
-    try {
-      const qs = buildQuery({ page: 1, page_size: CONFIG.DEFAULT_HACIENDAS_PAGE_SIZE });
-      const result = await api.get(`${ENDPOINTS.HACIENDAS}${qs}`);
-      haciendas = result.items || [];
 
-      // Load remaining pages in background if needed (fix: dropdown limited to page 1)
-      if (result.total_pages > 1) {
-        loadRemainingHaciendas(result.total_pages);
-      }
-    } catch {
+  /**
+   * Handle hacienda selection from HaciendaCodeInput (R2).
+   * Called with hacienda object on confirm, or null on clear.
+   */
+  function handleHaciendaSelect(hacienda) {
+    if (hacienda) {
+      selectedHaciendaId = hacienda.id;
+      haciendas = [hacienda];  // keep minimal array for SuerteFormModal compatibility
+    } else {
+      selectedHaciendaId = 0;
       haciendas = [];
-    } finally {
-      haciendasLoading = false;
-    }
-  }
-
-  async function loadRemainingHaciendas(totalPages) {
-    for (let p = 2; p <= totalPages; p++) {
-      try {
-        const qs = buildQuery({ page: p, page_size: CONFIG.DEFAULT_HACIENDAS_PAGE_SIZE });
-        const data = await api.get(`${ENDPOINTS.HACIENDAS}${qs}`);
-        haciendas = [...haciendas, ...(data.items || [])];
-      } catch {
-        // Silently skip failed pages
-      }
     }
   }
 
@@ -227,12 +207,7 @@ function showResult(msg, isError = false) {
   <div class="selector-row">
     <label>
       Hacienda:
-      <select bind:value={selectedHaciendaId}>
-        <option value={0}>-- Seleccione una hacienda --</option>
-        {#each haciendas as h}
-          <option value={h.id}>{h.nombre} ({h.codigo})</option>
-        {/each}
-      </select>
+      <HaciendaCodeInput onSelect={handleHaciendaSelect} placeholder="Ingrese código de hacienda" />
     </label>
   </div>
 
@@ -336,11 +311,6 @@ function showResult(msg, isError = false) {
   .page-header h1 { font-size: 24px; }
   .selector-row { margin-bottom: 24px; }
   .selector-row label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--text-secondary); max-width: 360px; }
-  .selector-row select {
-    padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
-    background: var(--bg-input); color: var(--text-primary); font-size: 14px;
-  }
-  .selector-row select:focus { outline: none; border-color: var(--accent); }
   .result-banner {
     padding: 12px 18px; border-radius: 8px; font-size: 14px; font-weight: 500;
     margin-bottom: 16px;
