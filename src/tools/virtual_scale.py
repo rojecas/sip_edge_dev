@@ -1,6 +1,6 @@
-﻿"""Balanza Virtual DINI ARGEO DFWLI-2 para desarrollo y pruebas.
+"""Balanza Virtual DINI ARGEO DFW06L para desarrollo y pruebas.
 
-Simula el protocolo DINI ARGEO DFWLI-2 via puerto serial, respondiendo
+Simula el protocolo DINI ARGEO DFW06L via puerto serial, respondiendo
 a los comandos READ, TARE, TMAN, ZERO y CLEAR con datos desde archivos
 CSV pre-generados. Incluye un REPL interactivo (Windows-only, usa msvcrt)
 para navegar por las medidas y simular eventos de la balanza real.
@@ -33,10 +33,10 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 CMD_READ = "READ"
-CMD_TARE = "00TARE"
-CMD_ZERO = "00ZERO"
-CMD_CLEAR = "00CLEAR"
-CMD_TMAN_PREFIX = "00TMAN"
+CMD_TARE = "TARE"
+CMD_ZERO = "ZERO"
+CMD_CLEAR = "CLEAR"
+CMD_TMAN_PREFIX = "TMAN"
 
 # Columnas esperadas en el CSV
 EXPECTED_COLUMNS = [
@@ -137,20 +137,20 @@ def _current_reading(
 
 
 # ---------------------------------------------------------------------------
-# T7 â€” construir respuesta extendida (READ)
+# T7 — construir respuesta DFW06L (READ)
 # ---------------------------------------------------------------------------
 
 
 def _build_extended_response(reading: dict) -> str:
-    """Construye la cadena de respuesta extendida: 01ST,1,<peso>,PT 0.0,0,kg\\r\\n.
+    """Construye la respuesta DFW06L: ST,GS,<peso>,kg\r\n.
 
-    La respuesta siempre lleva ST (la balanza virtual solo transmite
-    cuando estÃ¡ estable).
+    Formato corto del protocolo DFW06L (4 campos separados por coma).
+    La respuesta usa el status del reading (ST/US) para simular estabilidad.
     """
+    status = reading["status"]
     peso = reading["peso"]
     unit = reading["unit"]
-    return f"01ST,1,{peso},PT 0.0,0,{unit}\r\n"
-
+    return f"{status},GS,{peso},{unit}\r\n"
 
 # ---------------------------------------------------------------------------
 # T8 â€” construir respuesta OK
@@ -195,7 +195,7 @@ def _parse_serial_command(line: str) -> tuple[str, str | None]:
     """Parsea una lÃ­nea recibida por el puerto serial.
 
     Retorna (comando, argumento) donde comando es uno de:
-    'REXT', 'TARE', 'TMAN', 'ZERO', 'CLEAR', o 'UNKNOWN'.
+    'READ', 'TARE', 'TMAN', 'ZERO', 'CLEAR', o 'UNKNOWN'.
     El argumento es None excepto para TMAN, donde contiene el valor.
     """
     stripped = line.strip()
@@ -318,7 +318,7 @@ def main() -> None:
     # T16 â€” argparse
     # ------------------------------------------------------------------
     parser = argparse.ArgumentParser(
-        description="Balanza Virtual DINI ARGEO DFWLI-2 â€” Simulador serial para desarrollo.",
+        description="Balanza Virtual DINI ARGEO DFW06L â€” Simulador serial para desarrollo.",
     )
     parser.add_argument(
         "--port",
@@ -397,7 +397,7 @@ def main() -> None:
     # Mensaje de bienvenida
     # ------------------------------------------------------------------
     print("=" * 60)
-    print("  BALANZA VIRTUAL DINI ARGEO DFWLI-2")
+    print("  BALANZA VIRTUAL DINI ARGEO DFW06L")
     print("=" * 60)
     print()
     print(f"  Puerto serial : {args.port} @ {args.baudrate} baud")
