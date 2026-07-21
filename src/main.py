@@ -553,6 +553,8 @@ async def agent_query(
     orchestrator = app.state.agent_orchestrator
     sql_tools = app.state.sql_tools
     llm_client = app.state.llm_client
+    from src.agent_orchestrator import prepend_today
+    query_text = prepend_today(body.query)
 
     messages = [
         {
@@ -563,7 +565,7 @@ async def agent_query(
                 "NUNCA inventes numeros. Responde en espanol."
             ),
         },
-        {"role": "user", "content": body.query},
+        {"role": "user", "content": query_text},
     ]
 
     from src.sql_tools import TOOL_DEFINITIONS

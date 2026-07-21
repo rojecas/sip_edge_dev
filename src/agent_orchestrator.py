@@ -3,7 +3,8 @@
 import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
+
 
 from sqlalchemy.orm import Session
 
@@ -15,6 +16,18 @@ from src.sql_tools import SqlTools, TOOL_DEFINITIONS
 from src.ai_multi_turn import AiMultiTurnService
 
 logger = logging.getLogger(__name__)
+
+MONTHS_ES = ["", "enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+
+def prepend_today(text: str) -> str:
+    """Prefija "Hoy es dd de mes de aaaa. " a la consulta para anclar la fecha.
+
+    Asi el LLM puede resolver expresiones como ayer, esta semana, etc.
+    sin necesidad de regex ni depender de su fecha de entrenamiento.
+    """
+    today = date.today()
+    prefix = f"Hoy es {today.day} de {MONTHS_ES[today.month]} de {today.year}. "
+    return prefix + text
 
 SYSTEM_PROMPT = (
     "Eres un asistente de analisis de datos de pesaje agricola (SIP-Edge). "
@@ -210,10 +223,10 @@ class AgentOrchestrator:
         8. Enviar respuesta SMS.
 
         Compatibilidad hacia atras: si message_id es None, funciona sin
-        logging en tool_log y sin contexto multiturno.
         """
+        text = prepend_today(text)
+
         # Look up user role for context-aware responses
-        role = "unknown"
         _db = None
         try:
             _db = self._db_session_factory()
