@@ -167,9 +167,9 @@ class LlamaClient:
                             "function": {
                                 "name": tool_name,
                                 "arguments": json.dumps({
-                                    "fecha_inicio": "2026-01-01",
-                                    "fecha_fin": "2026-12-31",
+                                    "periodo": "mes_actual",
                                 }),
+
                             },
                         }],
                     },

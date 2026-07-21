@@ -1,4 +1,4 @@
-﻿"""SIP-Edge: Sistema Inteligente de Pesaje y Control de Materia Extrana."""
+"""SIP-Edge: Sistema Inteligente de Pesaje y Control de Materia Extrana."""
 import asyncio
 import json
 import logging
@@ -315,7 +315,7 @@ async def lifespan(app: FastAPI):
         app.state.llm_client = DualBackendClient(
             primary=local_client,
             secondary=remote_client,
-            cooldown=30,
+            cooldown=5,
         )
 
     # Inicializar SqlTools
