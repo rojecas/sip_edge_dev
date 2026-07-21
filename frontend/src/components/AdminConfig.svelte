@@ -17,6 +17,15 @@
   let gsm = $state({ modem_index: 0 });
   let sessionTimeout = $state(15);
   let scaleTimeout = $state(3);
+  let limitesControl = $state({
+    z_threshold: 3.0,
+    window_size: 120,
+    window_hours: 4,
+    max_vegetal_to_muestra: 0.5,
+    max_mineral_to_muestra: 0.3,
+    max_rate_change: 0.5,
+    max_consecutive_anomalies: 3,
+  });
 
   // Load state
   let loading = $state(true);
@@ -48,6 +57,9 @@
       if (data.scale_timeout_seconds !== undefined || data.timeout_seconds !== undefined) {
         scaleTimeout = data.scale_timeout_seconds ?? data.timeout_seconds;
       }
+      if (data.limites_control) {
+        limitesControl = { ...limitesControl, ...data.limites_control };
+      }
     } catch (err) {
       loadError = err instanceof ApiError ? err.message : "Error de conexión al cargar configuración.";
     } finally {
@@ -73,6 +85,16 @@
       // Save scale timeout
       await api.put(ENDPOINTS.SETUP_SCALE, {
         timeout_seconds: scaleTimeout,
+      });
+      // Save limites de control
+      await api.put("/api/setup/controls", {
+        z_threshold: limitesControl.z_threshold,
+        window_size: limitesControl.window_size,
+        window_hours: limitesControl.window_hours,
+        max_vegetal_to_muestra: limitesControl.max_vegetal_to_muestra,
+        max_mineral_to_muestra: limitesControl.max_mineral_to_muestra,
+        max_rate_change: limitesControl.max_rate_change,
+        max_consecutive_anomalies: limitesControl.max_consecutive_anomalies,
       });
       saveMsg = "Configuración guardada exitosamente.";
     } catch (err) {
@@ -160,6 +182,90 @@
         <button class="btn btn-test-orange" disabled={testing.gsm} onclick={() => testPort("gsm")}>
           {testing.gsm ? "Probando..." : "Test GSM"}
         </button>
+      </div>
+    </section>
+
+    <!-- Limites de Control Section -->
+    <section class="config-section">
+      <h2>Límites de Control</h2>
+      <div class="controls-grid">
+        <label class="control-label">
+          <span class="label-with-help">
+            Umbral Z-Score
+            <span class="tooltip-icon" tabindex="0">?</span>
+            <span class="tooltip-text">Desviaciones estándar para considerar un pesaje como anómalo. Valor típico: 3.0 (más alto = menos sensible).</span>
+          </span>
+          <div class="input-with-unit">
+            <input type="number" bind:value={limitesControl.z_threshold} min="1.0" max="10.0" step="0.1" />
+            <span class="unit">&sigma;</span>
+          </div>
+        </label>
+        <label class="control-label">
+          <span class="label-with-help">
+            Ventana de Análisis
+            <span class="tooltip-icon" tabindex="0">?</span>
+            <span class="tooltip-text">Cantidad de pesajes recientes que el sistema evalúa para detectar anomalías. Rango: 30-500 registros.</span>
+          </span>
+          <div class="input-with-unit">
+            <input type="number" bind:value={limitesControl.window_size} min="30" max="500" step="10" />
+            <span class="unit">registros</span>
+          </div>
+        </label>
+        <label class="control-label">
+          <span class="label-with-help">
+            Ventana Horaria
+            <span class="tooltip-icon" tabindex="0">?</span>
+            <span class="tooltip-text">Período de tiempo (en horas) que cubre la ventana de análisis. Rango: 1-48 horas.</span>
+          </span>
+          <div class="input-with-unit">
+            <input type="number" bind:value={limitesControl.window_hours} min="1" max="48" />
+            <span class="unit">horas</span>
+          </div>
+        </label>
+        <label class="control-label">
+          <span class="label-with-help">
+            Ratio Máx. Vegetal/Muestra
+            <span class="tooltip-icon" tabindex="0">?</span>
+            <span class="tooltip-text">Proporción máxima permitida entre materia extraña vegetal y peso de muestra. Si se supera, se marca como violación.</span>
+          </span>
+          <div class="input-with-unit">
+            <input type="number" bind:value={limitesControl.max_vegetal_to_muestra} min="0.01" max="1.0" step="0.01" />
+            <span class="unit">%</span>
+          </div>
+        </label>
+        <label class="control-label">
+          <span class="label-with-help">
+            Ratio Máx. Mineral/Muestra
+            <span class="tooltip-icon" tabindex="0">?</span>
+            <span class="tooltip-text">Proporción máxima permitida entre materia extraña mineral y peso de muestra. Si se supera, se marca como violación.</span>
+          </span>
+          <div class="input-with-unit">
+            <input type="number" bind:value={limitesControl.max_mineral_to_muestra} min="0.01" max="1.0" step="0.01" />
+            <span class="unit">%</span>
+          </div>
+        </label>
+        <label class="control-label">
+          <span class="label-with-help">
+            Tasa Máx. de Cambio
+            <span class="tooltip-icon" tabindex="0">?</span>
+            <span class="tooltip-text">Cambio máximo permitido (como fracción) entre dos pesajes consecutivos. Valores cercanos a 1.0 permiten cambios más bruscos.</span>
+          </span>
+          <div class="input-with-unit">
+            <input type="number" bind:value={limitesControl.max_rate_change} min="0.01" max="1.0" step="0.01" />
+            <span class="unit">%</span>
+          </div>
+        </label>
+        <label class="control-label">
+          <span class="label-with-help">
+            Máx. Anomalías Consecutivas
+            <span class="tooltip-icon" tabindex="0">?</span>
+            <span class="tooltip-text">Número de anomalías consecutivas que disparan una alerta. Rango: 1-20. Valores bajos generan más alertas.</span>
+          </span>
+          <div class="input-with-unit">
+            <input type="number" bind:value={limitesControl.max_consecutive_anomalies} min="1" max="20" />
+            <span class="unit">alertas</span>
+          </div>
+        </label>
       </div>
     </section>
 
@@ -298,4 +404,86 @@
 
   .btn-test-orange:hover:not(:disabled) { background: #d35400; }
   .btn-test-orange:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* F33: Controls grid and tooltips */
+  .controls-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .control-label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .label-with-help {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+    cursor: default;
+  }
+
+  .tooltip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: help;
+    line-height: 1;
+    user-select: none;
+  }
+
+  .tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    left: 0;
+    top: calc(100% + 6px);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    width: 240px;
+    font-size: 12px;
+    line-height: 1.4;
+    z-index: 100;
+    transition: opacity 0.15s, visibility 0.15s;
+    pointer-events: none;
+  }
+
+  .tooltip-icon:hover + .tooltip-text,
+  .tooltip-icon:focus + .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  .input-with-unit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .input-with-unit input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .unit {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    min-width: 65px;
+  }
 </style>

@@ -320,7 +320,7 @@ async def lifespan(app: FastAPI):
 
     # Inicializar SqlTools
     from src.sql_tools import SqlTools
-    app.state.sql_tools = SqlTools(db_session_factory=_db.SessionLocal)
+    app.state.sql_tools = SqlTools(db_session_factory=_db.SessionLocal, agent_config=agent_config)
 
     # Inicializar AiMultiTurnService (F28)
     app.state.ai_multi_turn = AiMultiTurnService(
@@ -923,6 +923,52 @@ async def put_scale_config(
     return {"timeout_seconds": config.timeout_seconds}
 
 
+# F33: Limites de control
+class LimitesControlRequest(BaseModel):
+    z_threshold: float = Field(ge=1.0, le=10.0)
+    window_size: int = Field(ge=30, le=500)
+    window_hours: int = Field(ge=1, le=48)
+    max_vegetal_to_muestra: float = Field(ge=0.01, le=1.0)
+    max_mineral_to_muestra: float = Field(ge=0.01, le=1.0)
+    max_rate_change: float = Field(ge=0.01, le=1.0)
+    max_consecutive_anomalies: int = Field(ge=1, le=20)
+
+
+@app.put("/api/setup/controls")
+async def put_controls(
+    body: LimitesControlRequest,
+    _: dict = Depends(check_inactivity),
+    __: dict = Depends(require_role("admin")),
+):
+    ac = app.state.agent_config
+    new_config = AgentConfig(
+        llm_url=ac.llm_url,
+        llm_model=ac.llm_model,
+        llm_timeout=ac.llm_timeout,
+        window_size=body.window_size,
+        window_hours=body.window_hours,
+        z_threshold=body.z_threshold,
+        max_vegetal_to_muestra=body.max_vegetal_to_muestra,
+        max_mineral_to_muestra=body.max_mineral_to_muestra,
+        max_rate_change=body.max_rate_change,
+        max_consecutive_anomalies=body.max_consecutive_anomalies,
+    )
+    save_agent_config(new_config, CONFIG_PATH)
+    app.state.agent_config = new_config
+    # Actualizar SqlTools con la nueva config
+    if hasattr(app.state, "sql_tools") and app.state.sql_tools is not None:
+        app.state.sql_tools._agent_config = new_config
+    return JSONResponse(content={
+        "z_threshold": new_config.z_threshold,
+        "window_size": new_config.window_size,
+        "window_hours": new_config.window_hours,
+        "max_vegetal_to_muestra": new_config.max_vegetal_to_muestra,
+        "max_mineral_to_muestra": new_config.max_mineral_to_muestra,
+        "max_rate_change": new_config.max_rate_change,
+        "max_consecutive_anomalies": new_config.max_consecutive_anomalies,
+    })
+
+
 @app.get("/api/config")
 async def get_config(
     _: dict = Depends(check_inactivity),
@@ -935,6 +981,18 @@ async def get_config(
         response["session_timeout_minutes"] = app.state.session.session_timeout_minutes
     if hasattr(app.state, "scale_config") and app.state.scale_config:
         response["scale_timeout_seconds"] = app.state.scale_config.timeout_seconds
+    # F33: Incluir limites de control desde AgentConfig
+    if hasattr(app.state, "agent_config") and app.state.agent_config:
+        ac = app.state.agent_config
+        response["limites_control"] = {
+            "z_threshold": ac.z_threshold,
+            "window_size": ac.window_size,
+            "window_hours": ac.window_hours,
+            "max_vegetal_to_muestra": ac.max_vegetal_to_muestra,
+            "max_mineral_to_muestra": ac.max_mineral_to_muestra,
+            "max_rate_change": ac.max_rate_change,
+            "max_consecutive_anomalies": ac.max_consecutive_anomalies,
+        }
     return JSONResponse(content=response)
 
 

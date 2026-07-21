@@ -418,6 +418,26 @@ class SMSService:
             f"{count} pesajes realizados, "
             f"peso total: {float(total_weight):.2f} kg"
         )
+        # F33: Incluir desviacion estandar
+        std_values = (
+            db.query(
+                Weighing.peso_muestra
+                + Weighing.peso_mineral
+                + Weighing.peso_vegetal_extrano
+            )
+            .filter(
+                func.date(Weighing.created_at) == today,
+                func.time(Weighing.created_at) >= turn_start,
+                func.time(Weighing.created_at) <= turn_end,
+            )
+            .all()
+        )
+        weights = [float(r[0]) for r in std_values]
+        if len(weights) > 1:
+            mean = sum(weights) / len(weights)
+            variance = sum((w - mean) ** 2 for w in weights) / (len(weights) - 1)
+            std_val = variance ** 0.5
+            report += f", desviacion estandar: {std_val:.2f} kg"
         return report
 
     # ------------------------------------------------------------------

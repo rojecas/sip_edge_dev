@@ -170,14 +170,15 @@ class TestMetricHandlers(unittest.TestCase):
     """Tests para METRIC_HANDLERS (R4)."""
 
     def test_metric_handlers_count(self):
-        """R4: El diccionario METRIC_HANDLERS tiene al menos 8 entradas."""
-        self.assertGreaterEqual(len(METRIC_HANDLERS), 8)
+        """R4: El diccionario METRIC_HANDLERS tiene al menos 9 entradas."""
+        self.assertGreaterEqual(len(METRIC_HANDLERS), 9)
 
     def test_metric_handlers_names(self):
         """R4: Los nombres esperados estan presentes."""
         expected = {
             "count", "avg", "min_max", "breakdown_by_hacienda",
             "breakdown_by_operator", "composition", "anomaly_count", "trend",
+            "std",
         }
         for name in expected:
             self.assertIn(name, METRIC_HANDLERS, f"Falta el handler '{name}'")
@@ -315,6 +316,38 @@ class TestGenerateReport(unittest.TestCase):
 
         self.assertIn("Reporte Vacia", report)
         self.assertNotIn("Total pesajes", report)
+
+    def test_generate_report_with_std_metric(self):
+        """F33/R16: generate_report con metrica std produce texto."""
+        template = self.service.create({
+            "name": "Std Report",
+            "schedule": ["12:00"],
+            "user_ids": [],
+            "metrics": ["std"],
+        })
+
+        db = self.SessionLocal()
+        try:
+            report = self.service.generate_report(template, db)
+        finally:
+            db.close()
+
+        self.assertIn("Reporte Std Report", report)
+        self.assertIn("Desviacion estandar", report)
+
+    def test_std_handler_returns_formatted_text(self):
+        """F33/R16: handler std retorna texto formateado."""
+        from src.report_templates import METRIC_HANDLERS
+        handler = METRIC_HANDLERS.get("std")
+        self.assertIsNotNone(handler, "std handler debe estar registrado")
+
+        db = self.SessionLocal()
+        try:
+            result = handler(db, date.today())
+        finally:
+            db.close()
+
+        self.assertIn("Desviacion estandar", result)
 
 
 class TestReportTemplatePivot(unittest.TestCase):

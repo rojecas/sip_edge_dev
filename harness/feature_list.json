@@ -746,7 +746,7 @@
       "title": "Herramientas Estadísticas v2 — Nuevas Métricas, Filtros y Agrupación",
       "type": "feature",
       "sdd": true,
-      "status": "pending",
+      "status": "testing",
       "description": "Extiende el catálogo de herramientas SQL con 4 nuevas métricas (tiempo promedio de pesaje, tasa de rechazo, top haciendas, comparativo de períodos) y modifica 3 herramientas existentes agregando parámetros de agrupación (día/semana/mes/turno) y filtro por vehículo (tractomula/vagon). Incluye shortcuts de fecha (hoy, ayer, últimos 7 días, mes actual).",
       "acceptance": [
         "RF-V14-01: Shortcuts de rango de fecha (hoy, ayer, últimos 7 días, mes actual, personalizado)",
@@ -761,7 +761,8 @@
       "depends_on": [
         8
       ],
-      "ers_ref": "ERS_V1.4_Adendas.md §A.1-A.2"
+      "ers_ref": "ERS_V1.4_Adendas.md §A.1-A.2",
+      "github_issue": "https://github.com/rojecas/sip_edge/issues/26"
     },
     {
       "id": 34,
@@ -850,7 +851,7 @@
         "El campo se limpia al hacer reset de la medida",
         "Las notas pueden ser consultadas via SMS (ej. 'notas del vagon V5' o 'notas de hoy') a traves del agente AI"
       ],
-      "status": "testing",
+      "status": "done",
       "depends_on": [
         6,
         8,

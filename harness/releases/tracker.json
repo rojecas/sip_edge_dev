@@ -28,6 +28,13 @@
       "name": "hacienda_search_filter",
       "title": "Entrada de Codigo de Hacienda en Kiosko y AdminSuertes",
       "completed_at": "2026-07-20"
+    },
+    {
+      "id": 37,
+      "type": "feature",
+      "name": "notas_muestras",
+      "title": "Campo de Notas Colapsable en Vista de Toma de Muestras",
+      "completed_at": "2026-07-20"
     }
   ],
   "history": [

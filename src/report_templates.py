@@ -414,3 +414,22 @@ def _metric_trend(db: Session, today: date) -> str:
     change_pct = (float(today_total) - float(yesterday_total)) / float(yesterday_total) * 100
     direction = "sube" if change_pct > 0 else ("baja" if change_pct < 0 else "estable")
     return f"Tendencia: {direction} {abs(change_pct):.1f}% vs ayer"
+
+
+@_register_metric("std")
+def _metric_std(db: Session, today: date) -> str:
+    """Desviacion estandar del peso total del dia actual."""
+    total_w = Weighing.peso_muestra + Weighing.peso_mineral + Weighing.peso_vegetal_extrano
+    rows = (
+        db.query(total_w)
+        .filter(Weighing.fecha == today)
+        .all()
+    )
+    values = [float(r[0]) for r in rows]
+    n = len(values)
+    if n < 2:
+        return "Desviacion estandar: sin datos (menos de 2 pesajes)"
+    mean = sum(values) / n
+    variance = sum((v - mean) ** 2 for v in values) / (n - 1)
+    std = variance ** 0.5
+    return f"Desviacion estandar: {std:.2f} kg"

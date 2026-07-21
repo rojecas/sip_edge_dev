@@ -530,6 +530,29 @@ class TestGenerateTurnReport(unittest.TestCase):
         # Solo pesajes de 08:00, 10:00, 12:00 deben contar (3 pesajes)
         self.assertIn("3 pesajes realizados", report)
 
+    def test_generate_turn_report_includes_std(self):
+        """F33/R15: El reporte de turno incluye desviacion estandar."""
+        db = self.SessionLocal()
+        try:
+            with self._patch_datetime_for_report():
+                report = self.svc.generate_turn_report(db, "00:00", "14:00")
+        finally:
+            db.close()
+
+        self.assertIn("desviacion estandar", report)
+        self.assertIn("kg", report.split("desviacion estandar:")[1] if "desviacion estandar:" in report else "")
+
+    def test_generate_turn_report_no_std_for_insufficient_data(self):
+        """F33: Con <2 pesajes no se incluye desviacion estandar."""
+        db = self.SessionLocal()
+        try:
+            with self._patch_datetime_for_report():
+                report = self.svc.generate_turn_report(db, "20:00", "22:00")
+        finally:
+            db.close()
+
+        self.assertNotIn("desviacion estandar", report)
+
 
 # ==================================================================
 # T12: Persistence integration tests (Feature 27)

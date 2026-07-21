@@ -334,3 +334,113 @@ class TestConfigTestEndpoint(unittest.TestCase):
     def test_test_invalid_port_returns_404(self):
         response = self.client.post("/api/config/test/invalid")
         self.assertEqual(response.status_code, 404)
+
+
+# ─────────────────────────────────────────────────────────────
+# F33: Tests para limites de control
+# ─────────────────────────────────────────────────────────────
+
+class TestLimitesControlEndpoints(unittest.TestCase):
+    """T29: Tests para PUT /api/setup/controls y GET /api/config (R20, R21, R26)."""
+
+    @classmethod
+    def setUpClass(cls):
+        from src.main import app
+        from src.auth import get_current_user
+        cls.temp_dir = tempfile.TemporaryDirectory()
+        cls.original_config_path = None
+        import src.main as main_mod
+        cls.original_config_path = main_mod.CONFIG_PATH
+        main_mod.CONFIG_PATH = f"{cls.temp_dir.name}/config.yaml"
+        from src.config import default_config, save_config
+        save_config(default_config(), main_mod.CONFIG_PATH)
+        from src.config import load_config
+        config, session, scale, backup, sms, agent = load_config(main_mod.CONFIG_PATH)
+        app.state.config = config
+        app.state.session = session
+        app.state.scale_config = scale
+        app.state.backup_config = backup
+        app.state.sms_config = sms
+        app.state.agent_config = agent
+        app.dependency_overrides[get_current_user] = lambda: {
+            "user_id": 1, "role": "admin", "iat": 9999999999
+        }
+        cls.client = TestClient(app)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.temp_dir.cleanup()
+        if cls.original_config_path is not None:
+            import src.main as main_mod
+            main_mod.CONFIG_PATH = cls.original_config_path
+
+    def test_get_config_includes_limites_control(self):
+        """R20: GET /api/config incluye section limites_control."""
+        response = self.client.get("/api/config")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("limites_control", data)
+        lc = data["limites_control"]
+        self.assertIn("z_threshold", lc)
+        self.assertIn("window_size", lc)
+        self.assertIn("window_hours", lc)
+        self.assertIn("max_vegetal_to_muestra", lc)
+        self.assertIn("max_mineral_to_muestra", lc)
+        self.assertIn("max_rate_change", lc)
+        self.assertIn("max_consecutive_anomalies", lc)
+
+    def test_put_controls_valid_returns_200(self):
+        """R21: PUT /api/setup/controls con valores validos persiste y retorna 200."""
+        body = {
+            "z_threshold": 3.5,
+            "window_size": 200,
+            "window_hours": 6,
+            "max_vegetal_to_muestra": 0.4,
+            "max_mineral_to_muestra": 0.25,
+            "max_rate_change": 0.6,
+            "max_consecutive_anomalies": 5,
+        }
+        response = self.client.put("/api/setup/controls", json=body)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["z_threshold"], 3.5)
+        self.assertEqual(data["window_size"], 200)
+        self.assertEqual(data["window_hours"], 6)
+        self.assertEqual(data["max_vegetal_to_muestra"], 0.4)
+        self.assertEqual(data["max_mineral_to_muestra"], 0.25)
+        self.assertEqual(data["max_rate_change"], 0.6)
+        self.assertEqual(data["max_consecutive_anomalies"], 5)
+
+        # Verificar persistencia via GET
+        get_resp = self.client.get("/api/config")
+        lc = get_resp.json()["limites_control"]
+        self.assertEqual(lc["z_threshold"], 3.5)
+        self.assertEqual(lc["window_size"], 200)
+
+    def test_put_controls_out_of_range_returns_422(self):
+        """R21: Valores fuera de rango retornan 422."""
+        body = {
+            "z_threshold": 20.0,  # > 10.0
+            "window_size": 200,
+            "window_hours": 6,
+            "max_vegetal_to_muestra": 0.4,
+            "max_mineral_to_muestra": 0.25,
+            "max_rate_change": 0.6,
+            "max_consecutive_anomalies": 5,
+        }
+        response = self.client.put("/api/setup/controls", json=body)
+        self.assertEqual(response.status_code, 422)
+
+    def test_put_controls_negative_limit_returns_422(self):
+        """R21: Valores negativos/invalidos retornan 422."""
+        body = {
+            "z_threshold": 3.0,
+            "window_size": 10,  # < 30
+            "window_hours": 0,  # < 1
+            "max_vegetal_to_muestra": 0.0,  # < 0.01
+            "max_mineral_to_muestra": 0.25,
+            "max_rate_change": 0.6,
+            "max_consecutive_anomalies": 100,  # > 20
+        }
+        response = self.client.put("/api/setup/controls", json=body)
+        self.assertEqual(response.status_code, 422)
