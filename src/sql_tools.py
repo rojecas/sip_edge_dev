@@ -33,7 +33,7 @@ TOOL_DEFINITIONS: list[dict] = [
                     "tipo_vehiculo": {"type": "string", "description": "Filtrar por: tractomula, vagon (opcional)"},
                     "periodo": {"type": "string", "description": "Shortcut de fecha: hoy, ayer, ultimos_7_dias, mes_actual, personalizado (opcional)"},
                 },
-                "required": ["fecha_inicio", "fecha_fin"],
+                "required": [],
             },
         },
     },
@@ -102,7 +102,7 @@ TOOL_DEFINITIONS: list[dict] = [
                     "tipo_vehiculo": {"type": "string", "description": "Filtrar por: tractomula, vagon (opcional)"},
                     "periodo": {"type": "string", "description": "Shortcut de fecha: hoy, ayer, ultimos_7_dias, mes_actual, personalizado (opcional)"},
                 },
-                "required": ["fecha_inicio", "fecha_fin"],
+                "required": [],
             },
         },
     },
@@ -184,7 +184,7 @@ TOOL_DEFINITIONS: list[dict] = [
                     "tipo_vehiculo": {"type": "string", "description": "Filtrar por: tractomula, vagon (opcional)"},
                     "periodo": {"type": "string", "description": "Shortcut de fecha: hoy, ayer, ultimos_7_dias, mes_actual, personalizado (opcional)"},
                 },
-                "required": ["fecha_inicio", "fecha_fin"],
+                "required": [],
             },
         },
     },
@@ -445,8 +445,8 @@ class SqlTools:
 
     def get_basic_stats(
         self,
-        fecha_inicio: str,
-        fecha_fin: str,
+        fecha_inicio: str | None = None,
+        fecha_fin: str | None = None,
         tipo_material: str | None = None,
         tipo_cosecha: str | None = None,
         agrupacion: str | None = None,
@@ -454,8 +454,8 @@ class SqlTools:
         periodo: str | None = None,
     ) -> dict:
         """Count, avg, min, max, std de los pesajes en un rango."""
-        if periodo:
-            fecha_inicio, fecha_fin = self._resolve_date_shortcut(periodo, fecha_inicio, fecha_fin)
+        fecha_inicio, fecha_fin = self._resolve_date_shortcut(periodo, fecha_inicio, fecha_fin)
+
         fi = date.fromisoformat(fecha_inicio)
         ff = date.fromisoformat(fecha_fin)
         weight_expr = self._weight_column(tipo_material)
@@ -640,16 +640,16 @@ class SqlTools:
 
     def get_breakdown_by_hacienda(
         self,
-        fecha_inicio: str,
-        fecha_fin: str,
+        fecha_inicio: str | None = None,
+        fecha_fin: str | None = None,
         tipo_cosecha: str | None = None,
         agrupacion: str | None = None,
         tipo_vehiculo: str | None = None,
         periodo: str | None = None,
     ) -> list[dict] | dict:
         """Desglose de pesajes por hacienda con JOIN."""
-        if periodo:
-            fecha_inicio, fecha_fin = self._resolve_date_shortcut(periodo, fecha_inicio, fecha_fin)
+        fecha_inicio, fecha_fin = self._resolve_date_shortcut(periodo, fecha_inicio, fecha_fin)
+
         fi = date.fromisoformat(fecha_inicio)
         ff = date.fromisoformat(fecha_fin)
         total_w = Weighing.peso_muestra + Weighing.peso_mineral + Weighing.peso_vegetal_extrano
@@ -906,16 +906,16 @@ class SqlTools:
 
     def get_custom_period_summary(
         self,
-        fecha_inicio: str,
-        fecha_fin: str,
+        fecha_inicio: str | None = None,
+        fecha_fin: str | None = None,
         tipo_cosecha: str | None = None,
         agrupacion: str | None = None,
         tipo_vehiculo: str | None = None,
         periodo: str | None = None,
     ) -> dict:
         """Resumen completo de un periodo personalizado."""
-        if periodo:
-            fecha_inicio, fecha_fin = self._resolve_date_shortcut(periodo, fecha_inicio, fecha_fin)
+        fecha_inicio, fecha_fin = self._resolve_date_shortcut(periodo, fecha_inicio, fecha_fin)
+
         fi = date.fromisoformat(fecha_inicio)
         ff = date.fromisoformat(fecha_fin)
         total_w = Weighing.peso_muestra + Weighing.peso_mineral + Weighing.peso_vegetal_extrano
@@ -1148,8 +1148,8 @@ class SqlTools:
         periodo: str | None = None,
     ) -> dict:
         """Tiempo promedio (minutos) entre pesajes consecutivos en el rango."""
-        if periodo:
-            fecha_inicio, fecha_fin = self._resolve_date_shortcut(
+        fecha_inicio, fecha_fin = self._resolve_date_shortcut(
+
                 periodo, fecha_inicio, fecha_fin
             )
         db = self._get_db()
@@ -1193,8 +1193,8 @@ class SqlTools:
         periodo: str | None = None,
     ) -> dict:
         """Tasa de anomalias (% de pesajes anomalos vs total)."""
-        if periodo:
-            fecha_inicio, fecha_fin = self._resolve_date_shortcut(
+        fecha_inicio, fecha_fin = self._resolve_date_shortcut(
+
                 periodo, fecha_inicio, fecha_fin
             )
         db = self._get_db()
@@ -1239,8 +1239,8 @@ class SqlTools:
         periodo: str | None = None,
     ) -> dict:
         """Ranking descendente de haciendas por peso total."""
-        if periodo:
-            fecha_inicio, fecha_fin = self._resolve_date_shortcut(
+        fecha_inicio, fecha_fin = self._resolve_date_shortcut(
+
                 periodo, fecha_inicio, fecha_fin
             )
         if limite <= 0:
@@ -1298,8 +1298,8 @@ class SqlTools:
         periodo: str | None = None,
     ) -> dict:
         """Comparacion (delta + delta%) entre dos periodos."""
-        if periodo:
-            fecha_inicio, fecha_fin = self._resolve_date_shortcut(
+        fecha_inicio, fecha_fin = self._resolve_date_shortcut(
+
                 periodo, fecha_inicio, fecha_fin
             )
         db = self._get_db()
