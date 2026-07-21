@@ -128,10 +128,10 @@ class ScaleService:
                 timeout=self._timeout,
             )
         except (serial.SerialException, OSError) as e:
-            raise ScaleConnectionError(
-                f"Cannot open serial port {self._serial_config.path}: {e}"
-            ) from e
-        self._running = True
+            logger.warning("Cannot open serial port %s: %s. Running without scale.", self._serial_config.path, e)
+            self._running = False
+            return
+
         self._thread = threading.Thread(target=self._async_reader, daemon=True)
         self._thread.start()
         logger.info("ScaleService started on %s", self._serial_config.path)
