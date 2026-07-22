@@ -132,6 +132,7 @@ class ScaleService:
             self._running = False
             return
 
+        self._running = True
         self._thread = threading.Thread(target=self._async_reader, daemon=True)
         self._thread.start()
         logger.info("ScaleService started on %s", self._serial_config.path)

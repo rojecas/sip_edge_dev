@@ -105,7 +105,7 @@ def _on_scale_data(data: dict, clients: set[WebSocket]) -> None:
     message = json.dumps({
         "type": "scale_reading",
         "data": {
-            "net_weight": data.get("net_weight", 0.0),
+            "net_weight": data.get("weight") or data.get("net_weight", 0.0),
             "is_stable": data.get("is_stable", False),
             "unit": data.get("unit", "kg"),
         },
