@@ -118,19 +118,51 @@ class ScaleService:
         if self._dev_mode:
             logger.warning("DEV_MODE: scale serial port connection skipped")
             return
-        try:
-            self._serial = serial.Serial(
-                port=self._serial_config.path,
-                baudrate=self._serial_config.baudrate,
-                parity=self._serial_config.parity,
-                bytesize=self._serial_config.data_bits,
-                stopbits=self._serial_config.stop_bits,
-                timeout=self._timeout,
-            )
-        except (serial.SerialException, OSError) as e:
-            logger.warning("Cannot open serial port %s: %s. Running without scale.", self._serial_config.path, e)
-            self._running = False
-            return
+        # Retry with exponential backoff for transient port contention (e.g. ModemManager at boot).
+        max_retries = 5
+        backoff = 1  # seconds, doubles each attempt
+        for attempt in range(1, max_retries + 1):
+            try:
+                self._serial = serial.Serial(
+                    port=self._serial_config.path,
+                    baudrate=self._serial_config.baudrate,
+                    parity=self._serial_config.parity,
+                    bytesize=self._serial_config.data_bits,
+                    stopbits=self._serial_config.stop_bits,
+                    timeout=self._timeout,
+                )
+                break  # success — exit retry loop
+            except OSError as e:
+                errno_val = getattr(e, "errno", None)
+                err_msg = str(e)
+                is_busy = (
+                    errno_val == 16
+                    or "Errno 16" in err_msg
+                    or "Device or resource busy" in err_msg
+                )
+                if is_busy:
+                    logger.warning(
+                        "Serial port %s busy (attempt %d/%d). Retrying in %ds...",
+                        self._serial_config.path, attempt, max_retries, backoff,
+                    )
+                    if attempt < max_retries:
+                        time.sleep(backoff)
+                        backoff = min(backoff * 2, 8)
+                        continue
+                # Non-busy OSError or exhausted retries
+                logger.warning(
+                    "Cannot open serial port %s: %s. Running without scale.",
+                    self._serial_config.path, e,
+                )
+                self._running = False
+                return
+            except serial.SerialException as e:
+                logger.warning(
+                    "Cannot open serial port %s: %s. Running without scale.",
+                    self._serial_config.path, e,
+                )
+                self._running = False
+                return
 
         self._running = True
         self._thread = threading.Thread(target=self._async_reader, daemon=True)
