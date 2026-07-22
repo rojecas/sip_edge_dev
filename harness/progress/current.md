@@ -1,52 +1,52 @@
-# Sesión F37 + F33 — 2026-07-20
+# Sesión Debug Scale DFW06L + Fix Boot Contention — 2026-07-22
 
-## Feature 37 — notas_muestras
-### Estado final: done (Issue #25)
+## Diagnóstico inicial
+El usuario reportó que la comunicación con la balanza estaba rota tras fixes del 17-jul.
+Se descubrieron **dos regresiones** y **un problema de contención en boot**.
 
-Ciclo: spec-author → spec-validator → humano (cambio R7/R8: columna → modal) → implementer → reviewer → testing → release-manager
+## Regresión 1 — WebSocket auto-capture (src/main.py:108)
+- `parse_short_response()` (DFW06L) devuelve clave `"weight"`
+- `_on_scale_data()` leía `data.get("net_weight", 0.0)` — clave inexistente en formato DFW06L
+- Fix: `data.get("weight") or data.get("net_weight", 0.0)` (commit aa59639)
 
-Bugs corregidos en testing:
-1. Notas no persistían — `NotesField.svelte` sin `$bindable()` en prop `notas`
-2. Hacienda no reseteaba — `HaciendaCodeInput` sin `resetKey`
-3. Historial sin orden por hora — `order_by` solo `fecha`, agregado `hora DESC`
+## Regresión 2 — Thread _async_reader moría instantáneamente (src/scale.py:135)
+- **Causa raíz**: commit df5cd54 (F33, graceful degradation) eliminó `self._running = True`
+- Sin flag True, el `while self._running:` del thread salía inmediatamente
+- El comando se escribía al puerto pero nadie leía la respuesta → 503 timeout
+- Fix: restaurar `self._running = True` antes de iniciar el thread (commit aa59639)
+- Verificado con strace: escritura OK, sin `read()` en fd del puerto
 
-## Feature 33 — sql_tools_v2
-### Estado final: done (Issue #26)
+## Contención de puerto en boot — ModemManager vs ScaleService
+- Tras reboot, ModemManager sondeaba `/dev/ttyACM*` con acceso exclusivo
+- El servicio arrancaba antes de que ModemManager liberara → Errno 16
+- Entraba en graceful degradation sin balanza hasta reinicio manual
 
-Ciclo: spec-author → spec-validator → humano (setup card + tooltips) → implementer → reviewer → testing → release-manager
+### Fix A — Regla udev (deploy/99-scale-ports.rules)
+SUBSYSTEM=="tty", KERNEL=="ttyACM*", ENV{ID_MM_DEVICE_IGNORE}="1"
+- ModemManager ya no toca /dev/ttyACM0 (RS485) ni /dev/ttyACM1 (RS232)
+- Verificado: `udevadm test` muestra ID_MM_DEVICE_IGNORE=1
+- Verificado post-reboot: cero probes de ModemManager en ttyACM
 
-Entregado:
-- 4 tools nuevas + 3 modificadas + shortcuts fecha + filtro vehículo
-- Setup: card "Límites de Control" con 7 parámetros + tooltips
-- `check_thresholds()` lee de AgentConfig
-- Desviación estándar en reportes SMS
+### Fix B — Reintentos con backoff (src/scale.py:start())
+- ScaleService.start() reintenta hasta 5 veces con backoff exponencial
+- Intervalos: 1s → 2s → 4s → 8s → 8s (máx ~23s total)
+- Detecta Errno 16 tanto por `errno` como por mensaje de excepción
+- Red de seguridad si otro proceso bloquea el puerto transitoriamente
+- Commit 6484117
 
-Fixes post-implementación:
-1. `llm_client.py` simulado usaba fechas hardcodeadas → `periodo: "mes_actual"`
-2. Circuit breaker cooldown 30s → 5s para LLM local
-3. `fecha_inicio`/`fecha_fin` opcionales en 3 tools (schema + firmas)
-4. `prepend_today()` inyecta fecha real en cada consulta
-5. `scale.py` no crashea si falta puerto serial (Docker sin hardware)
-6. `llm_url` en EB2 corregido: `http://localhost:8080` (sin `/v1` duplicado)
-
-## Infraestructura
-- EB2: `AI_PRIMARY_BACKEND=local` (qwen2.5-1.5b), `llm_timeout=120s`
-- llama-server con `taskset -c 0-2 -t 3` (3 cores, core 3 libre)
-- Docker local: `DEV_MODE=false`, `AI_PRIMARY_BACKEND=remote` (DeepSeek)
-- `compose.yml`: defaults actualizados
-
-## Datos de prueba
-- Script `generate_historical_weighings.py` actualizado: rangos personalizables, anomalías, notas contextuales
-- 7,137 pesajes generados (2026-04-01 a 2026-07-19), 618 anómalos, 3,985 con notas
+## Verificación post-reboot (13:45)
+- ✅ ScaleService started on /dev/ttyACM0 — sin errores, sin reintentos
+- ✅ READ: weight: -2.4 kg, respuesta <1s
+- ✅ Cero probes de ModemManager en ttyACM*
+- ✅ Puerto en uso exclusivo por uvicorn (PID 1284)
 
 ## Archivos modificados
-src/: sql_tools.py, main.py, llm_client.py, agent_orchestrator.py, scale.py, config.py, report_templates.py, sms_service.py
-frontend/: AdminConfig.svelte, NotesField.svelte, HaciendaCodeInput.svelte, KioskForm.svelte
-tests/: test_sql_tools.py, test_config.py, test_report_templates.py, test_sms_service.py
-scripts/: generate_historical_weighings.py (reescrito)
-docs/: admin_manual.md (nuevo)
-harness/: specs/33_sql_tools_v2/, specs/37_notas_muestras/ (actualizado)
+- src/main.py — _on_scale_data: data.get("weight") fallback
+- src/scale.py — self._running = True + retry backoff
+- deploy/99-scale-ports.rules — udev rule (nuevo)
+- docs/database.md — auto-regenerado
 
-## Pendiente
-- F32 (sample_imaging), F34 (alert_monitor), F35 (sms_scheduling_v2)
-- Mejorar desempeño LLM local en CM4
+## Próxima sesión
+- Features pendientes: F32 (sample_imaging), F34 (alert_monitor), F35 (sms_scheduling_v2)
+- F33 (sql_tools_v2) en testing
+- Cerrar 6 archivos closure-*.md faltantes
