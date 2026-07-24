@@ -7,8 +7,10 @@
   import { navigate } from "../lib/router.js";
   import { router } from "../lib/router.js";
   import LogoutButton from "./LogoutButton.svelte";
+  import AboutModal from "./AboutModal.svelte";
 
   let { children } = $props();
+  let showAbout = $state(false);
 
   let currentRoute = $derived($router);
 
@@ -61,7 +63,8 @@
         </span>
       </div>
       <div class="header-right">
-        <LogoutButton />
+        <button class="sidebar-about" onclick={() => showAbout = true} title="Acerca de">ⓘ</button>
+      <LogoutButton />
       </div>
     </header>
 
@@ -222,4 +225,14 @@
     padding: 24px;
     overflow-y: auto;
   }
+
+  .sidebar-about {
+    background: none; border: none; font-size: 16px;
+    color: var(--text-secondary, #888); cursor: pointer;
+    opacity: 0.6; transition: opacity 0.2s; margin-bottom: 8px;
+  }
+
+
+  .sidebar-about:hover { opacity: 1; }
+
 </style>

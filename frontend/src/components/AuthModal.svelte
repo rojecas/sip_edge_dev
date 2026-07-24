@@ -9,12 +9,14 @@
   import { authStore } from "../stores/auth.js";
   import { navigate } from "../lib/router.js";
   import ResetPinModal from "./ResetPinModal.svelte";
+  import AboutModal from "./AboutModal.svelte";
 
   let username = $state("");
   let password = $state("");
   let errorMessage = $state("");
   let isLoading = $state(false);
   let showResetPin = $state(false);
+  let showAbout = $state(false);
 
   let derived = $derived.by(() => {
     return {
@@ -117,7 +119,9 @@
         ¿Olvidó su contraseña?
       </button>
     </form>
+    <button class="about-btn" onclick={() => showAbout = true} title="Acerca de">ⓘ</button>
   </div>
+<AboutModal show={showAbout} onclose={() => showAbout = false} />
 </div>
 
 {#if showResetPin}
@@ -240,4 +244,15 @@
   .btn-link:hover {
     color: var(--accent-hover);
   }
+
+  .about-btn {
+    position: absolute; bottom: 10px; right: 14px;
+    background: none; border: none; font-size: 18px;
+    color: var(--text-secondary, #888); cursor: pointer;
+    opacity: 0.6; transition: opacity 0.2s;
+  }
+
+
+  .about-btn:hover { opacity: 1; }
+
 </style>

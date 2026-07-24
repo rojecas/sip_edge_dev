@@ -6,9 +6,11 @@
   import { authStore } from "../stores/auth.js";
   import { navigate } from "../lib/router.js";
   import LogoutButton from "./LogoutButton.svelte";
+  import AboutModal from "./AboutModal.svelte";
   import EmergencyBanner from "./EmergencyBanner.svelte";
 
   let { children } = $props();
+  let showAbout = $state(false);
 
   let currentRoute = $state(window.location.hash.slice(1) || "/");
 
@@ -91,6 +93,7 @@
       <span class="app-name">Sip-Edge</span>
     </div>
     <div class="header-right">
+      <button class="about-btn" onclick={() => showAbout = true} title="Acerca de">ⓘ</button>
       <LogoutButton />
     </div>
   </header>
@@ -98,6 +101,7 @@
   <main class="kiosk-main">
     {@render children?.()}
   </main>
+  <AboutModal show={showAbout} onclose={() => showAbout = false} />
 </div>
 
 <style>
@@ -202,4 +206,15 @@
     padding: 24px;
     overflow-y: auto;
   }
+
+  .about-btn {
+    background: none; border: none; font-size: 20px;
+    color: var(--text-secondary, #888); cursor: pointer;
+    margin-right: 8px; opacity: 0.6; transition: opacity 0.2s;
+    line-height: 1;
+  }
+
+
+  .about-btn:hover { opacity: 1; }
+
 </style>
