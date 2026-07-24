@@ -210,7 +210,7 @@
   .about-btn {
     background: none; border: none; font-size: 20px;
     color: var(--text-secondary, #888); cursor: pointer;
-    margin-right: 8px; opacity: 0.6; transition: opacity 0.2s;
+    margin-right: 8px; opacity: 0.8; transition: opacity 0.2s;
     line-height: 1;
   }
 
