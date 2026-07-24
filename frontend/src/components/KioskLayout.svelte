@@ -90,10 +90,11 @@
         {/if}
     </nav>
     <div class="header-center">
-      <img src="/static/logo-mayaguez.png" alt="Mayagüez" class="app-name" />
+      <img src="/static/LogoVMayaguez.png" alt="Mayagüez" class="header-logo" />
+      <span class="app-name">Sip-Edge</span>
     </div>
     <div class="header-right">
-      <button class="about-btn" onclick={() => showAbout = true} title="Acerca de">ⓘ</button>
+      <button class="about-btn about-btn-kiosk" onclick={() => showAbout = true} title="Acerca de">ⓘ</button>
       <LogoutButton />
     </div>
   </header>

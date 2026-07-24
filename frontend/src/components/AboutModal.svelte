@@ -11,11 +11,12 @@
     <div class="about-card" onclick={(e) => e.stopPropagation()}>
       <button class="about-close" onclick={onclose}>&times;</button>
       <div class="about-logo">
-        <img src="/static/logo-mayaguez.png" alt="Mayagüez" width="64" height="64" />
+        <img src="/static/logo-mayaguez.png" alt="Mayagüez" width="80" />
       </div>
       <h2>Ingenio Mayagüez S.A.</h2>
       <p class="about-subtitle">SIP-Edge v1.0</p>
       <hr />
+      <p class="about-copy">Desarrollado por INASC SAS</p>
       <p class="about-copy">&copy; 2026 Ingenio Mayagüez S.A. Todos los derechos reservados.</p>
       <p class="about-disclaimer">
         Sistema de uso exclusivo. Prohibida su reproducción total o parcial

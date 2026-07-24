@@ -34,7 +34,7 @@
 <div class="admin-layout">
   <aside class="sidebar">
     <div class="sidebar-header">
-      <img src="/static/logo-mayaguez.png" alt="Mayagüez" class="sidebar-logo" width="64" height="64" />
+      <img src="/static/LogoVMayaguez.png" alt="Mayagüez" class="sidebar-logo" />
       <span class="sidebar-title">SIP-Edge Admin</span>
     </div>
     <nav class="sidebar-nav">
