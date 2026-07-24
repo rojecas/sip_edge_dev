@@ -35,6 +35,13 @@
       "name": "notas_muestras",
       "title": "Campo de Notas Colapsable en Vista de Toma de Muestras",
       "completed_at": "2026-07-20"
+    },
+    {
+      "id": 44,
+      "type": "feature",
+      "name": "rs232_resend",
+      "title": "Reenvio de Datos RS232 desde Kiosko",
+      "completed_at": "2026-07-23"
     }
   ],
   "history": [

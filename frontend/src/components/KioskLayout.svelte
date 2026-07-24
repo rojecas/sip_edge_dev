@@ -188,7 +188,7 @@
     gap: 10px;
   }
 
-  .header-logo { height: 36px; width: auto; }
+  .header-logo { height: 43px; width: auto; }
   .app-name {
     font-size: 22px;
     font-weight: 700;
