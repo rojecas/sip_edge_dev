@@ -2,15 +2,19 @@
 
 > Feature: Reenvío de Datos RS232 desde Kiosko
 > Dependencias: F6 (weighing_capture), F11 (rs232_transmission)
-> Límite: 9 requirements (por debajo del límite de 20)
+> Límite: 10 requirements (por debajo del límite de 20)
 >
-> **Nota spec-validator (2026-07-23):** Corregidos R1-R5 y R9-R10; ver requirements.old.md.
+> **Nota spec-validator (2026-07-23):** Corregidos R1-R5 y R9-R10 originales.
 >
 > **Nota líder (2026-07-23):** Eliminado R5 original ("enviado_pc=true → no mostrar Reenviar").
 > Verificado en `src/rs232.py:68`: `ser.write()` sin handshaking — `enviado_pc=true` solo
 > significa que el EdgeBox escribió bytes al UART sin error de SO, NO que el PC los recibió.
 > Si el PC está apagado o el software cerrado, el write al UART igual tiene éxito.
 > Por tanto, el botón siempre debe cambiar a "Reenviar Datos" tras confirmar (Opción A).
+>
+> **Nota líder (2026-07-23):** Agregado R10 (acceso admin al kiosko). El botón 🔄 de
+> HistoryTable (R8) solo es visible para admins, pero los admins no tenían acceso a las
+> rutas /kiosko/*. R10 habilita el acceso sin duplicar componentes.
 
 ---
 
@@ -62,3 +66,9 @@ en cada fila donde `enviado_pc = false`.
 ## R9
 El botón 🔄 en `HistoryTable` NO DEBE ser visible para usuarios con rol
 `operator`.
+
+## R10
+CUANDO un usuario autenticado con rol `admin` navega a las rutas `/kiosko/*`,
+el sistema DEBE renderizar los mismos componentes del kiosko (HistoryTable,
+KioskForm, AdminHaciendas, AdminSuertes) dentro de KioskLayout, y DEBE
+proveer navegación de retorno al panel `/admin`.

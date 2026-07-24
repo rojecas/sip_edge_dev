@@ -11,6 +11,11 @@
 > **Nota líder (2026-07-23):** T1 migración corregida a formato `.py` (upgrade/downgrade)
 > como F37 y F39. El implementer ejecuta `upgrade()` manualmente en su entorno de
 > desarrollo (Docker). El migration tracker automatizado será F45.
+>
+> **Nota líder (2026-07-23):** T11 agregada — acceso admin a rutas /kiosko/* (R10).
+> Descubierto durante pruebas: los admins no podían acceder al HistoryTable para
+> probar el botón 🔄. Se implementó Opción A: habilitar /kiosko/* para admins
+> sin duplicar componentes.
 
 ---
 
@@ -32,7 +37,7 @@
           DROP COLUMN resend_count
       """))
   ```
-  **Ejecutar `upgrade()` en el entorno de desarrollo** (Docker: `docker compose exec backend python -c "from database.migrations.2026_07_23_000001_add_resend_count_to_weighings import upgrade; from src.db import engine; upgrade(engine.connect())"` o directamente contra MariaDB).
+  **Ejecutar `upgrade()` en el entorno de desarrollo** (Docker) y en EdgeBox de producción.
   Cubre: R6.
 
 - [x] T2 — Agregar columna `resend_count` al modelo `Weighing` en `src/models.py`:
@@ -77,6 +82,12 @@
   - En `<tbody>`, agregar `<td>` con botón 🔄 condicionado a `$authStore.isAdmin && !w.enviado_pc`.
   - El botón debe tener `e.stopPropagation()` para no abrir el modal de detalle.
   Cubre: R8, R9.
+
+- [x] T11 — Habilitar acceso admin a rutas `/kiosko/*` (R10):
+  - `App.svelte`: condición `$authStore.isOperator` → `$authStore.isOperator || ($authStore.isAdmin && currentRoute.startsWith("/kiosko"))`.
+  - `KioskLayout.svelte`: badge de rol dinámico (`{$authStore.isAdmin ? "admin" : "operador"}`) + botón "Admin" en nav que navega a `/admin`.
+  - `AdminLayout.svelte`: agregar ítem `{ route: "/kiosko/historial", label: "Kiosko", icon: "🏭" }` en sidebar.
+  Cubre: R10.
 
 ## Tests
 

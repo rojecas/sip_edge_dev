@@ -392,6 +392,22 @@ No hay dependencias transitivas más allá de F6 y F11 declaradas en
 `models.py` en el backend, y `KioskForm.svelte` / `HistoryTable.svelte` en
 el frontend.
 
+
+### Feature 13 — frontend_login_kiosk (acceso admin a rutas kiosko)
+
+| Ítem | Archivo | Cambio requerido |
+|------|---------|-----------------|
+| Condición de ruteo | App.svelte | `isOperator` → `isOperator \|\| (isAdmin && startsWith("/kiosko"))` |
+| Badge de rol dinámico | KioskLayout.svelte | `operador` → `{isAdmin ? "admin" : "operador"}` |
+| Botón Admin en nav | KioskLayout.svelte | Nuevo `<button>` condicionado a `isAdmin`, navega a `/admin` |
+| Ítem Kiosko en sidebar | AdminLayout.svelte | `{ route: "/kiosko/historial", label: "Kiosko", icon: "🏭" }` |
+
+Justificación: R8 requiere que los admins vean el botón 🔄 en HistoryTable, pero
+HistoryTable solo se renderiza bajo KioskLayout (rutas `/kiosko/*`), inaccesible
+para admins. La Opción A evita duplicar componentes: se habilita el renderizado
+condicional de KioskLayout para admins en rutas `/kiosko/*`, con navegación
+bidireccional (AdminLayout ↔ KioskLayout).
+
 ## Tests
 
 ### Archivo: `tests/test_weighings.py`
@@ -409,7 +425,23 @@ Nuevos tests a agregar:
 | `test_resend_multiple_times_allowed` | R3 |
 | `test_resend_count_defaults_to_zero_on_create` | R6 |
 
-### Tests de frontend
+#
+### Feature 13 — frontend_login_kiosk (acceso admin a rutas kiosko)
+
+| Ítem | Archivo | Cambio requerido |
+|------|---------|-----------------|
+| Condición de ruteo | App.svelte | `isOperator` → `isOperator \|\| (isAdmin && startsWith("/kiosko"))` |
+| Badge de rol dinámico | KioskLayout.svelte | `operador` → `{isAdmin ? "admin" : "operador"}` |
+| Botón Admin en nav | KioskLayout.svelte | Nuevo `<button>` condicionado a `isAdmin`, navega a `/admin` |
+| Ítem Kiosko en sidebar | AdminLayout.svelte | `{ route: "/kiosko/historial", label: "Kiosko", icon: "🏭" }` |
+
+Justificación: R8 requiere que los admins vean el botón 🔄 en HistoryTable, pero
+HistoryTable solo se renderiza bajo KioskLayout (rutas `/kiosko/*`), inaccesible
+para admins. La Opción A evita duplicar componentes: se habilita el renderizado
+condicional de KioskLayout para admins en rutas `/kiosko/*`, con navegación
+bidireccional (AdminLayout ↔ KioskLayout).
+
+## Tests de frontend
 
 | Test | Cubre R |
 |------|---------|
