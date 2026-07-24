@@ -55,7 +55,7 @@
           <path style="fill:#5F3E20" d="m 63,27 c -3,5 -7,8 -12,9 -4,1 2,-17 13,-17 5,0 13,3 15,15 -6,1 -14,-5 -16,-7"/>
         </svg>
         {$authStore && $authStore.username ? $authStore.username : "Operador"}
-        <span class="role-badge">operador</span>
+        <span class="role-badge">{$authStore.isAdmin ? "admin" : "operador"}</span>
       </span>
     </div>
     <nav class="header-nav">

@@ -46,7 +46,7 @@
 {:else}
   <InactivityGuard />
 
-  {#if $authStore.isOperator}
+  {#if $authStore.isOperator || ($authStore.isAdmin && currentRoute.startsWith("/kiosko"))}
     <KioskLayout>
       {#if currentRoute === "/kiosco/historial"}
         <HistoryTable />
