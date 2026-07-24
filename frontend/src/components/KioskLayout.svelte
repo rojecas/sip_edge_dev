@@ -90,7 +90,7 @@
         {/if}
     </nav>
     <div class="header-center">
-      <img src="/static/LogoVMayaguez.png" alt="Mayagüez" class="header-logo" />
+      <img src="/static/logo-mayaguez.png" alt="Mayagüez" class="header-logo" />
       <span class="app-name">Sip-Edge</span>
     </div>
     <div class="header-right">
