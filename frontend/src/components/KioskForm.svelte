@@ -48,6 +48,10 @@
   let showResetConfirm = $state(false);
   let showEmergencyModal = $state(false);
 
+  // Feature 44 — rs232_resend
+  let lastWeighingId = $state(null);
+  let resendMode = $state(false);
+
   // Auto-capture PRINT notification
   let printNotification = $state("");
   let printNotificationTimer = null;
@@ -144,6 +148,7 @@
     successMessage = "";
     errorMessage = "";
     resetCounter++;
+    exitResendMode();
   }
 
   async function handleReset() {
@@ -227,12 +232,12 @@
         tipo_cosecha: tipoCosecha,
         notas: notas || null,
       };
-      await api.post(ENDPOINTS.WEIGHINGS, body);
+      const result = await api.post(ENDPOINTS.WEIGHINGS, body);
+      lastWeighingId = result.id;
+      // R1: Always activate resend mode — enviado_pc is not reliable
+      // (UART write can succeed even if PC is not receiving).
+      resendMode = true;
       successMessage = "Pesaje registrado exitosamente";
-      // Clear form after 1.5 seconds
-      setTimeout(() => {
-        resetForm();
-      }, 1500);
     } catch (err) {
       if (err instanceof ApiError) {
         errorMessage = err.message;
@@ -242,6 +247,31 @@
     } finally {
       isSubmitting = false;
     }
+  }
+
+  async function handleResend() {
+    if (!lastWeighingId || isSubmitting) return;
+    isSubmitting = true;
+    errorMessage = "";
+    try {
+      const result = await api.post(
+        `${ENDPOINTS.WEIGHINGS_RESEND}/${lastWeighingId}`
+      );
+      if (result.enviado_pc) {
+        successMessage = "Datos reenviados exitosamente al PC";
+      }
+    } catch (err) {
+      errorMessage = err instanceof ApiError
+        ? err.message
+        : "Error al reenviar datos";
+    } finally {
+      isSubmitting = false;
+    }
+  }
+
+  function exitResendMode() {
+    resendMode = false;
+    lastWeighingId = null;
   }
 </script>
 
@@ -340,9 +370,9 @@
   <div class="form-section">
     <h3>Pesos (kg)</h3>
     <div class="weights-grid">
-      <WeightField fieldName="Peso Muestra" bind:value={pesoMuestra} disabled={!$emergencyStore} onReset={handleResetPesoMuestra} />
-      <WeightField fieldName="Peso Vegetal" bind:value={pesoVegetal} disabled={!$emergencyStore} onReset={handleResetPesoVegetal} />
-      <WeightField fieldName="Peso Mineral" bind:value={pesoMineral} disabled={!$emergencyStore} onReset={handleResetPesoMineral} />
+      <WeightField fieldName="Peso Muestra" bind:value={pesoMuestra} disabled={!$emergencyStore} onReset={handleResetPesoMuestra} onTara={exitResendMode} onLeer={exitResendMode} />
+      <WeightField fieldName="Peso Vegetal" bind:value={pesoVegetal} disabled={!$emergencyStore} onReset={handleResetPesoVegetal} onTara={exitResendMode} onLeer={exitResendMode} />
+      <WeightField fieldName="Peso Mineral" bind:value={pesoMineral} disabled={!$emergencyStore} onReset={handleResetPesoMineral} onTara={exitResendMode} onLeer={exitResendMode} />
     </div>
   </div>
 
@@ -367,10 +397,16 @@
     <button
       type="button"
       class="btn-confirm"
-      onclick={handleConfirm}
-      disabled={!isFormValid() || isSubmitting}
+      onclick={resendMode ? handleResend : handleConfirm}
+      disabled={resendMode ? false : (!isFormValid() || isSubmitting)}
     >
-      {isSubmitting ? "Registrando..." : "Confirmar Medidas"}
+      {#if resendMode}
+        Reenviar Datos
+      {:else if isSubmitting}
+        Registrando...
+      {:else}
+        Confirmar Medidas
+      {/if}
     </button>
   </div>
 </div>

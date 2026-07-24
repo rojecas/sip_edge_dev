@@ -7,6 +7,7 @@
   import { onMount } from "svelte";
   import { api, ApiError, buildQuery } from "../lib/api.js";
   import { ENDPOINTS, CONFIG } from "../lib/constants.js";
+  import { authStore } from "../stores/auth.js";
   import WeighingDetailModal from "./WeighingDetailModal.svelte";
 
   // Data
@@ -105,6 +106,16 @@
     if (val === null || val === undefined) return "—";
     return Number(val).toFixed(3);
   }
+
+  async function handleResend(weighingId) {
+    try {
+      await api.post(`${ENDPOINTS.WEIGHINGS_RESEND}/${weighingId}`);
+      // Reload table to reflect the change in enviado_pc
+      await loadData();
+    } catch {
+      // Error silently handled — user knows from button state
+    }
+  }
 </script>
 
 <div class="history-container">
@@ -169,6 +180,7 @@
             <th>Peso Muestra</th>
             <th>Peso Mineral</th>
             <th>Peso Vegetal</th>
+            <th>Acción</th>
           </tr>
         </thead>
         <tbody>
@@ -185,6 +197,12 @@
               <td class="num">{formatDecimal(w.peso_muestra)}</td>
               <td class="num">{formatDecimal(w.peso_mineral)}</td>
               <td class="num">{formatDecimal(w.peso_vegetal_extrano)}</td>
+              <td>
+                {#if $authStore.isAdmin && !w.enviado_pc}
+                  <button class="btn-action" onclick={(e) => { e.stopPropagation(); handleResend(w.id); }}
+                    title="Reenviar datos al PC">&#x1F504;</button>
+                {/if}
+              </td>
             </tr>
           {/each}
         </tbody>
@@ -453,5 +471,20 @@
     color: var(--text-primary);
     font-size: 13px;
     cursor: pointer;
+  }
+
+  .btn-action {
+    padding: 4px 8px;
+    border: none;
+    border-radius: 4px;
+    background: var(--accent);
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn-action:hover {
+    background: var(--accent-hover);
   }
 </style>

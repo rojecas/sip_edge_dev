@@ -74,6 +74,7 @@ class WeighingResponse(BaseModel):
     manual_entry: bool
     tipo_cosecha: str
     notas: Optional[str] = None
+    resend_count: int = Field(default=0)
 
     class Config:
         from_attributes = True
@@ -289,6 +290,7 @@ def list_weighings(
             manual_entry=w.manual_entry,
             tipo_cosecha=w.tipo_cosecha,
             notas=w.notas,
+            resend_count=w.resend_count,
         ))
 
     return PaginatedResponse(
@@ -316,6 +318,31 @@ def get_weighing(
 
 
 VALID_RESET_STEPS = ["peso_muestra", "peso_mineral", "peso_vegetal_extrano"]
+
+
+@router.post("/{weighing_id}/resend", response_model=WeighingResponse, status_code=200)
+def resend_weighing(
+    weighing_id: int,
+    current_user: dict = Depends(check_inactivity),
+    _: dict = Depends(require_any_role("admin", "operator")),
+    db: Session = Depends(get_db),
+):
+    w = db.query(Weighing).filter(Weighing.id == weighing_id).first()
+    if w is None:
+        raise HTTPException(404, "Weighing not found")
+    if current_user["role"] == "operator" and w.usuario_id != current_user["user_id"]:
+        raise HTTPException(404, "Weighing not found")
+
+    hacienda = db.query(Hacienda).filter(Hacienda.id == w.hacienda_id).first()
+    suerte = db.query(Suerte).filter(Suerte.id == w.suerte_id).first()
+
+    frame_data = _build_frame_data(w, hacienda, suerte)
+    _send_rs232_frame(frame_data, w)
+    w.resend_count += 1
+    db.commit()
+    db.refresh(w)
+
+    return w
 
 
 @router.post("/reset", response_model=ResetResponse)

@@ -8,6 +8,7 @@ export const ENDPOINTS = {
   COMPLETE_RESET: "/api/auth/complete-reset",
   WEIGHINGS: "/api/weighings",
   WEIGHINGS_RESET: "/api/weighings/reset",
+  WEIGHINGS_RESEND: "/api/weighings",
   HACIENDAS: "/api/haciendas",
   HACIENDAS_BY_ID: "/api/haciendas/",
   SUERTES: "/api/suertes",

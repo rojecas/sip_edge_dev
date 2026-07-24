@@ -2,7 +2,7 @@
  * Tests para HistoryTable.svelte + WeighingDetailModal.svelte — Feature 37.
  * Cubre: R7 (modal al hacer click en fila), R8 (Sin observaciones cuando no hay notas).
  */
-import { vi, describe, it, expect, afterEach } from "vitest";
+import { vi, describe, it, expect, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/svelte";
 import HistoryTable from "../HistoryTable.svelte";
 
@@ -76,6 +76,31 @@ vi.mock("../../lib/api.js", () => ({
   }),
 }));
 
+let _mockIsAdmin = true;
+
+vi.mock("../../stores/auth.js", () => ({
+  authStore: {
+    subscribe: vi.fn((cb) => {
+      cb({
+        token: "fake-token",
+        role: _mockIsAdmin ? "admin" : "operator",
+        username: "test",
+        isAuthenticated: true,
+        isOperator: !_mockIsAdmin,
+        isAdmin: _mockIsAdmin,
+        jwtPayload: { sub: "test", role: _mockIsAdmin ? "admin" : "operator" },
+        lastActivity: Date.now() / 1000,
+      });
+      return () => {};
+    }),
+    get token() { return "fake-token"; },
+    get role() { return _mockIsAdmin ? "admin" : "operator"; },
+    get isAdmin() { return _mockIsAdmin; },
+    login: vi.fn(),
+    logout: vi.fn(),
+  },
+}));
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -130,5 +155,34 @@ describe("HistoryTable — Feature 37: Modal de detalle (R7, R8)", () => {
 
     // It should show "Sin observaciones"
     expect(screen.getByText("Sin observaciones")).toBeInTheDocument();
+  });
+});
+
+describe("HistoryTable — Feature 44: rs232_resend (R8, R9)", () => {
+  beforeEach(() => {
+    _mockIsAdmin = true;
+  });
+
+  it("muestra boton de reenvio para admin cuando enviado_pc es false", async () => {
+    render(HistoryTable);
+    await waitFor(() => {
+      expect(screen.getByText("VAG-001")).toBeInTheDocument();
+    });
+    // Verify the "Acción" column header exists
+    expect(screen.getByText("Acción")).toBeInTheDocument();
+    // The 🔄 button should be present (both rows have enviado_pc=false, admin=true)
+    const resendButtons = document.querySelectorAll(".btn-action");
+    expect(resendButtons.length).toBe(2);
+  });
+
+  it("no muestra boton de reenvio para operador", async () => {
+    _mockIsAdmin = false;
+    render(HistoryTable);
+    await waitFor(() => {
+      expect(screen.getByText("VAG-001")).toBeInTheDocument();
+    });
+    // For operator, the 🔄 button should NOT be present
+    const resendButtons = document.querySelectorAll(".btn-action");
+    expect(resendButtons.length).toBe(0);
   });
 });

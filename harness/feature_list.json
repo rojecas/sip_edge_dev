@@ -922,6 +922,30 @@
         2
       ],
       "status": "done"
+    },
+    {
+      "id": 44,
+      "name": "rs232_resend",
+      "title": "Reenvio de Datos RS232 desde Kiosko",
+      "type": "feature",
+      "sdd": true,
+      "status": "testing",
+      "description": "Cuando el operador confirma una medida, los datos se guardan en BD y se envian al PC externo via RS232. Si el PC no esta listo para recibir (apagado, cable desconectado, software no abierto), no existe mecanismo de reenvio. Esta feature convierte el boton Confirmar en Reenviar Datos inmediatamente despues del POST exitoso, permitiendo reintentos ilimitados hasta la siguiente interaccion con la bascula (Tara o Read), momento en que el boton vuelve a Confirmar para el siguiente pesaje.",
+      "acceptance": [
+        "Tras POST /api/weighings exitoso (201), el boton Confirmar cambia su texto a Reenviar Datos",
+        "El boton Reenviar Datos llama a POST /api/weighings/{id}/resend, que solo transmite RS232 y actualiza enviado_pc, sin re-ejecutar deteccion de anomalias",
+        "El reintento es ilimitado: el operador puede presionar Reenviar Datos cuantas veces necesite",
+        "El boton Reenviar Datos permanece activo hasta que el operador presiona Tara o Read en cualquiera de los 3 campos de peso, momento en que vuelve a mostrar Confirmar",
+        "El endpoint GET /api/weighings/{id} ya retorna enviado_pc; el frontend lo consulta para determinar el texto del boton",
+        "Si enviado_pc ya es true, el boton no muestra Reenviar Datos (el envio fue exitoso en el primer intento)",
+        "Backend: nuevo endpoint POST /api/weighings/{id}/resend — solo transmite RS232 + actualiza enviado_pc=True. No toca la BD mas alla del UPDATE de ese campo."
+      ],
+      "depends_on": [
+        6,
+        11
+      ],
+      "design_decision": "Se crea un endpoint dedicado POST /api/weighings/{id}/resend en lugar de reutilizar POST /api/weighings. Justificacion: (1) responsabilidad unica: solo transmite RS232 sin re-ejecutar deteccion de anomalias ni reescribir el registro; (2) semantica clara: resend = reenviar, no crear; (3) no se acopla a cambios futuros en el endpoint de creacion. El endpoint lee el registro existente, construye la trama CSV, transmite por RS232, y actualiza enviado_pc=True. El frontend consulta enviado_pc via GET /api/weighings/{id} para decidir si mostrar el boton de reenvio.",
+      "github_issue": "https://github.com/rojecas/sip_edge/issues/27"
     }
   ]
 }

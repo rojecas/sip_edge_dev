@@ -109,6 +109,7 @@ class Weighing(Base):
         server_default=text("'Mecanico - Verde'"),
     )
     notas = Column(Text, nullable=True, default=None)
+    resend_count = Column(Integer, nullable=False, default=0, server_default="0")
 
 
 class BackupLog(Base):

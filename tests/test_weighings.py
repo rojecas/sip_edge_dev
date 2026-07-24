@@ -651,5 +651,111 @@ class TestWeighingsNotas(TestWeighingsAuth):
         self.assertEqual(data["items"][0]["notas"], "Nota de prueba")
 
 
+class TestWeighingsResend(TestWeighingsAuth):
+    """T8: Feature 44 — rs232_resend endpoint tests (R2, R3, R5, R6, R7)."""
+
+    def _create_weighing(self, token, **kwargs):
+        response = self.client.post(
+            "/api/weighings",
+            json=self._create_weighing_body(**kwargs),
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        return response.json()
+
+    @mock.patch("src.rs232.send_frame")
+    def test_resend_endpoint_returns_200(self, mock_send):
+        token = self._login("operator1", "op1pass")
+        w = self._create_weighing(token)
+        response = self.client.post(
+            f"/api/weighings/{w['id']}/resend",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["id"], w["id"])
+        self.assertIn("resend_count", data)
+
+    @mock.patch("src.rs232.send_frame")
+    def test_resend_endpoint_increments_resend_count(self, mock_send):
+        token = self._login("operator1", "op1pass")
+        w = self._create_weighing(token)
+        response = self.client.post(
+            f"/api/weighings/{w['id']}/resend",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["resend_count"], 1)
+
+    def test_resend_endpoint_404_if_not_found(self):
+        token = self._login("operator1", "op1pass")
+        response = self.client.post(
+            "/api/weighings/9999/resend",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 404)
+
+    @mock.patch("src.rs232.send_frame")
+    def test_resend_endpoint_404_if_operator_other_user(self, mock_send):
+        token1 = self._login("operator1", "op1pass")
+        token2 = self._login("operator2", "op2pass")
+        w = self._create_weighing(token1)
+        response = self.client.post(
+            f"/api/weighings/{w['id']}/resend",
+            headers={"Authorization": f"Bearer {token2}"},
+        )
+        self.assertEqual(response.status_code, 404)
+
+    @mock.patch("src.rs232.send_frame")
+    def test_resend_endpoint_does_not_run_anomaly_detection(self, mock_send):
+        token = self._login("operator1", "op1pass")
+        w = self._create_weighing(token)
+        with mock.patch("src.weighings._run_anomaly_detection") as mock_anomaly:
+            response = self.client.post(
+                f"/api/weighings/{w['id']}/resend",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            self.assertEqual(response.status_code, 200)
+            mock_anomaly.assert_not_called()
+
+    @mock.patch("src.rs232.send_frame")
+    def test_resend_endpoint_updates_enviado_pc(self, mock_send):
+        token = self._login("operator1", "op1pass")
+        w = self._create_weighing(token)
+        response = self.client.post(
+            f"/api/weighings/{w['id']}/resend",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data["enviado_pc"])
+
+    @mock.patch("src.rs232.send_frame")
+    def test_resend_multiple_times_allowed(self, mock_send):
+        token = self._login("operator1", "op1pass")
+        w = self._create_weighing(token)
+        for _ in range(3):
+            response = self.client.post(
+                f"/api/weighings/{w['id']}/resend",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["resend_count"], 3)
+
+    @mock.patch("src.rs232.send_frame")
+    def test_resend_count_defaults_to_zero_on_create(self, mock_send):
+        token = self._login("operator1", "op1pass")
+        w = self._create_weighing(token)
+        response = self.client.get(
+            f"/api/weighings/{w['id']}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("resend_count", data)
+        self.assertEqual(data["resend_count"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
