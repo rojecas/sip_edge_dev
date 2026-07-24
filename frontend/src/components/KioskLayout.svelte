@@ -188,7 +188,7 @@
     gap: 10px;
   }
 
-  .header-logo { height: 43px; width: auto; }
+  .header-logo { height: 50px; width: auto; }
   .app-name {
     font-size: 22px;
     font-weight: 700;
@@ -200,6 +200,9 @@
   .header-right {
     flex-shrink: 0;
     margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .header-right :global(.logout-btn) {
