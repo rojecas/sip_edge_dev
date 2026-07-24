@@ -21,7 +21,7 @@
     { route: "/admin/reportes", label: "Reportes", icon: "📋" },
     { route: "/admin/anomalias", label: "Anomalías", icon: "⚠️" },
     { route: "/admin/agente", label: "Agente IA", icon: "🤖" },
-    { route: "/admin/backup", label: "Backup", icon: "💾" },{ route: "/kiosko/historial", label: "Kiosko", icon: "🏭" },
+    { route: "/admin/backup", label: "Backup", icon: "💾" },{ route: "/kiosco/historial", label: "Kiosko", icon: "🏭" },
   ];
 
   function goTo(route) {
