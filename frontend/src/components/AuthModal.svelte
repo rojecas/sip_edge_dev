@@ -72,6 +72,7 @@
 
 <div class="modal-overlay">
   <div class="modal-container">
+    <img src="/static/logo-mayaguez.png" alt="Mayagüez" class="auth-logo" />
     <h1 class="modal-title">SIP-Edge</h1>
     <p class="modal-subtitle">Sistema Inteligente de Pesaje</p>
 
@@ -154,6 +155,13 @@
     font-size: 28px;
     color: var(--accent);
     text-align: center;
+  }
+
+  .auth-logo {
+    display: block;
+    margin: 0 auto 12px;
+    max-height: 64px;
+    width: auto;
   }
 
   .modal-subtitle {

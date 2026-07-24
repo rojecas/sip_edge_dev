@@ -1,18 +1,30 @@
 /* SIP-Edge Frontend — Global Styles
-   Palette: dark industrial theme, consistent with login page. */
+   Corporate Branding: Ingenio Mayagüez S.A. */
 
 :root {
-  --bg-primary: #1a1a2e;
-  --bg-secondary: #16213e;
-  --bg-input: #0f3460;
-  --text-primary: #e0e0e0;
-  --text-secondary: #a0a0b0;
-  --accent: #e94560;
-  --accent-hover: #c73652;
+  /* === Corporate brand variables (F43) === */
+  --color-primary: #FDB814;
+  --color-primary-hover: #e5a612;
+  --color-accent: #32373c;
+  --color-accent-hover: #3a3a3a;
+  --color-gray: #f4f4f4;
+  --color-gray-dark: #878787;
+  --color-gray-darker: #646464;
+
+  /* === Functional variables reassigned to corporate palette (F43) === */
+  --accent: var(--color-primary);
+  --accent-hover: var(--color-primary-hover);
+  --bg-primary: var(--color-accent);
+  --bg-secondary: #3a3a3a;
+  --bg-input: #2d2d2d;
+  --text-primary: #f4f4f4;
+  --text-secondary: #b0b0b0;
+  --border: #4a4a4a;
+
+  /* === Semantic variables — UNCHANGED (F43 R3) === */
   --success: #51cf66;
   --error: #ff6b6b;
   --warning: #ffd43b;
-  --border: #333;
 }
 
 *,
@@ -29,7 +41,7 @@ html {
 body {
   margin: 0;
   padding: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Montserrat", system-ui, -apple-system, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
@@ -62,6 +74,22 @@ input, select, textarea, button {
 input:disabled, select:disabled, button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
 }
 
 /* Scrollbar styling */

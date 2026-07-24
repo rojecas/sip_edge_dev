@@ -90,7 +90,7 @@
         {/if}
     </nav>
     <div class="header-center">
-      <span class="app-name">Sip-Edge</span>
+      <img src="/static/logo-mayaguez.png" alt="Mayagüez" class="app-name" />
     </div>
     <div class="header-right">
       <button class="about-btn" onclick={() => showAbout = true} title="Acerca de">ⓘ</button>
@@ -185,11 +185,9 @@
   }
 
   .app-name {
-    font-size: 38px;
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: 1px;
-    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    max-height: 48px;
+    width: auto;
+    display: block;
   }
 
   .header-right {

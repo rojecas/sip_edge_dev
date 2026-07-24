@@ -34,6 +34,7 @@
 <div class="admin-layout">
   <aside class="sidebar">
     <div class="sidebar-header">
+      <img src="/static/logo-mayaguez.png" alt="Mayagüez" class="sidebar-logo" width="64" height="64" />
       <span class="sidebar-title">SIP-Edge Admin</span>
     </div>
     <nav class="sidebar-nav">
@@ -74,6 +75,8 @@
   </div>
 </div>
 
+<AboutModal show={showAbout} onclose={() => showAbout = false} />
+
 <style>
   .admin-layout {
     min-height: 100vh;
@@ -85,24 +88,34 @@
   .sidebar {
     width: 220px;
     min-width: 220px;
-    background: var(--bg-secondary);
+    background: var(--color-accent);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     height: 100vh;
     position: sticky;
     top: 0;
+    color: var(--color-gray);
   }
 
   .sidebar-header {
     padding: 20px 16px 16px;
     border-bottom: 1px solid var(--border);
+    text-align: center;
+  }
+
+  .sidebar-logo {
+    display: block;
+    margin: 0 auto 8px;
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
   }
 
   .sidebar-title {
     font-size: 16px;
     font-weight: 700;
-    color: var(--accent);
+    color: var(--color-primary);
     letter-spacing: 0.5px;
   }
 
@@ -132,13 +145,14 @@
   }
 
   .sidebar-link:hover {
-    background: var(--bg-input);
-    color: var(--text-primary);
+    background: var(--color-accent-hover);
+    color: var(--color-gray);
   }
 
   .sidebar-link.active {
-    background: var(--accent);
-    color: white;
+    background: var(--color-primary);
+    color: #32373c;
+    font-weight: 600;
   }
 
   .link-icon {
@@ -189,6 +203,8 @@
     padding: 12px 24px;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
+    position: relative;
+    z-index: 1;
   }
 
   .header-left {
@@ -214,6 +230,11 @@
 
   .header-right {
     margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
   }
 
   .header-right :global(.logout-btn) {
@@ -227,12 +248,21 @@
   }
 
   .sidebar-about {
-    background: none; border: none; font-size: 16px;
-    color: var(--text-secondary, #888); cursor: pointer;
-    opacity: 0.8; transition: opacity 0.2s; margin-right: 12px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 16px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s, color 0.2s;
+    padding: 4px 10px;
+    line-height: 1;
   }
 
-
-  .sidebar-about:hover { opacity: 1; }
+  .sidebar-about:hover {
+    opacity: 1;
+    color: var(--color-primary);
+  }
 
 </style>

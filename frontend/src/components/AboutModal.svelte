@@ -11,7 +11,7 @@
     <div class="about-card" onclick={(e) => e.stopPropagation()}>
       <button class="about-close" onclick={onclose}>&times;</button>
       <div class="about-logo">
-        <img src="/static/favicon.png" alt="Mayaguez" width="48" height="48" />
+        <img src="/static/logo-mayaguez.png" alt="Mayagüez" width="64" height="64" />
       </div>
       <h2>Ingenio Mayagüez S.A.</h2>
       <p class="about-subtitle">SIP-Edge v1.0</p>

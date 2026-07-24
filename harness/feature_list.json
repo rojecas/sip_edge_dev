@@ -924,12 +924,110 @@
       "status": "done"
     },
     {
+      "id": 41,
+      "name": "pdf_reports",
+      "title": "Informes PDF con Graficas",
+      "type": "feature",
+      "sdd": true,
+      "status": "pending",
+      "description": "Extension del sistema de plantillas de reporte existente (report_templates) para generar informes en formato PDF con graficas estadisticas incrustadas. Periodos de consulta arbitrarios (dia, semana, mes, rango personalizado). Metricas con representacion grafica: trend (linea de evolucion temporal), composition (torta de proporcion muestra/mineral/vegetal). Metricas sin grafica: count, avg, min_max, anomaly_count, std (valores puntuales). Canales de entrega: descarga desde panel admin, envio por Telegram, almacenamiento local para exportacion USB junto con backups. Se integra como extension del sistema de plantillas actual, no como sistema independiente.",
+      "acceptance": [
+        "El admin puede seleccionar un periodo arbitrario (hoy, ayer, ultimos 7 dias, mes actual, rango personalizado) para generar el PDF",
+        "El PDF incluye grafica de tendencia (linea) con evolucion de peso total en el periodo",
+        "El PDF incluye grafica de composicion (torta) con proporcion muestra/mineral/vegetal",
+        "Metricas sin grafica (count, avg, min_max, anomaly_count, std) se presentan como tabla resumen en el PDF",
+        "El PDF se puede descargar desde el boton Generar Informe en /admin/reportes",
+        "El PDF se puede enviar por Telegram a los destinatarios de la plantilla",
+        "El PDF se almacena en el sistema de archivos para exportacion USB",
+        "Las plantillas de reporte existentes se extienden con una opcion Formato PDF (sin eliminar el formato SMS actual)",
+        "Requiere dependencias externas: reportlab (o fpdf2) + matplotlib (a aprobar en spec)"
+      ],
+      "depends_on": [
+        1,
+        8,
+        17
+      ],
+      "external_dependencies": [
+        "reportlab",
+        "matplotlib"
+      ]
+    },
+    {
+      "id": 42,
+      "name": "telegram_channel",
+      "title": "Canal de Comunicacion Telegram",
+      "type": "feature",
+      "sdd": true,
+      "status": "pending",
+      "description": "Replica de todas las funcionalidades del canal SMS a traves de un bot de Telegram. Incluye: comandos de emergencia (manual on/off/ext), restablecimiento de contrasena (reset password), consultas AI multiturno con Function Calling, envio de reportes programados (con PDFs adjuntos), y alertas de seguridad. Arquitectura con tablas separadas: telegram_conversations, telegram_messages, telegram_ai_tool_log (paralelas pero independientes de sms_*). Vinculacion de usuarios: el admin registra manualmente chat_id o @username en la ficha del usuario. El usuario elige su canal preferido: solo SMS, solo Telegram, o ambos. Comunicacion via long polling (getUpdates) a api.telegram.org. Requiere plan de datos 4G activo en el EdgeBox. Si internet cae, SMS actua como fallback para alertas criticas.",
+      "acceptance": [
+        "El bot de Telegram replica todos los flujos SMS: emergency (manual on/off/ext), password reset, consultas AI, reportes programados, alertas de seguridad",
+        "El admin puede registrar chat_id o @username en la ficha de cada usuario desde /admin/usuarios",
+        "Cada usuario puede elegir su canal preferido: solo SMS, solo Telegram, o ambos",
+        "El bot usa long polling (getUpdates) - sin webhook, sin endpoint publico, sin abrir puertos",
+        "Tablas separadas telegram_conversations, telegram_messages, telegram_ai_tool_log (independientes de sms_*)",
+        "Comandos de emergencia (manual on/off/ext) se procesan desde Telegram igual que desde SMS",
+        "Reset de contrasena (reset password <usuario>) se procesa desde Telegram con validacion de admin",
+        "Consultas AI multiturno mantienen contexto conversacional independiente del canal",
+        "Reportes programados se envian como mensaje de Telegram (con PDF adjunto cuando aplique)",
+        "Alertas de seguridad (3+ intentos fallidos) se envian por Telegram si el admin tiene el canal configurado",
+        "Si internet cae, el sistema falla gracefully: Telegram en pausa, SMS sigue funcionando para alertas criticas",
+        "Requiere plan de datos 4G activo (dependencia externa de conectividad)"
+      ],
+      "depends_on": [
+        7,
+        8,
+        9,
+        12,
+        13,
+        16,
+        27,
+        28,
+        41
+      ],
+      "external_dependencies": [
+        "python-telegram-bot (o httpx para getUpdates manual)"
+      ]
+    },
+    {
+      "id": 43,
+      "name": "corporate_branding",
+      "title": "Identidad Corporativa Mayaguez - Tema Visual, About y Disclaimers",
+      "type": "feature",
+      "sdd": true,
+      "status": "testing",
+      "description": "Aplicacion de la identidad visual corporativa de Ingenio Mayaguez S.A. a toda la interfaz del sistema SIP-Edge (login, kiosko, admin). Incluye: paleta de colores corporativos, logo institucional, tipografia Montserrat, pagina About con copyright y disclaimers legales, y favicon con isotipo. Colores extraidos del manual de marca y logo: primario #fab900 (amarillo PANTONE 130 C), acento #ff0032 (rojo PANTONE RED 032 C), grises #878787 / #646464 (Cool Gray 10 C / Silver 877 C). Tipografia: Montserrat (Google Fonts, gratuita) para toda la UI, reemplazando la fuente actual del sistema.",
+      "acceptance": [
+        "Paleta corporativa aplicada a todas las vistas: login, kiosko (/kiosco/*), admin (/admin/*)",
+        "Logo Mayaguez visible en: pantalla de login (centrado, arriba del formulario), header/banner en kiosko y admin",
+        "Tipografia Montserrat cargada desde Google Fonts o servida localmente, aplicada como fuente principal",
+        "Colores funcionales respetados: verde exito, rojo error, amarillo procesando (no se altera la semantica)",
+        "Favicon del navegador usa el isotipo de Mayaguez (recorte del logo, version a color)",
+        "Pagina o modal About accesible desde todas las vistas con: razon social, copyright, version del sistema, disclaimer legal",
+        "Disclaimer: Sistema de uso exclusivo. Prohibida su reproduccion total o parcial sin autorizacion del Ingenio Mayaguez S.A.",
+        "Copyright: (c) [ano] Ingenio Mayaguez S.A. Todos los derechos reservados.",
+        "Sidebar de admin usa la paleta corporativa (fondo oscuro con acentos amarillo)",
+        "Componentes de formulario (inputs, selects, botones) estilizados con colores corporativos"
+      ],
+      "depends_on": [
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "assets": [
+        "docs/logo-mayaguez.png"
+      ],
+      "github_issue": "https://github.com/rojecas/sip_edge/issues/28"
+    },
+    {
       "id": 44,
       "name": "rs232_resend",
       "title": "Reenvio de Datos RS232 desde Kiosko",
       "type": "feature",
       "sdd": true,
-      "status": "testing",
+      "status": "done",
       "description": "Cuando el operador confirma una medida, los datos se guardan en BD y se envian al PC externo via RS232. Si el PC no esta listo para recibir (apagado, cable desconectado, software no abierto), no existe mecanismo de reenvio. Esta feature convierte el boton Confirmar en Reenviar Datos inmediatamente despues del POST exitoso, permitiendo reintentos ilimitados hasta la siguiente interaccion con la bascula (Tara o Read), momento en que el boton vuelve a Confirmar para el siguiente pesaje.",
       "acceptance": [
         "Tras POST /api/weighings exitoso (201), el boton Confirmar cambia su texto a Reenviar Datos",
