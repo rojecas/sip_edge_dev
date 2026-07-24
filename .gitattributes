@@ -31,3 +31,5 @@
 
 # Dockerfiles
 Dockerfile text eol=lf
+# Frontend compiled output — treat as binary (no line-ending conversion)
+src/static/* -text
