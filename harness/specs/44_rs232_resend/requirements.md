@@ -61,7 +61,7 @@ DEBE incrementar `resend_count` en exactamente 1.
 ## R8
 CUANDO un usuario autenticado con rol `admin` visualiza el historial de
 pesajes en `HistoryTable`, el sistema DEBE mostrar un botón 🔄
-en cada fila donde `enviado_pc = false`.
+en cada fila del historial, sin filtrar por `enviado_pc`.
 
 ## R9
 El botón 🔄 en `HistoryTable` NO DEBE ser visible para usuarios con rol

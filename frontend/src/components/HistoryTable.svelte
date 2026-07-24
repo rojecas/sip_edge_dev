@@ -198,7 +198,7 @@
               <td class="num">{formatDecimal(w.peso_mineral)}</td>
               <td class="num">{formatDecimal(w.peso_vegetal_extrano)}</td>
               <td>
-                {#if $authStore.isAdmin && !w.enviado_pc}
+                {#if $authStore.isAdmin}
                   <button class="btn-action" onclick={(e) => { e.stopPropagation(); handleResend(w.id); }}
                     title="Reenviar datos al PC">&#x1F504;</button>
                 {/if}
