@@ -183,12 +183,18 @@
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
+  .header-logo { height: 36px; width: auto; }
   .app-name {
-    max-height: 48px;
-    width: auto;
-    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-primary);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
   }
 
   .header-right {
