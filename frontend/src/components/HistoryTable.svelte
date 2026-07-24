@@ -474,17 +474,13 @@
   }
 
   .btn-action {
-    padding: 4px 8px;
+    background: none;
     border: none;
-    border-radius: 4px;
-    background: var(--accent);
-    color: white;
-    font-size: 14px;
     cursor: pointer;
+    font-size: 16px;
+    padding: 4px 6px;
+    border-radius: 4px;
     transition: background 0.2s;
   }
-
-  .btn-action:hover {
-    background: var(--accent-hover);
-  }
+  .btn-action:hover { background: var(--bg-input); }
 </style>
