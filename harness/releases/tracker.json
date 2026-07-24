@@ -42,6 +42,13 @@
       "name": "rs232_resend",
       "title": "Reenvio de Datos RS232 desde Kiosko",
       "completed_at": "2026-07-23"
+    },
+    {
+      "id": 43,
+      "type": "feature",
+      "name": "corporate_branding",
+      "title": "Identidad Corporativa Mayaguez - Tema Visual, About y Disclaimers",
+      "completed_at": "2026-07-23"
     }
   ],
   "history": [

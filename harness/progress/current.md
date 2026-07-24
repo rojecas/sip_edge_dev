@@ -23,3 +23,10 @@ Plan: tasks T1..T23 de harness/specs/43_corporate_branding/tasks.md — todas [x
 - src/static/ (frontend recompilado)
 
 ### Test results: 201 passed / 19 failed (pre-existing) / 220 total
+
+## Cierre — 2026-07-23
+
+- **Status:** testing → done
+- **Tracker:** Registrada en `harness/releases/tracker.json` > `pending`
+- **GitHub:** Issue #28 cerrado
+- **Closure:** `harness/progress/closure-43_corporate_branding.md`
