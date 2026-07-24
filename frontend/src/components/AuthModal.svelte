@@ -145,7 +145,7 @@
     border-radius: 12px;
     padding: 40px;
     width: 100%;
-    max-width: 420px;
+    max-width: 420px; position: relative;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   }
 
