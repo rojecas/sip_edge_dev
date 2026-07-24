@@ -35,6 +35,10 @@
   function goToSuertes() {
     navigate("/kiosco/suertes");
   }
+
+  function goToAdmin() {
+    navigate("/admin");
+  }
 </script>
 
 <div class="kiosk-layout">
@@ -79,6 +83,9 @@
         class:active={currentRoute === "/kiosco/suertes"}
         onclick={goToSuertes}
       >Suertes</button>
+        {#if $authStore.isAdmin}
+        <button class="nav-btn nav-btn-admin" onclick={goToAdmin}>Admin</button>
+        {/if}
     </nav>
     <div class="header-center">
       <span class="app-name">Sip-Edge</span>
