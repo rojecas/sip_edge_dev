@@ -995,7 +995,7 @@
       "title": "Identidad Corporativa Mayaguez - Tema Visual, About y Disclaimers",
       "type": "feature",
       "sdd": true,
-      "status": "testing",
+      "status": "done",
       "description": "Aplicacion de la identidad visual corporativa de Ingenio Mayaguez S.A. a toda la interfaz del sistema SIP-Edge (login, kiosko, admin). Incluye: paleta de colores corporativos, logo institucional, tipografia Montserrat, pagina About con copyright y disclaimers legales, y favicon con isotipo. Colores extraidos del manual de marca y logo: primario #fab900 (amarillo PANTONE 130 C), acento #ff0032 (rojo PANTONE RED 032 C), grises #878787 / #646464 (Cool Gray 10 C / Silver 877 C). Tipografia: Montserrat (Google Fonts, gratuita) para toda la UI, reemplazando la fuente actual del sistema.",
       "acceptance": [
         "Paleta corporativa aplicada a todas las vistas: login, kiosko (/kiosco/*), admin (/admin/*)",
