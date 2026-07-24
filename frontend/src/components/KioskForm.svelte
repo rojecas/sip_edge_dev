@@ -255,7 +255,7 @@
     errorMessage = "";
     try {
       const result = await api.post(
-        `${ENDPOINTS.WEIGHINGS_RESEND}/${lastWeighingId}`
+        `${ENDPOINTS.WEIGHINGS_RESEND}/${lastWeighingId}/resend`
       );
       if (result.enviado_pc) {
         successMessage = "Datos reenviados exitosamente al PC";

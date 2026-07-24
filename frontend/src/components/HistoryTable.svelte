@@ -109,7 +109,7 @@
 
   async function handleResend(weighingId) {
     try {
-      await api.post(`${ENDPOINTS.WEIGHINGS_RESEND}/${weighingId}`);
+      await api.post(`${ENDPOINTS.WEIGHINGS_RESEND}/${weighingId}/resend`);
       // Reload table to reflect the change in enviado_pc
       await loadData();
     } catch {
