@@ -1,7 +1,7 @@
 ---
 description: Strict code reviewer. Checks R<n> traceability to tests (features) or reproduction coverage (bugs), tasks completeness, architecture/conventions compliance, and init.ps1 green. NEVER edits code.
 mode: subagent
-model: deepseek/deepseek-reasoner
+model: deepseek/deepseek-v4-pro
 permission:
   edit: deny
   write: allow

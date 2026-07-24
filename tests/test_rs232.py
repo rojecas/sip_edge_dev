@@ -89,8 +89,8 @@ class TestSendFrame(unittest.TestCase):
             os.environ.pop("DEV_MODE", None)
 
     @mock.patch("serial.Serial")
-    def test_csv_format_15_fields(self, mock_serial):
-        """R2: Verify frame has exactly 15 comma-separated fields in correct order."""
+    def test_csv_format_14_fields(self, mock_serial):
+        """R2: Verify frame has exactly 14 comma-separated fields in correct order."""
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = os.path.join(tmpdir, "config.yaml")
             _write_default_config(config_path)
@@ -100,18 +100,19 @@ class TestSendFrame(unittest.TestCase):
         frame = mock_serial.return_value.write.call_args[0][0].decode("ascii")
         fields = frame.strip().split(",")
         self.assertEqual(
-            len(fields), 15, f"Expected 15 fields, got {len(fields)}: {fields}"
+            len(fields), 14, f"Expected 14 fields, got {len(fields)}: {fields}"
         )
         self.assertEqual(fields[0], "42")
-        self.assertEqual(fields[1], "2026-06-15")
-        self.assertEqual(fields[2], "10:30:00")
+        self.assertEqual(fields[1], "2026/06/15")
+        self.assertEqual(fields[2], "10:30")
         self.assertEqual(fields[3], "ABC-123")
-        self.assertEqual(fields[4], "G-789")
-        self.assertEqual(fields[5], "1.500")
-        for i in range(6, 13):
+        self.assertEqual(fields[4], "1")
+        self.assertEqual(fields[5], "G-789")
+        self.assertEqual(fields[6], "1.50")
+        for i in range(7, 12):
             self.assertEqual(fields[i], "0", f"Field {i} should be 0, got {fields[i]}")
-        self.assertEqual(fields[13], "0.200")
-        self.assertEqual(fields[14], "0.800")
+        self.assertEqual(fields[12], "0.20")
+        self.assertEqual(fields[13], "0.80")
 
     @mock.patch("serial.Serial")
     def test_vagon_unmodified(self, mock_serial):
@@ -142,7 +143,7 @@ class TestSendFrame(unittest.TestCase):
 
     @mock.patch("serial.Serial")
     def test_guia_from_numero_guia(self, mock_serial):
-        """R9: Verify numero_guia appears as Guia field (position 5)."""
+        """R9: Verify numero_guia appears as Guia field (position 6, index 5)."""
         data = dict(self.frame_data)
         data["numero_guia"] = "GUIA-999"
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -152,11 +153,11 @@ class TestSendFrame(unittest.TestCase):
 
         frame = mock_serial.return_value.write.call_args[0][0].decode("ascii")
         fields = frame.strip().split(",")
-        self.assertEqual(fields[4], "GUIA-999")
+        self.assertEqual(fields[5], "GUIA-999")
 
     @mock.patch("serial.Serial")
-    def test_pesos_three_decimals(self, mock_serial):
-        """R10: Verify weights are formatted with exactly 3 decimals."""
+    def test_pesos_two_decimals(self, mock_serial):
+        """R10: Verify weights are formatted with exactly 2 decimals."""
         data = dict(self.frame_data)
         data["pesos"] = {
             "muestra": 2.0,
@@ -170,9 +171,93 @@ class TestSendFrame(unittest.TestCase):
 
         frame = mock_serial.return_value.write.call_args[0][0].decode("ascii")
         fields = frame.strip().split(",")
-        self.assertEqual(fields[5], "2.000")
-        self.assertEqual(fields[13], "0.000")
-        self.assertEqual(fields[14], "0.123")
+        self.assertEqual(fields[6], "2.00")
+        self.assertEqual(fields[12], "0.00")
+        self.assertEqual(fields[13], "0.12")
+
+    @mock.patch("serial.Serial")
+    def test_fecha_slash_separator(self, mock_serial):
+        """R1: Verify date uses / as separator (YYYY/MM/DD)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = os.path.join(tmpdir, "config.yaml")
+            _write_default_config(config_path)
+            send_frame(self.frame_data, config_path=config_path)
+
+        frame = mock_serial.return_value.write.call_args[0][0].decode("ascii")
+        fields = frame.strip().split(",")
+        self.assertEqual(fields[1], "2026/06/15")
+        self.assertNotIn("-", fields[1])
+
+    @mock.patch("serial.Serial")
+    def test_hora_no_seconds(self, mock_serial):
+        """R2: Verify time has no seconds (HH:MM format)."""
+        data = dict(self.frame_data)
+        data["hora"] = "14:45:30"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = os.path.join(tmpdir, "config.yaml")
+            _write_default_config(config_path)
+            send_frame(data, config_path=config_path)
+
+        frame = mock_serial.return_value.write.call_args[0][0].decode("ascii")
+        fields = frame.strip().split(",")
+        self.assertEqual(fields[2], "14:45")
+        # Verify no seconds separator
+        self.assertNotIn(":45:", fields[2])
+        self.assertEqual(len(fields[2]), 5)
+
+    @mock.patch("serial.Serial")
+    def test_campo_fijo_1(self, mock_serial):
+        """R3: Verify field 5 (index 4) contains the fixed value 1."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = os.path.join(tmpdir, "config.yaml")
+            _write_default_config(config_path)
+            send_frame(self.frame_data, config_path=config_path)
+
+        frame = mock_serial.return_value.write.call_args[0][0].decode("ascii")
+        fields = frame.strip().split(",")
+        self.assertEqual(fields[4], "1")
+
+    @mock.patch("serial.Serial")
+    def test_full_frame_format_integration(self, mock_serial):
+        """R6,R7,R9: Integration test verifying full frame from _build_frame_data to send_frame."""
+        # Simulate what _build_frame_data produces + _send_rs232_frame adds id
+        frame_data = {
+            "id": 99,
+            "fecha": "2026-07-24",
+            "hora": "15:45:00",
+            "tractomula": "TRC-001",
+            "vagon": "V-001",
+            "numero_guia": "G-1001",
+            "hacienda": {"id": 10, "codigo": "H010", "nombre": "La Esperanza"},
+            "suerte": {"id": 5, "codigo_suerte": "B2"},
+            "pesos": {
+                "muestra": 3.456,
+                "mineral": 1.234,
+                "vegetal_extrano": 0.001,
+            },
+            "tipo_cosecha": "Cosechadora",
+            "notas": "Sin observaciones",
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = os.path.join(tmpdir, "config.yaml")
+            _write_default_config(config_path)
+            send_frame(frame_data, config_path=config_path)
+
+        frame = mock_serial.return_value.write.call_args[0][0].decode("ascii")
+        fields = frame.strip().split(",")
+        self.assertEqual(len(fields), 14)
+        self.assertEqual(fields[0], "99")
+        self.assertEqual(fields[1], "2026/07/24")
+        self.assertEqual(fields[2], "15:45")
+        self.assertEqual(fields[3], "V-001")
+        self.assertEqual(fields[4], "1")
+        self.assertEqual(fields[5], "G-1001")
+        self.assertEqual(fields[6], "3.46")
+        for i in range(7, 12):
+            self.assertEqual(fields[i], "0", f"Field {i} should be 0, got {fields[i]}")
+        self.assertEqual(fields[12], "0.00")
+        self.assertEqual(fields[13], "1.23")
+        self.assertTrue(frame.endswith("\r\n"))
 
     @mock.patch("serial.Serial")
     def test_dev_mode_skips_serial(self, mock_serial):

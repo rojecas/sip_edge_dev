@@ -1,7 +1,7 @@
 ---
 description: Writes specs (requirements.md, design.md, tasks.md) for one pending SDD feature. NEVER writes application code or tests.
 mode: subagent
-model: deepseek/deepseek-reasoner
+model: deepseek/deepseek-v4-pro
 permission:
   edit: allow
   write: allow

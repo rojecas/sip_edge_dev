@@ -42,6 +42,13 @@
       "name": "rs232_resend",
       "title": "Reenvio de Datos RS232 desde Kiosko",
       "completed_at": "2026-07-23"
+    },
+    {
+      "id": 45,
+      "type": "feature",
+      "name": "rs232_frame_update",
+      "title": "Actualización de Formato de Trama RS-232",
+      "completed_at": "2026-07-24"
     }
   ],
   "history": [

@@ -19,7 +19,7 @@ def send_frame(
 
     Si DEV_MODE esta activo, omite toda operacion de E/S serial. En modo
     normal, carga la configuracion del puerto RS232 desde config.yaml,
-    construye una linea CSV de 15 campos con terminacion CRLF, abre el
+    construye una linea CSV de 14 campos con terminacion CRLF, abre el
     puerto serial, escribe la trama y cierra el puerto.
 
     Args:
@@ -40,16 +40,19 @@ def send_frame(
     system_config, _, _, _, _, _ = load_config(config_path)
     rs232_cfg = system_config.rs232
 
+    fecha_fmt = frame_data["fecha"].replace("-", "/")
+    hora_fmt = frame_data["hora"][:5]
     csv_line = (
         f"{frame_data['id']},"
-        f"{frame_data['fecha']},"
-        f"{frame_data['hora']},"
+        f"{fecha_fmt},"
+        f"{hora_fmt},"
         f"{frame_data['vagon']},"
+        f"1,"
         f"{frame_data['numero_guia']},"
-        f"{float(frame_data['pesos']['muestra']):.3f},"
-        f"0,0,0,0,0,0,0,"
-        f"{float(frame_data['pesos']['vegetal_extrano']):.3f},"
-        f"{float(frame_data['pesos']['mineral']):.3f}"
+        f"{float(frame_data['pesos']['muestra']):.2f},"
+        f"0,0,0,0,0,"
+        f"{float(frame_data['pesos']['vegetal_extrano']):.2f},"
+        f"{float(frame_data['pesos']['mineral']):.2f}"
         f"\r\n"
     )
 

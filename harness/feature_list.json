@@ -1044,6 +1044,30 @@
       ],
       "design_decision": "Se crea un endpoint dedicado POST /api/weighings/{id}/resend en lugar de reutilizar POST /api/weighings. Justificacion: (1) responsabilidad unica: solo transmite RS232 sin re-ejecutar deteccion de anomalias ni reescribir el registro; (2) semantica clara: resend = reenviar, no crear; (3) no se acopla a cambios futuros en el endpoint de creacion. El endpoint lee el registro existente, construye la trama CSV, transmite por RS232, y actualiza enviado_pc=True. El frontend consulta enviado_pc via GET /api/weighings/{id} para decidir si mostrar el boton de reenvio.",
       "github_issue": "https://github.com/rojecas/sip_edge/issues/27"
+    },
+    {
+      "id": 45,
+      "name": "rs232_frame_update",
+      "title": "Actualización de Formato de Trama RS-232",
+      "type": "feature",
+      "sdd": true,
+      "status": "done",
+      "description": "Modificar el formato de la trama CSV que se transmite por RS-232 al PC externo tras confirmar un pesaje, según requerimientos actualizados del cliente. Cambios: formato de fecha con `/` en vez de `-` (YYYY/MM/DD), hora sin segundos (HH:MM), nuevo campo fijo `1` entre vagon y número de guía, pesos con 2 decimales en vez de 3, y reducción de 7 a 5 ceros de reserva. El cambio aplica tanto al envío inicial (POST /api/weighings) como al reenvío (POST /api/weighings/{id}/resend). No requiere migración de base de datos, solo cambio de formato en la transmisión.",
+      "acceptance": [
+        "La trama RS-232 usa `/` como separador de fecha (YYYY/MM/DD)",
+        "La hora se envía sin segundos (HH:MM)",
+        "Después del campo vagon y antes de numero_guia se inserta un campo fijo con valor `1`",
+        "Los 3 pesos (muestra, vegetal, mineral) se formatean con 2 decimales (.2f)",
+        "Los ceros de reserva se reducen de 7 a 5",
+        "El cambio aplica tanto al endpoint POST /api/weighings como a POST /api/weighings/{id}/resend",
+        "Tests unitarios en test_rs232.py verifican el nuevo formato",
+        "Tests de integración verifican la transmisión completa con el nuevo formato"
+      ],
+      "depends_on": [
+        6,
+        11,
+        44
+      ]
     }
   ]
 }

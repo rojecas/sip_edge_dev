@@ -1,7 +1,7 @@
 ---
 description: SDD orchestrator. Reads feature_list.json, decomposes work, and delegates to sub-agents. NEVER writes code directly.
 mode: primary
-model: deepseek/deepseek-reasoner
+model: deepseek/deepseek-v4-pro
 permission:
   edit: deny
   bash: allow

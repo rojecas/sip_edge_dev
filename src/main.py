@@ -292,7 +292,7 @@ async def lifespan(app: FastAPI):
     )
 
     # Cliente remoto (DeepSeek)
-    deepseek_model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+    deepseek_model = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
     deepseek_url = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
     deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "")
     remote_client = LlamaClient(
