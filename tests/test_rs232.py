@@ -90,7 +90,7 @@ class TestSendFrame(unittest.TestCase):
 
     @mock.patch("serial.Serial")
     def test_csv_format_14_fields(self, mock_serial):
-        """R2: Verify frame has exactly 14 comma-separated fields in correct order."""
+        """R2: Verify frame has exactly 16 comma-separated fields in correct order."""
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = os.path.join(tmpdir, "config.yaml")
             _write_default_config(config_path)
@@ -100,7 +100,7 @@ class TestSendFrame(unittest.TestCase):
         frame = mock_serial.return_value.write.call_args[0][0].decode("ascii")
         fields = frame.strip().split(",")
         self.assertEqual(
-            len(fields), 14, f"Expected 14 fields, got {len(fields)}: {fields}"
+            len(fields), 16, f"Expected 16 fields, got {len(fields)}: {fields}"
         )
         self.assertEqual(fields[0], "42")
         self.assertEqual(fields[1], "2026/06/15")
@@ -109,10 +109,10 @@ class TestSendFrame(unittest.TestCase):
         self.assertEqual(fields[4], "1")
         self.assertEqual(fields[5], "G-789")
         self.assertEqual(fields[6], "1.50")
-        for i in range(7, 12):
+        for i in range(7, 14):
             self.assertEqual(fields[i], "0", f"Field {i} should be 0, got {fields[i]}")
-        self.assertEqual(fields[12], "0.20")
-        self.assertEqual(fields[13], "0.80")
+        self.assertEqual(fields[14], "0.20")
+        self.assertEqual(fields[15], "0.80")
 
     @mock.patch("serial.Serial")
     def test_vagon_unmodified(self, mock_serial):
@@ -172,8 +172,8 @@ class TestSendFrame(unittest.TestCase):
         frame = mock_serial.return_value.write.call_args[0][0].decode("ascii")
         fields = frame.strip().split(",")
         self.assertEqual(fields[6], "2.00")
-        self.assertEqual(fields[12], "0.00")
-        self.assertEqual(fields[13], "0.12")
+        self.assertEqual(fields[14], "0.00")
+        self.assertEqual(fields[15], "0.12")
 
     @mock.patch("serial.Serial")
     def test_fecha_slash_separator(self, mock_serial):
@@ -219,7 +219,7 @@ class TestSendFrame(unittest.TestCase):
 
     @mock.patch("serial.Serial")
     def test_full_frame_format_integration(self, mock_serial):
-        """R6,R7,R9: Integration test verifying full frame from _build_frame_data to send_frame."""
+        """R6,R7,R9: Integration test verifying full 16-field frame."""
         # Simulate what _build_frame_data produces + _send_rs232_frame adds id
         frame_data = {
             "id": 99,
@@ -245,7 +245,7 @@ class TestSendFrame(unittest.TestCase):
 
         frame = mock_serial.return_value.write.call_args[0][0].decode("ascii")
         fields = frame.strip().split(",")
-        self.assertEqual(len(fields), 14)
+        self.assertEqual(len(fields), 16)
         self.assertEqual(fields[0], "99")
         self.assertEqual(fields[1], "2026/07/24")
         self.assertEqual(fields[2], "15:45")
@@ -253,10 +253,10 @@ class TestSendFrame(unittest.TestCase):
         self.assertEqual(fields[4], "1")
         self.assertEqual(fields[5], "G-1001")
         self.assertEqual(fields[6], "3.46")
-        for i in range(7, 12):
+        for i in range(7, 14):
             self.assertEqual(fields[i], "0", f"Field {i} should be 0, got {fields[i]}")
-        self.assertEqual(fields[12], "0.00")
-        self.assertEqual(fields[13], "1.23")
+        self.assertEqual(fields[14], "0.00")
+        self.assertEqual(fields[15], "1.23")
         self.assertTrue(frame.endswith("\r\n"))
 
     @mock.patch("serial.Serial")

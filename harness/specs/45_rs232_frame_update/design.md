@@ -6,7 +6,7 @@
 
 | Archivo              | Cambio                                                      |
 |----------------------|-------------------------------------------------------------|
-| `src/rs232.py:43-54` | Reconstruir `csv_line` con el nuevo formato de 14 campos     |
+| `src/rs232.py:43-54` | Reconstruir `csv_line` con el nuevo formato de 16 campos     |
 | `tests/test_rs232.py`| Actualizar tests existentes + agregar tests del nuevo formato|
 
 ### Archivos NO modificados
@@ -48,7 +48,7 @@ csv_line = (
     f"1,"
     f"{frame_data['numero_guia']},"
     f"{float(frame_data['pesos']['muestra']):.2f},"
-    f"0,0,0,0,0,"
+    f"0,0,0,0,0,0,0,"
     f"{float(frame_data['pesos']['vegetal_extrano']):.2f},"
     f"{float(frame_data['pesos']['mineral']):.2f}"
     f"\r\n"
@@ -60,9 +60,9 @@ Cambios puntuales:
 2. `hora` trunca a 5 caracteres → `"10:30:00"[:5]` = `"10:30"`
 3. Nuevo campo fijo `1` insertado entre vagon y numero_guia
 4. Pesos: `.3f` → `.2f`
-5. Ceros de reserva: `"0,0,0,0,0,0,0"` (7) → `"0,0,0,0,0"` (5)
+5. Ceros de reserva: 7 ceros (`"0,0,0,0,0,0,0"`)
 
-### Nuevo layout de 14 campos
+### Nuevo layout de 16 campos
 
 | Pos | Campo                | Fuente                                         |
 |-----|----------------------|------------------------------------------------|
@@ -78,8 +78,10 @@ Cambios puntuales:
 | 10  | reserva 3            | `0`                                            |
 | 11  | reserva 4            | `0`                                            |
 | 12  | reserva 5            | `0`                                            |
-| 13  | peso_vegetal (.2f)   | `frame_data["pesos"]["vegetal_extrano"]`       |
-| 14  | peso_mineral (.2f)   | `frame_data["pesos"]["mineral"]`               |
+| 13  | reserva 6            | `0`                                            |
+| 14  | reserva 7            | `0`                                            |
+| 15  | peso_vegetal (.2f)   | `frame_data["pesos"]["vegetal_extrano"]`       |
+| 16  | peso_mineral (.2f)   | `frame_data["pesos"]["mineral"]`               |
 
 Terminador: `\r\n` (sin cambios).
 

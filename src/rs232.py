@@ -50,7 +50,7 @@ def send_frame(
         f"1,"
         f"{frame_data['numero_guia']},"
         f"{float(frame_data['pesos']['muestra']):.2f},"
-        f"0,0,0,0,0,"
+        f"0,0,0,0,0,0,0,"
         f"{float(frame_data['pesos']['vegetal_extrano']):.2f},"
         f"{float(frame_data['pesos']['mineral']):.2f}"
         f"\r\n"

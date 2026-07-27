@@ -16,21 +16,21 @@ el campo numero_guia en la trama RS-232.
 El sistema DEBE formatear los 3 pesos (muestra, vegetal_extrano, mineral) con
 exactamente 2 decimales (`.2f`) en lugar de 3 decimales (`.3f`).
 
-## R5 — Reduccion de ceros de reserva
-El sistema DEBE reducir los ceros de reserva de 7 a 5 en la trama RS-232.
+## R5 — Ceros de reserva
+El sistema DEBE incluir 7 ceros de reserva en la trama RS-232.
 
 ## R6 — Aplicacion en POST /api/weighings
 CUANDO se confirma un pesaje via POST /api/weighings, el sistema DEBE
-transmitir la trama RS-232 con el nuevo formato de 14 campos.
+transmitir la trama RS-232 con el nuevo formato de 16 campos.
 
 ## R7 — Aplicacion en POST /api/weighings/{id}/resend
 CUANDO se reenvia un pesaje via POST /api/weighings/{id}/resend, el sistema
-DEBE transmitir la trama RS-232 con el nuevo formato de 14 campos.
+DEBE transmitir la trama RS-232 con el nuevo formato de 16 campos.
 
 ## R8 — Tests unitarios del nuevo formato
 El sistema DEBE tener tests unitarios en tests/test_rs232.py que verifiquen
-el nuevo formato: 14 campos, fecha con `/`, hora sin segundos, campo fijo `1`,
-pesos con 2 decimales, y 5 ceros de reserva.
+el nuevo formato: 16 campos, fecha con `/`, hora sin segundos, campo fijo `1`,
+pesos con 2 decimales, y 7 ceros de reserva.
 
 ## R9 — Tests de integracion de transmision completa
 El sistema DEBE tener tests de integracion que verifiquen la transmision
@@ -53,5 +53,7 @@ completa de la trama con el nuevo formato desde los endpoints POST
 | 10       | reserva 3            | 0          | 0              |
 | 11       | reserva 4            | 0          | 0              |
 | 12       | reserva 5            | 0          | 0              |
-| 13       | peso_vegetal_extrano | .2f        | 0.20           |
-| 14       | peso_mineral         | .2f        | 0.80           |
+| 13       | reserva 6            | 0          | 0              |
+| 14       | reserva 7            | 0          | 0              |
+| 15       | peso_vegetal_extrano | .2f        | 0.20           |
+| 16       | peso_mineral         | .2f        | 0.80           |
