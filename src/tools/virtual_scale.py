@@ -338,8 +338,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--data-dir",
-        default=os.path.join("data", "readings"),
-        help="Ruta a la carpeta que contiene los archivos CSV (default: data/readings/)",
+        default=os.path.join("src", "tools", "readings"),
+        help="Ruta a la carpeta que contiene los archivos CSV (default: src/tools/readings/)",
     )
     args = parser.parse_args()
 

@@ -170,8 +170,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--output-dir",
-        default=os.path.join("data", "readings"),
-        help="Directorio donde guardar los CSVs (default: data/readings/)",
+        default=os.path.join("src", "tools", "readings"),
+        help="Directorio donde guardar los CSVs (default: src/tools/readings/)",
     )
     parser.add_argument(
         "--seed",
