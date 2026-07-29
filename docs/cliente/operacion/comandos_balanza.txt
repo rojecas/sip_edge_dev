@@ -1,0 +1,29 @@
+COMANDOS DE PRUEBA — BALANZA DFW06L
+=====================================
+
+Formato: enviar comando + esperar respuesta
+
+1. Peso (probado, funciona):
+   echo -ne "READ\r\n" > /dev/ttyACM0 && timeout 2 cat /dev/ttyACM0
+
+2. Tarar:
+   echo -ne "TARE\r\n" > /dev/ttyACM0 && timeout 2 cat /dev/ttyACM0
+
+3. Poner cero:
+   echo -ne "ZERO\r\n" > /dev/ttyACM0 && timeout 2 cat /dev/ttyACM0
+
+4. Limpiar tara:
+   echo -ne "CLEAR\r\n" > /dev/ttyACM0 && timeout 2 cat /dev/ttyACM0
+
+5. Tara manual (si existe, ajusta el valor):
+   echo -ne "TMAN10.5\r\n" > /dev/ttyACM0 && timeout 2 cat /dev/ttyACM0
+
+6. Version:
+   echo -ne "VER\r\n" > /dev/ttyACM0 && timeout 2 cat /dev/ttyACM0
+
+=====================================
+NOTAS:
+- Si alguno responde ERR04, probar sin \r: "TARE\n", "ZERO\n", etc.
+- Si varios responden ERR04, esos comandos no existen en este modelo.
+- Documentar en el archivo que SI funcionan y que NO.
+=====================================
