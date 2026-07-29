@@ -2,7 +2,7 @@
 # sync.sh — EdgeBox: sincroniza sip_edge_dev -> sip_edge y reinicia servicio
 set -e
 
-DEV_DIR="/home/sipedge/sip_edge_dev"
+DEV_DIR="/home/sipdev/sip_edge_dev"
 PROD_DIR="/home/sipedge/sip_edge"
 
 if [ ! -d "$PROD_DIR" ]; then
