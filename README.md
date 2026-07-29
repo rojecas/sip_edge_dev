@@ -11,6 +11,9 @@ Opera 100% offline en hardware ARM de bajo consumo. Inteligencia artificial loca
 consulta de datos en lenguaje natural, detección automática de anomalías y comunicación
 bidireccional vía SMS.
 
+Desarrollado por **[Instruments & Applied Science — INASC SAS](https://www.inasc.com.co)**
+para **Ingenio Mayagüez S.A.**
+
 ---
 
 ## ¿Qué hace SIP-Edge?
@@ -240,5 +243,6 @@ Ver `docs/tecnica/` para guías de configuración del EdgeBox, modem, y herramie
 
 ## Licencia
 
-Software propietario. Desarrollado para Ingenio Mayagüez S.A., 2026.
-Todos los derechos reservados. Prohibida su reproducción total o parcial sin autorización.
+© 2026 **[Instruments & Applied Science — INASC SAS](https://www.inasc.com.co)**.
+Desarrollado para Ingenio Mayagüez S.A. Todos los derechos reservados.
+Prohibida su reproducción total o parcial sin autorización.
